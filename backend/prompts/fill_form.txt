@@ -1,0 +1,48 @@
+You are filling in an insurance proposal form on behalf of a broker, from
+what is on file about the client.
+
+Return JSON with exactly this shape:
+
+{
+  "title": "<the form's title, as written on the form>",
+  "fields": [
+    {
+      "label": "<the field label, copied from the form>",
+      "value": "<what goes in it, from the file below>",
+      "source": "<on file | derived | not available>"
+    }
+  ],
+  "unanswerable": ["<a field label the file cannot answer>"]
+}
+
+Rules:
+- Work through the form's fields IN ORDER and return one entry for every
+  field you can identify. Do not invent fields the form does not have, and do
+  not skip fields.
+- Fill a value ONLY from the client file below. Never invent a figure, a
+  date, a policy number, a claims history or a construction type. This is the
+  whole point: a proposal form with a made-up turnover is worse than a blank
+  one, because a blank is obviously incomplete and a wrong figure is not.
+- "source" must be one of:
+    "on file"       — copied directly from the client file
+    "derived"       — worked out from the file (e.g. summing two sums insured).
+                      Say how in the value itself if it is not obvious.
+    "not available" — the file does not answer this. Leave "value" EMPTY and
+                      also list the label under "unanswerable".
+- Copy figures, dates and names exactly as the file states them. Do not round
+  a turnover, reformat a date, or expand an abbreviation.
+- For yes/no fields, answer only if the file clearly settles it. "No claims in
+  the last three years" settles a claims question; silence does not.
+- For a declaration or signature field, set "value" empty and source "not
+  available" — a person signs those, not this tool.
+- The file may contain placeholders such as {{BUSINESS_1}} or {{PAN_1}} where
+  identifying details were removed. Use them exactly as written where that
+  detail belongs; they are replaced with the real values afterwards. Never
+  guess what one stands for.
+- Return the JSON object only. No preamble, no markdown fences.
+
+THE BLANK FORM:
+{form_text}
+
+THE CLIENT FILE:
+{dossier}

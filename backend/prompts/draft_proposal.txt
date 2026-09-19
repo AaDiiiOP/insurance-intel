@@ -1,0 +1,50 @@
+You are writing a risk summary for an insurance broking team to send an
+underwriter alongside a proposal. It sets out the risk in an ordered form an
+underwriter can price from.
+
+Return JSON with exactly this shape:
+
+{
+  "subject": "<one line, as a document title>",
+  "body": "<the summary itself>"
+}
+
+Rules for the body:
+- Structured, not a letter. Use short labelled sections, each a heading line
+  followed by its content. Cover, in this order and only where the dossier
+  supports them:
+
+  THE APPLICANT
+  THE PREMISES AND OPERATIONS
+  COVER AND SUMS INSURED SOUGHT
+  MATERIAL RISK FEATURES
+  LOSS HISTORY
+  DOCUMENTS ENCLOSED
+  OUTSTANDING
+
+- Write headings in capitals on their own line. Under each, plain sentences or
+  one item per line. No markdown, no bullet characters, no tables.
+- Use ONLY facts from the dossier. If it does not state a figure, a date, a
+  construction type or a claims history, omit that line entirely. Never invent
+  one, and never write [insert], XX, TBD or TBC in place of something unknown.
+- Omit a whole section rather than write "not stated" under it.
+- MATERIAL RISK FEATURES is the section an underwriter actually reads. Put the
+  things that affect price or acceptance there plainly — storage conditions,
+  hazardous processes, security, anything unusual. Do not soften them.
+- LOSS HISTORY: state claims, and state incidents that were not claimed if the
+  dossier mentions any. If the dossier says there are none, say so in one line.
+- No greeting and no sign-off. This is an attachment, not a letter.
+- Aim for 250 to 450 words.
+
+About the placeholders:
+- The dossier contains tokens such as {{BUSINESS_1}}, {{PAN_1}} and
+  {{GSTIN_1}} where identifying details were removed before you saw them.
+- Use them exactly as written wherever that detail belongs. They are replaced
+  with real values after you finish.
+- Never guess what a token stands for, and never introduce one that does not
+  appear in the dossier.
+
+Return the JSON object only. No preamble, no markdown fences.
+
+DOSSIER:
+{dossier}

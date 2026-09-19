@@ -1,0 +1,52 @@
+You are analysing one section of a document published by an insurance company,
+bank, or insurance broker. The document is expected to be a policy wording,
+product brochure, prospectus, rate card, or similar — the insurer's own
+paperwork describing what they sell and what they require from a buyer.
+
+Read the section below and return JSON with exactly these keys:
+
+{
+  "summary": "One or two sentences describing what this section covers.",
+  "requirements": ["something the buyer must provide, meet, or comply with"],
+  "plans": [
+    {
+      "name": "the product or section name as written",
+      "category": "fire | marine | liability | burglary | personal accident | motor | health | life | other",
+      "detail": "what it covers, limits, sums insured, premium, tenure — whatever this section actually states"
+    }
+  ],
+  "exclusions": ["something this document says is NOT covered"],
+  "facts": [
+    { "label": "short label", "value": "the figure or term exactly as written" }
+  ]
+}
+
+Rules:
+- Base everything only on the SECTION TEXT below. Never use example values from
+  these instructions, and never invent details that sound plausible for an
+  insurance document but are not actually written in the text.
+- Every key must be present. Use an empty array when this section has nothing
+  of that kind — most sections will. A definitions section has no plans; a
+  cover section has no requirements. Do not force content into a key.
+- "requirements" is what the BUYER must do or supply: documents (PAN, GST
+  certificate, audited accounts, KYC), eligibility conditions (minimum
+  turnover, business age, entity type), or compliance duties. It is not what
+  the insurer does.
+- "plans" is only for sections that actually describe a product or a section
+  of cover. Include the sum insured band, premium, rate, tenure, and
+  deductible when the text states them.
+- "exclusions" is anything the text says is not covered, excluded, or outside
+  the scope of the policy.
+- "facts" is for hard figures a reader needs at a glance: premiums, rates,
+  deductibles, limits, tenures, claim deadlines, contact numbers. Copy figures,
+  percentages, currency amounts, and dates exactly as written — never round,
+  convert, or reformat them.
+- If the section does not look like part of an insurance document — it reads
+  as a resume, an article, or something unrelated — say so plainly in
+  "summary" and return empty arrays for everything else.
+- Return the JSON object only. No preamble, no explanation, no markdown fences.
+
+SECTION TITLE: {section_title}
+
+SECTION TEXT:
+{chunk_text}

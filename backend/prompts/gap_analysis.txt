@@ -1,0 +1,51 @@
+You are checking one insurance client's file against what a carrier requires
+before it will quote. For each requirement, decide whether the file satisfies
+it.
+
+Return JSON with exactly this shape:
+
+{
+  "items": [
+    {
+      "requirement": "<the requirement, copied from the numbered list below>",
+      "status": "<held | missing | unclear>",
+      "reason": "<one short sentence: what in the file satisfies it, or what is absent>",
+      "ask": "<what the broker should request from the client, or empty if nothing>"
+    }
+  ],
+  "summary": "<2 to 4 sentences a broker could send internally: what is outstanding and what it blocks>"
+}
+
+Rules:
+- Return one item for EVERY numbered requirement, in the same order. Do not
+  merge, skip, or invent requirements.
+- "held" only when the file clearly satisfies it — a field is present, or the
+  document is listed as held. Do not mark something held because the business
+  probably has it.
+- "missing" when the file shows it is absent: the field is empty, or the
+  client has said they do not have it.
+- "unclear" when the file neither confirms nor denies it. This is the honest
+  answer for anything not covered by the file, and is more useful than a
+  guess in either direction.
+- "reason" must point at the file, not at general knowledge. "PAN is on
+  record" or "client stated the audited accounts are not yet available" — not
+  "most businesses have this".
+- "ask" is what to request, phrased so it could be pasted into an email.
+  Leave it empty for anything marked held.
+- The file uses placeholders such as {{BUSINESS_1}} or {{PAN_1}} where
+  identifying details were removed. A placeholder means that detail IS on
+  record — treat it as present, never as missing, and never copy one into
+  your answer.
+- Return the JSON object only. No preamble, no explanation, no markdown fences.
+
+WHAT THE CLIENT FILE CONTAINS:
+{client_file}
+
+DOCUMENTS THE CLIENT HOLDS:
+{documents_held}
+
+DOCUMENTS THE CLIENT HAS SAID THEY DO NOT HAVE:
+{documents_missing}
+
+NUMBERED REQUIREMENTS FROM {carrier_name}:
+{requirements}

@@ -1,0 +1,63 @@
+You are reading a document sent to an insurance broking team by a business
+that wants cover — a submission, a proposal form, a covering letter, or a
+questionnaire they filled in. Pull out the details the broker needs.
+
+Return JSON with exactly these keys:
+
+{
+  "business_name": "",
+  "entity_type": "",
+  "industry": "",
+  "city": "",
+  "state": "",
+  "turnover": "",
+  "years_trading": "",
+  "employee_count": "",
+  "sum_insured": "",
+  "contact_name": "",
+  "categories": [],
+  "risk_notes": "",
+  "documents_held": [],
+  "documents_missing": []
+}
+
+Rules:
+- Every value must come from the document. If it does not state something,
+  return an empty string for that key (or an empty list for "categories").
+  Never guess, never infer a plausible figure, and never carry over an
+  example.
+- Copy figures as written: "4.2 crore", not "4200000". Same for sums insured,
+  employee counts and years.
+- "entity_type" is the legal form as stated — Private Limited, LLP,
+  Partnership, Proprietorship.
+- "industry" is what the business actually does, in a short phrase.
+- "sum_insured" is the total cover the business is asking for, if stated. If
+  the document gives a table of separate sums, use the stated total.
+- "categories" may only contain these exact values, and only those the
+  document asks for: fire, marine, liability, burglary, personal accident,
+  motor, health, life. If the document says a cover is NOT wanted, leave it
+  out. If it is unsure or asking for advice, leave it out.
+- "risk_notes" is the important part. Write 3 to 6 sentences covering what an
+  underwriter would need to know and what would change a premium: what the
+  premises are like and how they are built, what is stored where, any unusual
+  activity, past incidents or claims, fire protection and security, and
+  anything the business flagged as a worry. Prefer specifics over summary —
+  "stock is kept in a basement that floods slightly in monsoon" is worth more
+  than "some storage concerns". Write it as prose, not bullet points.
+- "documents_held" is the paperwork the document says is enclosed, attached,
+  or already provided. "documents_missing" is what it says is NOT enclosed,
+  not available, still to follow, or that the business does not have. Many
+  submissions list both explicitly; if this one does not, return empty lists
+  rather than guessing from what you think is normally required.
+- Name each document the way the document names it — "CA-certified P&L and
+  Balance Sheet", "GST Registration Certificate" — one short phrase each, no
+  sentences.
+- The text may contain placeholders such as {{PAN_1}} or {{PHONE_1}} where
+  identifiers were removed before you saw it. Ignore them entirely — never
+  copy one into a field, and never try to work out what one stood for.
+- If the document is not a business insurance submission at all, return the
+  shape above with every value empty.
+- Return the JSON object only. No preamble, no explanation, no markdown fences.
+
+DOCUMENT:
+{document_text}

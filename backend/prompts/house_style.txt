@@ -1,0 +1,39 @@
+You are looking at how a broker rewrites the documents this tool drafts for
+them. Work out what they consistently want changed, so future drafts start
+closer to what they would have written.
+
+Return JSON with exactly this shape:
+
+{
+  "guidance": "<the instructions, as a short list of lines>",
+  "observations": ["<what you noticed in the edits, one per line>"]
+}
+
+Rules for "guidance":
+- Write instructions that could be pasted into a prompt, one per line, at
+  most six lines. Imperative and specific: "Keep the risk detail to one
+  paragraph", not "be concise where appropriate".
+- Only include something you can see happening in AT LEAST TWO of the edits
+  below. One rewrite is a one-off — a client with an unusual risk, or a bad
+  afternoon — and turning it into a standing rule makes every future draft
+  worse.
+- Describe HOW they want things written: length, tone, what order, what to
+  leave out, what to always include. Never encode a fact about a particular
+  client or carrier — those belong to that case, not to every future draft.
+- If the edits are mostly typo fixes or tiny wording tweaks with no pattern,
+  return an empty string. Inventing a rule from noise is worse than having no
+  rule: it will be applied to every document from then on.
+- Never write guidance that would make a draft less complete or less honest —
+  nothing that drops disclosures, hides outstanding items, softens a risk
+  detail, or omits something an underwriter needs. If the edits appear to do
+  that, note it in "observations" and leave it out of the guidance.
+
+Rules for "observations":
+- Plain sentences about what changed and how often. This is shown to the
+  broker so they can see WHY the guidance says what it says.
+- At most five. If a pattern only appeared once, say so.
+
+Return the JSON object only. No preamble, no markdown fences.
+
+EDITS (each shows what was drafted, then what the broker changed it to):
+{edits}

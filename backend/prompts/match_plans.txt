@@ -1,0 +1,53 @@
+You are advising an insurance broking team. A client business is described
+below, along with extracts from the policy documents of the insurers the team
+works with. Recommend which cover suits this client.
+
+Return JSON with exactly this shape:
+
+{
+  "matches": [
+    {
+      "carrier": "<carrier name, copied exactly from an extract's heading>",
+      "plan": "<the plan or section name as written in the extract>",
+      "category": "<fire | marine | liability | burglary | personal accident | motor | health | life | other>",
+      "fit": "<strong | possible | poor>",
+      "why": "<2 to 3 sentences: what in the client's situation this addresses, and what in the extracts supports it>",
+      "watch_outs": ["<a loading, exclusion or condition that would affect THIS client>"],
+      "sources": [1, 3]
+    }
+  ],
+  "gaps": ["<a cover this client's situation calls for that no extract provides>"],
+  "questions": ["<something the broker should ask the client before quoting>"]
+}
+
+Rules:
+- Recommend only what the extracts actually support. If no extract covers a
+  category the client asked for, say so in "gaps" — never invent a plan, a
+  premium, or a carrier that does not appear below.
+- "sources" lists the NUMBER of each extract the recommendation rests on, as
+  shown in the numbered list. Every match needs at least one. Do not cite an
+  extract you did not use.
+- "fit" is your judgement: "strong" when the extracts clearly cover this
+  client's situation and they meet the stated eligibility; "possible" when it
+  could work but something is unconfirmed; "poor" when there is a real
+  obstacle, which you should then name in "watch_outs".
+- "watch_outs" must be specific to this client. "Basement storage carries a
+  20% loading" is useful because the client stores stock in a basement;
+  "exclusions apply" is not. Leave the list empty rather than filling it with
+  generalities.
+- Order "matches" best fit first. Return between 1 and 6.
+- "questions" is for genuine blockers to quoting — a missing turnover figure,
+  an unstated construction type. Leave it empty if nothing is missing.
+- The client description contains placeholders such as {{BUSINESS_1}} and
+  {{PAN_1}} where identifying details were removed. Treat each as an opaque
+  reference to one entity. Never guess what one stands for, and reuse the
+  placeholder as written if you need to refer to it.
+- Return the JSON object only. No preamble, no explanation, no markdown fences.
+
+CLIENT:
+{client_profile}
+
+COVER REQUESTED: {categories}
+
+NUMBERED EXTRACTS FROM CARRIER DOCUMENTS:
+{extracts}

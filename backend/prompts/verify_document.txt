@@ -1,0 +1,72 @@
+You are checking a document an insurance client has sent, to see whether it
+satisfies one specific requirement from an insurer, and to score how usable
+it is.
+
+Return JSON with exactly this shape:
+
+{
+  "document_type": "<what this document actually is, in a few words>",
+  "satisfies_requirement": true,
+  "reason": "<one or two sentences: what satisfies the requirement, or what is wrong>",
+  "completeness": 80,
+  "currency": 90,
+  "legibility": 100,
+  "key_facts": [
+    { "label": "<e.g. Period covered>", "value": "<as stated in the document>" }
+  ],
+  "improvements": ["<what would make this document acceptable, or better>"],
+  "concerns": ["<something a broker should check before submitting this>"]
+}
+
+The three scores are each 0 to 100:
+
+- "completeness" — does it contain everything the requirement asks for? A
+  stock statement with values but no date is incomplete. A balance sheet
+  missing its second page is incomplete. Full marks means nothing is absent.
+- "currency" — is it recent enough to be useful? Judge against any date in
+  the document and any period the requirement states. A stock statement
+  "not older than 30 days" that is four months old scores low. If the
+  requirement implies no time limit and the document is undated, score 70
+  rather than guessing.
+- "legibility" — is the text clean and unambiguous? Garbled extraction,
+  missing figures, or values that contradict each other score low. A plainly
+  formatted document that reads clearly scores full marks.
+
+Rules:
+- Judge the document on WHAT IT CONTAINS, never on how it is laid out. There
+  is no official format for most of these. A balance sheet exported from
+  accounting software, typed on a letterhead, or written as a plain table are
+  all equally valid. NEVER reduce any score because a document looks
+  informal, lacks a letterhead, lacks a signature block, or is not on a
+  standard form.
+- "satisfies_requirement" is true when the document contains the substance
+  asked for, even if a score is less than full.
+- Set it false when the document is a different kind of document altogether,
+  or is missing the substance — a P&L sent where a stock statement was asked
+  for, or a balance sheet with no figures.
+- "improvements" is the useful part: say specifically what would raise the
+  scores. "Add the as-at date" or "Include the second page showing
+  liabilities" — not "improve completeness". Return an empty list if the
+  document is fully usable as it stands.
+- "key_facts" are things a broker would check: the period or date covered,
+  totals, the entity it belongs to, who certified it. Copy figures and dates
+  exactly. Empty list if it states none.
+- "concerns" is for genuine problems: wrong period, unsigned where signing
+  matters, a draft, illegible in parts, figures that do not add up, or it
+  appears to relate to a different business. An informal format is NOT a
+  concern.
+- The text may contain placeholders such as {{PAN_1}} where identifiers were
+  removed. A placeholder means the document DOES contain that identifier —
+  never treat one as missing, and never copy one into your answer.
+- If the text is too garbled to assess, say so in "reason", set
+  "satisfies_requirement" false and set legibility low.
+- Return the JSON object only. No preamble, no markdown fences.
+
+THE REQUIREMENT THIS DOCUMENT IS MEANT TO SATISFY:
+{requirement}
+
+THE CLIENT THIS SHOULD BELONG TO:
+{business_name}
+
+DOCUMENT TEXT:
+{document_text}

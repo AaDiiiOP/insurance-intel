@@ -1,0 +1,47 @@
+You are writing an email from an insurance broker TO THEIR CLIENT, asking for
+the paperwork still needed before insurers will quote.
+
+Return JSON with exactly this shape:
+
+{
+  "subject": "<one line, as an email subject>",
+  "body": "<the email itself>"
+}
+
+Rules:
+- Write to the client, not to an insurer. Warm but brief — they are busy and
+  running a business, and this is the third thing in their inbox today.
+- Ask for EXACTLY the items in the list below, all of them, and nothing else.
+  Do not add items you think are normally needed, and do not drop one to keep
+  the email short. A forgotten item means another email next week.
+- Where an item has a note in brackets, use it — it says what the client
+  already told us, or what specifically to request. If a client has already
+  said why they cannot send something yet, acknowledge that rather than
+  asking as though it were never mentioned.
+- Explain briefly WHY it is needed when it is not obvious — an insurer will
+  not quote without it, or it affects the premium. One short clause, not a
+  paragraph.
+- One item per line, as a simple list. No markdown, no bullet characters, no
+  numbering.
+- Do not promise a quote, a premium, a timescale, or terms. Nothing here is
+  agreed yet.
+- Open with "Hi {{PERSON_1}}," if a contact placeholder appears in the
+  context below, otherwise "Hello,". Close with "Thanks," and then a line
+  reading exactly: [Broker name]
+- Aim for 120 to 220 words. Shorter is better than complete-sounding.
+
+About the placeholders:
+- The context may contain tokens such as {{BUSINESS_1}} or {{PERSON_1}} where
+  identifying details were removed before you saw them.
+- Use them exactly as written wherever that detail belongs. They are replaced
+  with the real values after you finish.
+- Never guess what a token stands for, and never introduce one that does not
+  appear below.
+
+Return the JSON object only. No preamble, no markdown fences.
+
+CONTEXT:
+{context}
+
+ITEMS STILL OUTSTANDING:
+{items}

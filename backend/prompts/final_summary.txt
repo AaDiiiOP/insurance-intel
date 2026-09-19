@@ -1,0 +1,83 @@
+You are producing a single briefing on an insurance company's product, for an
+insurance broking team who will use it to advise business clients. Everything
+below was extracted section by section from the company's own documents.
+
+Return JSON with exactly these keys:
+
+{
+  "summary": "<4 to 7 sentences of flowing prose, as ONE string>",
+  "company_overview": {
+    "insurer": "<who issues or underwrites this, as named in the document>",
+    "product": "<the product name as written>",
+    "target_buyer": "<who it is sold to>",
+    "eligibility": "<the headline eligibility condition, e.g. a turnover band>"
+  },
+  "key_points": [
+    { "label": "<short label, e.g. Tenure>", "value": "<short value from THIS document>" }
+  ],
+  "requirements": ["a consolidated requirement the buyer must meet or supply"],
+  "plans": [
+    {
+      "name": "<product or section name>",
+      "category": "<fire | marine | liability | burglary | personal accident | motor | health | life | other>",
+      "detail": "<cover, limits, premium, tenure as stated>",
+      "exclusions": ["<what this plan does not cover>"]
+    }
+  ]
+}
+
+The examples above show the shape only. They are not sample content. Every
+value you return must come from the material below. If the documents do not
+state something — a premium, an eligibility band, an insurer name — leave that
+field as an empty string or omit the entry. Never invent one or reuse an
+example.
+
+Rules for "summary":
+- One single string containing 4 to 7 sentences. Not a list, not an object.
+- Cover, where the documents state them: who the insurer is and what the
+  product is, who it is for, what sections or covers it bundles, the
+  commercial shape (sums insured, premium basis, tenure), what the buyer has
+  to supply, and anything unusual a broking team should flag to a client.
+- Write for someone who has not read the documents. Plain English, no bullet
+  points, no headings, no preamble.
+- If the material does not actually describe an insurance product, say so
+  plainly in this string and leave every other field empty.
+
+Rules for "key_points":
+- Between 3 and 8 entries: the hard facts a broker needs at a glance —
+  tenure options, premium basis, deductible, claim intimation deadline,
+  turnover band, free-look period.
+- Keep values under 40 characters. Copy figures exactly as written.
+- Only include a point the documents actually state.
+
+Rules for "requirements":
+- Merge duplicates and near-duplicates from the list below into single entries.
+- Keep the wording specific — "CA-certified P&L and balance sheet for turnover
+  verification" not "financial documents".
+- Preserve every distinct requirement. Do not summarise them away. This list is
+  what a later stage checks a client's submission against, so a requirement
+  dropped here is one that will never be checked.
+
+Rules for "plans":
+- One entry per distinct product, section, or cover the documents describe.
+- Merge fragments about the same plan found in different sections into one
+  entry rather than repeating it.
+- Set "category" from the fixed list shown above. Use "other" if none fit.
+- Keep every stated figure — sums insured, rates, premiums, tenures, limits.
+
+Return the JSON object only. No preamble, no explanation, no markdown fences.
+
+NUMBERED SECTION SUMMARIES:
+{section_summaries}
+
+REQUIREMENTS EXTRACTED FROM EACH SECTION:
+{all_requirements}
+
+PLANS AND COVERS EXTRACTED FROM EACH SECTION:
+{all_plans}
+
+EXCLUSIONS EXTRACTED FROM EACH SECTION:
+{all_exclusions}
+
+FACTS EXTRACTED FROM EACH SECTION:
+{all_facts}

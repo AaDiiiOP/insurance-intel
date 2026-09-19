@@ -1,0 +1,71 @@
+services:
+  backend:
+    build: ./backend
+    container_name: insurance-backend
+    ports:
+      - "8100:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - postgres
+      - chromadb
+    environment:
+      - DATABASE_URL=postgresql://insurance_user:insurance_pass@postgres:5432/insurance_db
+      - CHROMA_HOST=chromadb
+      # Internal container port, NOT the host-mapped 8101 below. Container-to-
+      # container traffic inside Docker's network hits Chroma's own listening
+      # port directly; the "8101:8000" mapping only applies from the host.
+      - CHROMA_PORT=8000
+      # Ollama runs natively on the host machine, not in a container — it needs
+      # direct GPU/Metal access, which a container would not get.
+      # host.docker.internal lets containers reach services on the host.
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=qwen2.5:7b
+      - OLLAMA_EMBED_MODEL=nomic-embed-text
+    # On Linux, host.docker.internal is not defined by default the way it is
+    # on Docker Desktop for Mac/Windows. This maps it to the host gateway so
+    # the same OLLAMA_HOST value works everywhere.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build: ./frontend
+    container_name: insurance-frontend
+    ports:
+      - "5183:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      # Points at the backend's HOST-mapped port (8100), since this is read
+      # by code running in the browser, outside Docker's network entirely —
+      # the browser has no notion of the "backend" container hostname.
+      - VITE_API_URL=http://localhost:8100
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: insurance-postgres
+    ports:
+      - "5442:5432"
+    environment:
+      - POSTGRES_USER=insurance_user
+      - POSTGRES_PASSWORD=insurance_pass
+      - POSTGRES_DB=insurance_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Not used by Phase 1. Running now so /health reports on it and Phase 2's
+  # retrieval has it ready without a compose change.
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: insurance-chromadb
+    ports:
+      - "8101:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+volumes:
+  postgres_data:
+  chroma_data:
