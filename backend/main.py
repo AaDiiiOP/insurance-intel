@@ -84,7 +84,21 @@ app = FastAPI(title="Insurance Intelligence API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5183", "http://localhost:3000"],
+    # Read from the environment so a deployed instance can allow its own
+    # public address without a code change. A fixed localhost-only list
+    # works locally but silently blocks every request once the app is
+    # reachable from a real IP or domain — which looks exactly like a
+    # backend outage from the browser's side, even though /health is fine.
+    #
+    # Comma-separated, so a server can allow both an IP and a domain during
+    # a DNS cutover.
+    allow_origins=[
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS", "http://localhost:5183,http://localhost:3000"
+        ).split(",")
+        if origin.strip()
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )

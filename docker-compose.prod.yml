@@ -1,0 +1,122 @@
+# Production compose, for a single server (EC2 or similar).
+#
+# Differences from docker-compose.yml, and why each one matters:
+#
+#   - Ollama runs as a CONTAINER here, not on the host. The dev setup reaches
+#     a host-installed Ollama through host.docker.internal, which is a Docker
+#     Desktop convenience; on a Linux server it needs a gateway mapping and
+#     an Ollama install outside Docker. Running it as a service means one
+#     `docker compose up` brings up everything.
+#   - No source-code volume mounts and no --reload. Dev mounts ./backend in
+#     for live reload; a production image should be immutable, and --reload
+#     watches the filesystem for changes that will never come.
+#   - Postgres has no host port. Nothing outside this machine should be able
+#     to reach the database directly.
+#   - The frontend is a built static bundle served by nginx, not Vite's dev
+#     server. See frontend/Dockerfile.prod.
+#   - Credentials and public URLs come from the environment, and the compose
+#     file REFUSES to start without them rather than falling back to a
+#     local-dev default on a public box.
+#
+# Before running:
+#   export PUBLIC_URL=http://<your-ec2-public-ip-or-dns>
+#   export POSTGRES_PASSWORD=<something real>
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Then pull the models INTO the ollama container (several GB, one time —
+# they persist on the ollama_models volume across restarts):
+#   docker compose -f docker-compose.prod.yml exec ollama ollama pull qwen2.5:7b
+#   docker compose -f docker-compose.prod.yml exec ollama ollama pull nomic-embed-text
+
+services:
+  backend:
+    build: ./backend
+    container_name: insurance-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8100}:8000"
+    depends_on:
+      - postgres
+      - chromadb
+      - ollama
+    # Overrides the Dockerfile's dev command to drop --reload.
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      - DATABASE_URL=postgresql://insurance_user:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/insurance_db
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      # Container-to-container, by service name — no host gateway involved.
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+      # Must match the address the browser actually loads the frontend from,
+      # or every request is blocked by the browser even though the backend
+      # is healthy. A working /health plus "Failed to fetch" in the console
+      # is almost always this.
+      - CORS_ORIGINS=${PUBLIC_URL:?set PUBLIC_URL}
+    # Embedding a long document can be slow on CPU. Raise if reindexing
+    # times out; chat/drafting calls already have no cap.
+    # - OLLAMA_EMBED_TIMEOUT=300
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        # Baked into the bundle at BUILD time — changing this needs a
+        # rebuild, not a restart.
+        - VITE_API_URL=${PUBLIC_URL:?set PUBLIC_URL}:${BACKEND_PORT:-8100}
+    container_name: insurance-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:5173"
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: insurance-postgres
+    restart: unless-stopped
+    # Deliberately no host port mapping. The backend reaches it over the
+    # compose network; nothing else needs to.
+    environment:
+      - POSTGRES_USER=insurance_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      - POSTGRES_DB=insurance_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: insurance-chromadb
+    restart: unless-stopped
+    # Also no host port. The index is rebuildable from Postgres anyway, but
+    # there is no reason to expose it.
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: insurance-ollama
+    restart: unless-stopped
+    # No host port either — only the backend talks to it. Exposing 11434 to
+    # the internet would be an open, unauthenticated model endpoint.
+    volumes:
+      # Models are several GB each. Keeping them on a volume means a
+      # container restart does not re-download them.
+      - ollama_models:/root/.ollama
+    # Uncomment on a GPU instance (g4dn / g5) after installing the NVIDIA
+    # container toolkit on the host. Without it the model runs on CPU, which
+    # works but is substantially slower.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  postgres_data:
+  chroma_data:
+  ollama_models:

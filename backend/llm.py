@@ -32,6 +32,15 @@ import httpx
 logger = logging.getLogger(__name__)
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+
+# A bare host (no scheme) reaches this point if OLLAMA_HOST was exported in
+# the shell as something like "0.0.0.0" rather than a full URL -- easy to do
+# by accident when switching between the dev and prod compose files, since
+# shell exports outlive the terminal session that set them. Fail loudly here
+# rather than let httpx raise an opaque "missing protocol" error deep inside
+# a request.
+if OLLAMA_HOST and not OLLAMA_HOST.startswith(("http://", "https://")):
+    OLLAMA_HOST = f"http://{OLLAMA_HOST}"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 
 # Separate, much smaller model used only to turn text into vectors. Not used

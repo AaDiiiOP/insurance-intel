@@ -126,6 +126,58 @@ access a container wouldn't get. `docker-compose.yml` maps
 
 ---
 
+## Running it on a server (AWS EC2 or similar)
+
+Use `docker-compose.prod.yml`, not the dev one. It differs in ways that
+matter on a public box: Ollama runs as a container rather than on the host,
+the frontend is a built static bundle served by nginx instead of Vite's dev
+server, Postgres and Ollama are not reachable from outside the machine, and
+the file refuses to start without a real password and public URL rather than
+falling back to local-dev defaults.
+
+```bash
+export PUBLIC_URL=http://<your-ec2-public-ip-or-dns>
+export POSTGRES_PASSWORD=<something real>
+
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Pull the models into the ollama container. Several GB, one time — they
+# persist on a volume across restarts.
+docker compose -f docker-compose.prod.yml exec ollama ollama pull qwen2.5:7b
+docker compose -f docker-compose.prod.yml exec ollama ollama pull nomic-embed-text
+```
+
+The app is then on port 80, the API on 8100. Override with `FRONTEND_PORT`
+and `BACKEND_PORT` if something else on the instance already uses them.
+
+**Three things that are genuinely environment-specific, not config:**
+
+1. **Instance sizing.** `qwen2.5:7b` needs real memory and compute. A small
+   instance will either fail to load it or run unusably slowly. CPU-only,
+   budget an `m5.xlarge` or larger; a `g4dn.xlarge` GPU instance is far
+   faster (uncomment the `deploy:` block in the prod compose and install the
+   NVIDIA container toolkit first). This is a cost decision no config file
+   can avoid.
+2. **Security groups.** Open inbound `80` (the app) and `8100` (the API) —
+   to your own IP where possible, not `0.0.0.0/0`. Nothing else needs to be
+   open: Postgres, ChromaDB and Ollama have no host ports in the prod
+   compose, so they are reachable only from inside the instance. An exposed
+   `11434` would be an open, unauthenticated model endpoint.
+3. **`PUBLIC_URL` is baked into the frontend at build time.** It is compiled
+   into the JavaScript a browser downloads, so changing it — a new IP after
+   a stop/start, or moving to a domain — needs
+   `docker compose -f docker-compose.prod.yml up -d --build`, not just a
+   restart.
+
+**If the page loads but everything fails with "Failed to fetch"** while
+`/health` works: that is CORS. `PUBLIC_URL` must match the address the
+browser actually loads the app from, exactly — protocol, host and port. The
+prod compose passes it through to `CORS_ORIGINS` for you; the variable
+accepts a comma-separated list if you need to allow both an IP and a domain
+during a DNS cutover.
+
+---
+
 ## Architecture
 
 ```
@@ -181,10 +233,67 @@ matching function receives already-redacted text; nothing downstream of
 
 ---
 
+## Switching back to local after running the server version
+
+If you've run `docker-compose.prod.yml` (or exported `PUBLIC_URL`,
+`POSTGRES_PASSWORD`, `OLLAMA_HOST`, etc. in your terminal for it) and now
+want to go back to running everything on your own machine with the plain
+`docker-compose.yml`, two things need clearing — otherwise leftover shell
+state silently overrides the local defaults.
+
+**1. Unset anything you exported for the server run**, in the same terminal
+you'll use to run the local version:
+
+```bash
+# macOS/Linux
+unset PUBLIC_URL POSTGRES_PASSWORD OLLAMA_HOST CORS_ORIGINS OLLAMA_MODEL BACKEND_PORT FRONTEND_PORT
+```
+
+```powershell
+# Windows PowerShell
+Remove-Item Env:PUBLIC_URL, Env:POSTGRES_PASSWORD, Env:OLLAMA_HOST, Env:CORS_ORIGINS, Env:OLLAMA_MODEL, Env:BACKEND_PORT, Env:FRONTEND_PORT -ErrorAction SilentlyContinue
+```
+
+An exported variable stays set for the rest of that terminal session (and,
+on Windows, sometimes across sessions if it was set as a *system* or *user*
+environment variable rather than just in that PowerShell window) — Docker
+Compose then uses that leftover value instead of the default baked into
+`docker-compose.yml`, even though nothing in the file itself changed.
+
+**2. Bring the containers down and back up on the plain compose file:**
+
+```bash
+docker compose down
+docker compose up --build
+```
+
+(Not `docker-compose.prod.yml` — the file with no suffix.)
+
+**If you're not sure whether something is still exported**, check before
+running:
+
+```bash
+# macOS/Linux
+echo $OLLAMA_HOST
+
+# Windows PowerShell
+echo $Env:OLLAMA_HOST
+```
+
+If either prints anything other than nothing/blank, that's a leftover export
+overriding the default — unset it and re-run.
+
+---
+
 ## Troubleshooting
 
 **"Ollama is not reachable"** -- it runs on your machine, not in Docker.
 `curl http://localhost:11434/api/tags` should return JSON.
+
+**Error mentions a bare address like `0.0.0.0` with "missing a protocol"** --
+`OLLAMA_HOST` is set to something without `http://` in front of it, almost
+always a leftover shell export from an earlier server run. See "Switching
+back to local" above -- unset it and restart.
 
 **Matching/Ask says the index is empty but carriers are briefed** -- briefing
 and indexing are separate steps. Check Settings for the real cause (usually

@@ -7,12 +7,14 @@ import Carriers from './views/Carriers'
 import ClientDetail from './views/ClientDetail'
 import Clients from './views/Clients'
 import Health from './views/Health'
+import Home from './views/Home'
 import Review from './views/Review'
 import Upload from './views/Upload'
 
 // Only screens that exist. Dead links for unbuilt phases would be worse than
 // a short nav — Phase 3 adds gap analysis, Phase 4 the drafting step.
 const NAV = [
+  { id: 'home', label: 'Home' },
   { id: 'carriers', label: 'Carriers' },
   { id: 'clients', label: 'Clients' },
   { id: 'ask', label: 'Ask' },
@@ -21,7 +23,7 @@ const NAV = [
 ]
 
 export default function App() {
-  const [view, setView] = useState('carriers')
+  const [view, setView] = useState('home')
   // Bumped after an upload or delete so the list refetches instead of
   // showing stale data.
   const [refreshKey, setRefreshKey] = useState(0)
@@ -81,7 +83,7 @@ export default function App() {
           <h2 className="wordmark">
             Insurance<span> Intelligence</span>
           </h2>
-          <p className="wordmark-sub">Carriers · Clients · Matching</p>
+          <p className="wordmark-sub">Local · Reviewed · Auditable</p>
         </div>
 
         <button
@@ -125,6 +127,9 @@ export default function App() {
             }}
             onOpen={openCarrier}
           />
+        )}
+        {view === 'home' && (
+          <Home onNavigate={setView} onAddCarrier={() => setView('upload')} />
         )}
         {view === 'carriers' && (
           <Carriers

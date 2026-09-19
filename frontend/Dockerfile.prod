@@ -1,0 +1,45 @@
+# Production frontend: build the static bundle, serve it with nginx.
+#
+# The dev Dockerfile runs `npm run dev`, which is Vite's development server.
+# That is fine on a laptop and wrong on a public server: it is slower, ships
+# unminified source, and is explicitly not built to face the internet.
+#
+# Two stages, so the final image contains only the built files — no Node, no
+# npm, no node_modules. Smaller image, smaller attack surface.
+
+FROM node:20-slim AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+
+# VITE_ variables are read at BUILD time and baked into the bundle, so this
+# has to be an address a visitor's browser can actually reach — not
+# localhost, and never a Docker service name. Changing it later means a
+# rebuild, not just a restart.
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build
+
+FROM nginx:alpine
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Serve index.html for any path. This app switches views in React state
+# rather than by URL, so it matters less here than in a routed app — but a
+# stray path should still land on the app rather than an nginx 404.
+RUN printf 'server {\n\
+  listen 5173;\n\
+  root /usr/share/nginx/html;\n\
+  index index.html;\n\
+  location / {\n\
+    try_files $uri $uri/ /index.html;\n\
+  }\n\
+}\n' > /etc/nginx/conf.d/default.conf
+
+EXPOSE 5173
+
+CMD ["nginx", "-g", "daemon off;"]
