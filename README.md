@@ -247,6 +247,24 @@ installed in the backend's own Docker image) and Poppler for PDF rendering —
 both fully local and offline. Extraction uses the same local Ollama model as
 every other feature in this tool. No new database, no cloud OCR, no paid API.
 
+### Evaluation
+
+`backend/eval_harness.py` runs the real pipeline against a labelled test set
+and reports actual accuracy — not estimated. See **`Results.md`** in the
+project root for the first real run (20 synthetic companies, 100 documents,
+6 scanned/OCR variants, 4 deliberate cross-document contradictions) and, more
+importantly, for the two real gaps it found: **contradiction detection does
+not exist yet** (a policy and its coverage schedule can disagree and nothing
+catches it), and the deterministic extraction regex was narrower than real
+policy wording. One of those is now fixed; the other is still open.
+
+Re-run it against any labelled document set with the same folder shape:
+
+```bash
+cd backend
+python3 eval_harness.py /path/to/dataset
+```
+
 ---
 
 

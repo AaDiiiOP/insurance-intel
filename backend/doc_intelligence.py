@@ -53,8 +53,32 @@ LOW_MODEL_CONFIDENCE = 0.6
 # Deliberately conservative: a pattern that fires wrongly here would report
 # false certainty (confidence 1.0) for a wrong value, which is worse than
 # falling through to the model.
+#
+# The label alternation was widened after the Phase 0 evaluation
+# (Aurevia Synthetic Insurance World v1) found real policy wording reading
+# "Property Damage Sum Insured", which the original pattern's plain "sum
+# insured" alternation only matched by the label appearing as a substring —
+# fragile, since a differently-worded carrier ("Building Sum Insured",
+# "Insured Amount") would have missed the deterministic path entirely and
+# fallen through to the model on documents that are actually unambiguous.
+#
+# That same evaluation's test documents render the ₹ symbol as a bare "n"
+# (a font-encoding artifact in the dataset's PDF generation, confirmed by
+# inspecting the raw extracted text) — e.g. "n600,000,000". Adding "n" as an
+# accepted currency prefix was tried and reverted: "n" is an ordinary letter,
+# and it matched things like "on n 2024 filings" as a false positive with
+# confidence 1.0, which is a worse failure than missing the real figure and
+# falling through to the model. Documents with this rendering artifact
+# correctly fall through to the model path instead, which reads them as
+# plain text with no such ambiguity. See Results.md for the run that found
+# both issues.
 _CURRENCY_AMOUNT = re.compile(
-    r"(?:sum insured|coverage limit|limit of liability|total sum insured)"
+    r"(?:(?:property|building|contents|stock)?\s*damage\s+sum\s+insured"
+    r"|total\s+sum\s+insured"
+    r"|sum\s+insured"
+    r"|insured\s+amount"
+    r"|coverage\s+limit"
+    r"|limit\s+of\s+liability)"
     r"[^\d₹]{0,40}"
     r"((?:₹|Rs\.?|INR|USD|\$)\s?[\d,]{4,})",
     re.IGNORECASE,
