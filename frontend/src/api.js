@@ -317,3 +317,30 @@ export async function fillProposalForm(clientId, file, carrierId) {
     body: form,
   })
 }
+
+// ---- Document Intelligence vertical slice ---------------------------------
+
+/** Upload one policy document: quality check, OCR fallback, one extracted
+ * fact with evidence and typed confidence, awaiting human review. */
+export function uploadForExtraction(file) {
+  const form = new FormData()
+  form.append('file', file)
+  return request('/doc-intelligence/upload', { method: 'POST', body: form })
+}
+
+export function getExtractionFact(factId) {
+  return request(`/doc-intelligence/facts/${factId}`)
+}
+
+export function reviewExtractionFact(factId, reviewer, action, newValue, reason) {
+  return request(`/doc-intelligence/facts/${factId}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      reviewer,
+      action,
+      new_value: newValue || null,
+      reason: reason || null,
+    }),
+  })
+}

@@ -11,3 +11,10 @@ python-pptx==1.0.2
 # local embedding (~300MB more) which are unused here — embeddings come from
 # Ollama, and Chroma is told never to embed anything itself.
 chromadb-client==1.5.9
+
+# OCR fallback (Document Intelligence vertical slice). Both are Python
+# bindings only — the actual engines (tesseract-ocr, poppler-utils) are
+# installed as system packages in the Dockerfile.
+pytesseract==0.3.13
+pdf2image==1.17.0
+Pillow>=10.4.0

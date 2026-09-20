@@ -1506,3 +1506,125 @@ button.suggestion:hover { border-color: var(--accent-line); color: var(--accent-
   font-size: 12px;
   color: var(--ink-faint);
 }
+
+/* ------------------------------------------- Document Intelligence slice -- */
+
+.confidence-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  margin: 14px 0;
+}
+
+.confidence-badge.tone-ok {
+  background: var(--ok-bg);
+  border-color: var(--ok-line);
+}
+
+.confidence-badge.tone-warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+}
+
+.confidence-badge.tone-bad {
+  background: var(--bad-bg);
+  border-color: var(--bad-line);
+}
+
+.confidence-label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tone-ok .confidence-label { color: var(--ok); }
+.tone-warn .confidence-label { color: var(--warn); }
+.tone-bad .confidence-label { color: var(--bad); }
+
+.confidence-detail {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.confidence-note {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.extracted-fact {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sheet);
+}
+
+.extracted-fact-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+
+.extracted-fact-value {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.extracted-fact-original {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+
+.evidence-block {
+  margin: 14px 0;
+  padding: 13px 15px;
+  background: var(--sunken);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--accent-line);
+}
+
+.evidence-source {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  margin-top: 5px;
+}
+
+.evidence-snippet {
+  margin: 10px 0 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--line-firm);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.review-bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.correction-form {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  flex: 1;
+}

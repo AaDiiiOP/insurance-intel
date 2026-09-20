@@ -57,6 +57,23 @@ future ones. Nothing is trained — it's plain text you can read, edit, or
 delete — and a rule that would make a document less complete or less candid
 is refused, in code, even if it's typed in by hand.
 
+**Document Intelligence (early vertical slice).** A separate, deliberately
+narrow path under its own "Doc Intelligence" screen: upload any policy
+document — including a scanned one — and the tool extracts its coverage
+limit / sum insured as one structured, evidence-backed fact rather than
+free text. If the document has no usable text layer, OCR (Tesseract) runs
+automatically. Every fact carries **typed** confidence — a value from a
+deterministic rule reads differently from an OCR engine's own score, which
+reads differently again from a model's self-reported plausibility, and the
+UI labels which kind it's showing rather than presenting all three as
+equivalent percentages. A human then verifies, corrects, or flags the fact,
+and every action is kept in an append-only trail.
+
+This is intentionally the only fact type extracted this way today. It
+exists to prove the shape (evidence + typed confidence + review + audit)
+works end to end before the same pattern is extended to more fact types or
+document kinds — see "Document Intelligence" below for the reasoning.
+
 ---
 
 ## Why it's built this way
@@ -178,7 +195,61 @@ during a DNS cutover.
 
 ---
 
-## Architecture
+## Document Intelligence
+
+A separate vertical slice, reachable from its own "Doc Intelligence" screen,
+kept apart from the rest of the app on purpose.
+
+**What it does.** Upload one policy document. If it has a usable text layer,
+that's read directly; if it doesn't — a scanned copy, a photographed
+schedule — Tesseract OCR runs automatically, page by page, and reports its
+own confidence for each page. Either way, the tool then extracts exactly one
+fact: the coverage limit / sum insured. That fact is stored with:
+
+- **Evidence** — the page, section, and an exact quoted snippet it came from,
+  so a reviewer can check the source rather than take the number on faith.
+- **Typed confidence** — not a bare percentage. Three distinct kinds, each
+  meaning something different, and the UI names which one it's showing:
+  - `deterministic` — a rule (a labelled currency figure matching a known
+    pattern) either matched or it didn't. Value is 1.0 or the fact isn't
+    created at all.
+  - `ocr_engine` — Tesseract's own per-word recognition confidence,
+    averaged for the page the value came from.
+  - `model_self_reported` — the local LLM's own stated plausibility when
+    neither of the above applies. Never a calibrated probability, and
+    never confused with the other two in the schema or the UI.
+- **Status** — every fact starts `needs_review`. Nothing is ever
+  auto-verified; a human always makes the final call.
+
+A reviewer can **✓ Verify**, **✎ Correct** (with a reason), or **⚠ flag for
+review**. Every action appends a row to an audit trail that is never edited
+or deleted — the same principle as the draft-approval trail elsewhere in
+this tool.
+
+**Why only one fact type.** This exists to answer one question before
+anything is built on top of it: do the evidence/confidence/review/audit
+shapes actually hold up against a real document? Extracting broadly before
+that question is answered would mean discovering a wrong schema after
+building ten extraction paths on it, instead of after building one. Once
+this shape is validated against real use, the same pattern extends to more
+fact types — this is deliberately not that yet.
+
+**Pilot-stage tenant boundary.** Every fact and document created here
+belongs to an `organization_id`. Right now that's a single default
+organization with **application-level filtering, not database-enforced
+isolation** — explicitly not production-grade multi-tenancy. Fine for a
+handful of pilot brokers; something to revisit deliberately (row-level
+security or per-tenant databases) before real customer data at scale. The
+schema is shaped so that upgrade doesn't require rewriting the tables.
+
+**Nothing new was added to run this.** OCR uses Tesseract (a system package,
+installed in the backend's own Docker image) and Poppler for PDF rendering —
+both fully local and offline. Extraction uses the same local Ollama model as
+every other feature in this tool. No new database, no cloud OCR, no paid API.
+
+---
+
+
 
 ```
 backend/
@@ -197,6 +268,8 @@ backend/
   drafting.py     the four document generators (Phase 4)
   export_docx.py  draft -> real .docx
   feedback.py     house-style distillation with a safety guardrail (Phase 5)
+  ocr.py          quality gate + Tesseract OCR fallback (Document Intelligence)
+  doc_intelligence.py  the coverage-limit extraction fact (Document Intelligence)
   llm.py          the one place that talks to Ollama
   prompts/*.txt   every prompt, kept out of the code
 
@@ -303,6 +376,11 @@ and indexing are separate steps. Check Settings for the real cause (usually
 actually be policy paperwork, or the parse produced too little text.
 Regenerate the briefing; if it's still empty, check what was actually
 extracted at `GET /documents/{id}/text`.
+
+**Doc Intelligence upload fails immediately on any PDF** -- if the error
+mentions Tesseract not being found, the backend image needs rebuilding after
+the OCR packages were added: `docker compose up --build` (not just `up`),
+since `docker compose up` alone reuses an already-built image.
 
 **Ports clash with another project** -- everything's remapped off the common
 defaults (5183 / 8100 / 5442 / 8101 instead of 5173 / 8000 / 5432 / 8001)

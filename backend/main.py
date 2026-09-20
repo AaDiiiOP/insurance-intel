@@ -29,6 +29,7 @@ from pydantic import BaseModel
 
 import chat
 import db
+import doc_intelligence
 import drafting
 import export_docx
 import extraction
@@ -41,7 +42,13 @@ import tokenise
 import vectorstore
 import verify
 from llm import LLMError
-from parsers import SUPPORTED_EXTENSIONS, ParseError, extension_of, parse_file
+from parsers import (
+    SUPPORTED_EXTENSIONS,
+    ParseError,
+    extension_of,
+    parse_file,
+    parse_file_with_quality,
+)
 from summarise import summarise_carrier
 from vectorstore import VectorStoreError
 
@@ -2413,4 +2420,255 @@ async def fill_proposal_form(
 
     payload = _draft_response(row)
     payload["fields"] = result["fields"]
+    return payload
+
+
+# ==========================================================================
+# Document Intelligence vertical slice
+#
+# A separate, self-contained path: upload -> quality check -> text/OCR ->
+# one extracted fact -> evidence + typed confidence -> human review ->
+# append-only audit event. Deliberately does not touch the existing carrier
+# upload/briefing flow above — that flow keeps working exactly as it did.
+# This exists to validate the schema (db.py's extraction_facts /
+# extraction_events / organizations) against one real path before any other
+# extraction code is asked to use the same shapes.
+# ==========================================================================
+
+
+class ReviewAction(BaseModel):
+    """A human verifying, correcting, or flagging one extracted fact."""
+
+    reviewer: str
+    action: str  # 'verified' | 'corrected' | 'flagged'
+    new_value: str | None = None
+    reason: str | None = None
+
+
+def _fact_response(row: dict) -> dict:
+    return {
+        "fact_id": str(row["id"]),
+        "document_id": str(row["document_id"]),
+        "fact_type": row["fact_type"],
+        "label": row["label"],
+        "value": row["value"],
+        "original_value": row.get("original_value"),
+        "status": row["status"],
+        "evidence": {
+            "page": row.get("evidence_page"),
+            "section": row.get("evidence_section"),
+            "snippet": row.get("evidence_snippet"),
+            "source": row.get("evidence_source"),
+        },
+        "confidence": {
+            "value": row["confidence_value"],
+            "type": row["confidence_type"],
+            "method": row["confidence_method"],
+            "note": row.get("confidence_note"),
+        },
+        "produced_by": row["produced_by"],
+        "created_at": row["created_at"].isoformat(),
+        "updated_at": row["updated_at"].isoformat(),
+    }
+
+
+@app.post("/doc-intelligence/upload")
+async def doc_intelligence_upload(file: UploadFile = File(...)):
+    """
+    Upload one policy document for the vertical slice: quality check, OCR
+    fallback if needed, extraction of the coverage-limit fact, all stored
+    with evidence and typed confidence, awaiting human review.
+
+    Pilot-stage tenant scoping: every document and fact created here belongs
+    to the default organization (db.DEFAULT_ORGANIZATION_ID). Filtering by
+    organization_id is application-level, not database-enforced — documented
+    explicitly, per the pilot-stage decision, as not yet real isolation.
+    """
+    data = await file.read()
+    filename = file.filename or "unnamed"
+
+    try:
+        parsed, quality = parse_file_with_quality(filename, data)
+    except ParseError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    with db.get_connection() as conn:
+        organization_id = db.get_or_create_default_organization(conn)
+
+        # Reuses the existing documents table and carrier_id's nullability —
+        # a doc-intelligence upload is not attached to any carrier, which the
+        # schema already allows.
+        carrier_id = db.create_carrier(conn, f"(unfiled) {filename}")
+        document_row = db.create_document(
+            conn,
+            carrier_id=carrier_id,
+            filename=filename,
+            file_type=extension_of(filename),
+            size_bytes=len(data),
+            pages=quality["pages"],
+            chars=parsed.chars,
+            status="parsed",
+            error_message=None,
+            extracted_text=parsed.text,
+        )
+        document_id = str(document_row["id"])
+
+        db.save_document_quality(
+            conn,
+            document_id=document_id,
+            used_ocr=quality["used_ocr"],
+            pages_total=quality["pages"],
+            pages_ocr_low_confidence=len(quality.get("low_confidence_pages", [])),
+            avg_ocr_confidence=quality.get("avg_ocr_confidence"),
+            notes=quality.get("notes", []),
+        )
+
+    # Extraction happens outside the connection block: it may call the LLM,
+    # which should never hold a database connection open while it runs.
+    if not llm.is_available():
+        # The document and its quality record are already saved — extraction
+        # can be retried later without re-uploading. Nothing here invents a
+        # fact rather than admit the model is unreachable.
+        return {
+            "document_id": document_id,
+            "quality": quality,
+            "fact": None,
+            "extraction_error": (
+                f"Ollama is not reachable at {OLLAMA_HOST}, or "
+                f"'{llm.OLLAMA_MODEL}' is not pulled. The document is saved; "
+                "re-run extraction once it is available."
+            ),
+        }
+
+    ocr_confidence = quality.get("avg_ocr_confidence")
+    extracted = doc_intelligence.extract_coverage_limit(
+        text=parsed.text, ocr_confidence=ocr_confidence
+    )
+
+    if extracted is None:
+        # No fact created — per the "no silent guessing" rule, absence is
+        # represented by there being no row, not by a row with an empty or
+        # invented value.
+        return {
+            "document_id": document_id,
+            "quality": quality,
+            "fact": None,
+            "extraction_error": (
+                "No coverage limit could be found in this document with "
+                "enough confidence to record."
+            ),
+        }
+
+    with db.get_connection() as conn:
+        fact_row = db.save_extraction_fact(
+            conn,
+            organization_id=organization_id,
+            document_id=document_id,
+            fact_type=extracted["fact_type"],
+            label=extracted["label"],
+            value=extracted["value"],
+            evidence=extracted["evidence"],
+            confidence=extracted["confidence"],
+            status="needs_review",
+            produced_by=extracted["produced_by"],
+        )
+
+    return {
+        "document_id": document_id,
+        "quality": quality,
+        "fact": _fact_response(fact_row),
+    }
+
+
+@app.get("/doc-intelligence/documents/{document_id}/facts")
+def list_document_facts(document_id: str):
+    document_id = _validate_uuid(document_id, "document id")
+    with db.get_connection() as conn:
+        rows = db.list_extraction_facts(conn, document_id)
+        quality = db.get_document_quality(conn, document_id)
+    return {
+        "document_id": document_id,
+        "quality": quality,
+        "facts": [_fact_response(r) for r in rows],
+    }
+
+
+@app.get("/doc-intelligence/facts/{fact_id}")
+def get_fact(fact_id: str):
+    fact_id = _validate_uuid(fact_id, "fact id")
+    with db.get_connection() as conn:
+        row = db.get_extraction_fact(conn, fact_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Fact not found.")
+        events = db.get_extraction_events(conn, fact_id)
+    payload = _fact_response(row)
+    payload["history"] = [
+        {
+            "event": e["event"],
+            "reviewer": e["reviewer"],
+            "before_value": e["before_value"],
+            "after_value": e["after_value"],
+            "reason": e["reason"],
+            "at": e["created_at"].isoformat(),
+        }
+        for e in events
+    ]
+    return payload
+
+
+@app.post("/doc-intelligence/facts/{fact_id}/review")
+def review_fact(fact_id: str, body: ReviewAction):
+    """
+    Record a human review action on one extracted fact.
+
+    'corrected' requires new_value — a correction with nothing to correct to
+    is not a correction. The event is appended to extraction_events
+    regardless of outcome; nothing here is ever deleted or overwritten,
+    matching the same append-only principle as draft_events.
+    """
+    fact_id = _validate_uuid(fact_id, "fact id")
+
+    reviewer = " ".join((body.reviewer or "").split())
+    if not reviewer:
+        raise HTTPException(status_code=400, detail="Enter your name to review this.")
+
+    action = (body.action or "").strip().lower()
+    if action not in {"verified", "corrected", "flagged"}:
+        raise HTTPException(
+            status_code=400, detail="Action must be verified, corrected or flagged."
+        )
+
+    new_value = None
+    if action == "corrected":
+        new_value = (body.new_value or "").strip()
+        if not new_value:
+            raise HTTPException(
+                status_code=400, detail="Provide the corrected value."
+            )
+
+    with db.get_connection() as conn:
+        row = db.review_extraction_fact(
+            conn,
+            fact_id,
+            event=action,
+            reviewer=reviewer[:120],
+            new_value=new_value,
+            reason=" ".join((body.reason or "").split())[:300] or None,
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Fact not found.")
+        events = db.get_extraction_events(conn, fact_id)
+
+    payload = _fact_response(row)
+    payload["history"] = [
+        {
+            "event": e["event"],
+            "reviewer": e["reviewer"],
+            "before_value": e["before_value"],
+            "after_value": e["after_value"],
+            "reason": e["reason"],
+            "at": e["created_at"].isoformat(),
+        }
+        for e in events
+    ]
     return payload

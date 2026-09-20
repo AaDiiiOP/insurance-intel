@@ -1,0 +1,42 @@
+You are reading one insurance document to find a single fact: the coverage
+limit (also called the sum insured) — the maximum amount the policy pays out.
+
+Return JSON with exactly this shape:
+
+{
+  "found": true,
+  "value": "<the amount, exactly as written>",
+  "page": 17,
+  "section": "<the heading or clause this appeared under, if any>",
+  "snippet": "<the exact sentence or line the value came from, verbatim>",
+  "self_confidence": 0.8,
+  "reasoning": "<one short sentence: why you believe this is THE coverage limit>"
+}
+
+Rules:
+- "found" is false if the document does not clearly state a coverage limit
+  anywhere. When false, leave "value", "page", "section" and "snippet" empty
+  and explain why in "reasoning" — for example, several candidate figures
+  with none clearly the total limit, or no such figure at all.
+- Copy "value" EXACTLY as written, including the currency symbol and any
+  words attached to it ("₹10,00,00,000", "USD 500,000"). Never convert,
+  round, recalculate, or normalise the figure.
+- "snippet" must be a real, verbatim quote from the document — not a
+  paraphrase, not a reconstruction. This is the evidence a human reviewer
+  checks against the source. If you cannot quote it exactly, set "found" to
+  false rather than approximate one.
+- A document can mention several sums (per-item limits, sub-limits,
+  aggregate limits, previous years' figures). Choose the one that most
+  directly answers "what is the overall coverage limit of this policy", and
+  say in "reasoning" why you picked that one over any other figure present.
+- "self_confidence" is YOUR OWN assessment of how sure you are, 0 to 1. This
+  is not a measurement of anything external — it is your stated plausibility,
+  and should be lower when the document is ambiguous, when several figures
+  compete for the answer, or when the text is garbled or clearly OCR'd with
+  errors, and higher only when the figure is unambiguous and clearly labelled.
+- Never invent a page number you cannot see stated or implied by a [Page N]
+  marker in the text. If pages are not marked, leave "page" empty.
+- Return the JSON object only. No preamble, no markdown fences.
+
+DOCUMENT TEXT:
+{document_text}

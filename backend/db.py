@@ -325,6 +325,135 @@ CREATE TABLE IF NOT EXISTS house_style (
     edited_by_hand BOOLEAN NOT NULL DEFAULT false,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ==========================================================================
+-- Document Intelligence vertical slice
+--
+-- One end-to-end path, deliberately narrow: upload -> quality check ->
+-- text/OCR -> one extracted fact -> evidence + typed confidence -> human
+-- review/correction -> append-only audit event. Nothing below is meant to
+-- generalise yet — the point of a vertical slice is to find out whether
+-- these four shapes (organization, fact, evidence+confidence, event) are
+-- right BEFORE building the other extraction paths on top of them.
+-- ==========================================================================
+
+-- Pilot-stage tenant boundary: application-level filtering on
+-- organization_id, not database-enforced row-level security. Every relevant
+-- table gets the column below; every query in this vertical slice is scoped
+-- by it. This is NOT production-grade tenant isolation — a bug in
+-- application code could still cross the boundary, which real RLS would
+-- prevent. Explicitly acceptable for a 2-3 broker pilot; revisit before
+-- real customer data at scale, per the pilot-stage decision on file.
+CREATE TABLE IF NOT EXISTS organizations (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- One structured, evidence-backed fact extracted from one document.
+--
+-- This is the object the whole slice exists to validate: whether "a fact"
+-- can be represented once, uniformly, whether it came from a deterministic
+-- check, an OCR read, or a model's own judgement. If this shape is wrong,
+-- it is wrong here in one place — not repeated wrong across ten extraction
+-- paths built on a bad assumption.
+--
+-- Confidence is deliberately NOT a single number. 92% from a checksum and
+-- 92% from a model's self-report are different claims, and collapsing them
+-- into one field would let a UI display them as though they meant the same
+-- thing. confidence_type says which kind of claim value actually is:
+--   'deterministic'      — a rule either passed or it did not (value is 1.0 or 0.0)
+--   'ocr_engine'          — the OCR engine's own per-token/region confidence
+--   'model_self_reported' — an LLM's stated plausibility, never a calibrated probability
+CREATE TABLE IF NOT EXISTS extraction_facts (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    document_id       UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+
+    -- What was extracted, kept generic on purpose: this slice extracts one
+    -- fact type (coverage/sum insured limit) to prove the shape works, not
+    -- to build a taxonomy. A fixed enum here would be exactly the kind of
+    -- premature structure the pilot-gate decision says to avoid.
+    fact_type         TEXT NOT NULL,
+    label             TEXT NOT NULL,
+    value             TEXT NOT NULL,
+
+    -- Evidence: where this value came from, so a reviewer can check the
+    -- source page rather than take the extraction on faith.
+    evidence_page      INTEGER,
+    evidence_section    TEXT,
+    evidence_snippet    TEXT,
+    evidence_source     TEXT NOT NULL DEFAULT 'text_layer'
+                         CHECK (evidence_source IN ('text_layer', 'ocr')),
+
+    -- Typed confidence — see the note above. method names the specific
+    -- engine/rule/model version, so accuracy can be tracked per-method over
+    -- time once there is enough data to compare.
+    confidence_value    REAL NOT NULL,
+    confidence_type     TEXT NOT NULL
+                         CHECK (confidence_type IN
+                                ('deterministic', 'ocr_engine', 'model_self_reported')),
+    confidence_method   TEXT NOT NULL,
+    confidence_note     TEXT,
+
+    -- The crucial rule from the pilot-stage plan: if the system doesn't
+    -- know, it says so, rather than guessing. needs_review is set
+    -- automatically when confidence falls below a threshold (see
+    -- doc_intelligence.py) or extraction could not settle on a value at all.
+    status              TEXT NOT NULL DEFAULT 'needs_review'
+                         CHECK (status IN ('needs_review', 'verified', 'corrected')),
+
+    -- The value as first extracted, kept even after a correction — a
+    -- reviewer's correction should be comparable against what the model
+    -- actually said, not overwrite the evidence that it said it.
+    original_value      TEXT,
+
+    -- Which model/rule produced this, and its version, so accuracy is
+    -- trackable per version once an evaluation set exists (Phase 3).
+    produced_by         TEXT NOT NULL,
+
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS extraction_facts_document_idx
+    ON extraction_facts(document_id);
+CREATE INDEX IF NOT EXISTS extraction_facts_org_idx
+    ON extraction_facts(organization_id, status);
+
+-- Append-only. Every verify/correct action on a fact is recorded here and
+-- nothing is ever updated or deleted — matches the same append-only
+-- principle as draft_events, for the same reason: an audit trail that can
+-- be edited is not an audit trail.
+CREATE TABLE IF NOT EXISTS extraction_events (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fact_id     UUID NOT NULL REFERENCES extraction_facts(id) ON DELETE CASCADE,
+    event       TEXT NOT NULL CHECK (event IN ('verified', 'corrected', 'flagged')),
+    -- Self-declared, same honesty as draft_events.actor: there is no auth
+    -- system yet, so this records who SAID they reviewed it.
+    reviewer    TEXT NOT NULL,
+    before_value TEXT,
+    after_value  TEXT,
+    reason       TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS extraction_events_fact_idx
+    ON extraction_events(fact_id, created_at ASC);
+
+-- Document-level OCR/quality outcome. One row per document, showing whether
+-- OCR ran at all and what the page-level picture looked like — separate
+-- from extraction_facts because "was this document readable" is a property
+-- of the document, not of any one fact pulled from it.
+CREATE TABLE IF NOT EXISTS document_quality (
+    document_id     UUID PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+    used_ocr        BOOLEAN NOT NULL DEFAULT false,
+    pages_total     INTEGER NOT NULL DEFAULT 0,
+    pages_ocr_low_confidence INTEGER NOT NULL DEFAULT 0,
+    avg_ocr_confidence REAL,
+    notes           JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 """
 
 
@@ -351,6 +480,27 @@ ALTER TABLE summaries
 ALTER TABLE draft_events DROP CONSTRAINT IF EXISTS draft_events_event_check;
 ALTER TABLE draft_events ADD CONSTRAINT draft_events_event_check
     CHECK (event IN ('created', 'edited', 'approved', 'revoked', 'exported'));
+
+-- Pilot-stage tenant boundary, added to tables that predate it. A single
+-- default organization is created and backfilled onto every existing row,
+-- so this migration never breaks data from before the boundary existed.
+INSERT INTO organizations (id, name)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Default organization')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE carriers
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE carriers SET organization_id = '00000000-0000-0000-0000-000000000001'
+    WHERE organization_id IS NULL;
+ALTER TABLE carriers ALTER COLUMN organization_id SET NOT NULL;
+
+ALTER TABLE clients
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE clients SET organization_id = '00000000-0000-0000-0000-000000000001'
+    WHERE organization_id IS NULL;
+ALTER TABLE clients ALTER COLUMN organization_id SET NOT NULL;
 """
 
 
@@ -373,11 +523,19 @@ def init_schema() -> None:
 
 
 def create_carrier(conn, name: str) -> str:
-    """Insert a carrier and return its generated id."""
+    """
+    Insert a carrier and return its generated id.
+
+    Defaults to the pilot-stage default organization when no caller passes
+    one — every existing call site (the carrier-briefing flow) predates the
+    organization_id column and is untouched here, so it keeps working
+    exactly as before rather than being required to change alongside a
+    schema addition it has no reason to know about.
+    """
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO carriers (name) VALUES (%s) RETURNING id",
-            (name,),
+            "INSERT INTO carriers (name, organization_id) VALUES (%s, %s) RETURNING id",
+            (name, DEFAULT_ORGANIZATION_ID),
         )
         return str(cur.fetchone()["id"])
 
@@ -678,18 +836,25 @@ CLIENT_FIELDS = (
 
 def create_client(conn, *, fields: dict, categories: list[str],
                   redacted_profile: str) -> dict:
-    """Insert a client and return the full row."""
+    """
+    Insert a client and return the full row.
+
+    Same pilot-stage default-organization fallback as create_carrier: the
+    existing client-intake flow predates organization_id and is untouched
+    here, kept working by defaulting rather than requiring every call site
+    to be updated for a column it has no reason to know about.
+    """
     columns = list(CLIENT_FIELDS)
     values = [fields.get(c) for c in columns]
 
-    placeholders = ", ".join(["%s"] * (len(columns) + 2))
-    column_sql = ", ".join(columns + ["categories", "redacted_profile"])
+    placeholders = ", ".join(["%s"] * (len(columns) + 3))
+    column_sql = ", ".join(columns + ["categories", "redacted_profile", "organization_id"])
 
     with conn.cursor() as cur:
         cur.execute(
             f"INSERT INTO clients ({column_sql}) VALUES ({placeholders}) "
             f"RETURNING *",
-            (*values, Jsonb(categories), redacted_profile),
+            (*values, Jsonb(categories), redacted_profile, DEFAULT_ORGANIZATION_ID),
         )
         return dict(cur.fetchone())
 
@@ -1238,3 +1403,172 @@ def insight_counts(conn) -> dict:
             round(row["avg_changed"], 1) if row["avg_changed"] is not None else None
         )
     return out
+
+
+# --------------------------------------------------------------------------
+# Document Intelligence vertical slice — organizations, facts, events
+# --------------------------------------------------------------------------
+
+DEFAULT_ORGANIZATION_ID = "00000000-0000-0000-0000-000000000001"
+
+
+def get_or_create_default_organization(conn) -> str:
+    """
+    The pilot-stage default org.
+
+    A real onboarding flow would let a broker create their own organization;
+    this vertical slice does not build that yet — it only needs to prove the
+    column and the scoping work, which a single default organization already
+    does. Genuinely creating a second organization (and confirming a second
+    broker's data stays apart from the first's) is the actual test of this
+    boundary, not a UI to manage many of them.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO organizations (id, name) VALUES (%s, %s) "
+            "ON CONFLICT (id) DO NOTHING",
+            (DEFAULT_ORGANIZATION_ID, "Default organization"),
+        )
+    return DEFAULT_ORGANIZATION_ID
+
+
+def create_organization(conn, name: str) -> dict:
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO organizations (name) VALUES (%s) RETURNING id, name, created_at",
+            (name,),
+        )
+        return dict(cur.fetchone())
+
+
+def list_organizations(conn) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute("SELECT id, name, created_at FROM organizations ORDER BY created_at")
+        return cur.fetchall()
+
+
+def save_extraction_fact(conn, *, organization_id: str, document_id: str,
+                         fact_type: str, label: str, value: str,
+                         evidence: dict, confidence: dict,
+                         status: str, produced_by: str) -> dict:
+    """
+    Insert one extracted fact with its evidence and typed confidence.
+
+    `evidence` is {page, section, snippet, source}. `confidence` is
+    {value, type, method, note} — see the schema comment on
+    extraction_facts for what each confidence_type actually claims.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO extraction_facts (
+                organization_id, document_id, fact_type, label, value,
+                evidence_page, evidence_section, evidence_snippet, evidence_source,
+                confidence_value, confidence_type, confidence_method, confidence_note,
+                status, original_value, produced_by
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING *
+            """,
+            (
+                organization_id, document_id, fact_type, label, value,
+                evidence.get("page"), evidence.get("section"),
+                evidence.get("snippet"), evidence.get("source", "text_layer"),
+                confidence["value"], confidence["type"], confidence["method"],
+                confidence.get("note"),
+                status, value, produced_by,
+            ),
+        )
+        return dict(cur.fetchone())
+
+
+def list_extraction_facts(conn, document_id: str) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT * FROM extraction_facts WHERE document_id = %s ORDER BY created_at",
+            (document_id,),
+        )
+        return cur.fetchall()
+
+
+def get_extraction_fact(conn, fact_id: str) -> dict | None:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM extraction_facts WHERE id = %s", (fact_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def review_extraction_fact(conn, fact_id: str, *, event: str, reviewer: str,
+                           new_value: str | None, reason: str | None) -> dict | None:
+    """
+    Record a human review action and update the fact's current state.
+
+    The extraction_events row is the permanent record of what happened;
+    the extraction_facts row is updated to reflect current status so the UI
+    can show "corrected" without replaying the event log every time.
+    """
+    fact = get_extraction_fact(conn, fact_id)
+    if not fact:
+        return None
+
+    before_value = fact["value"]
+    after_value = new_value if event == "corrected" else before_value
+    new_status = {"verified": "verified", "corrected": "corrected", "flagged": "needs_review"}[event]
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO extraction_events (fact_id, event, reviewer, before_value, after_value, reason)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (fact_id, event, reviewer, before_value, after_value, reason),
+        )
+        cur.execute(
+            """
+            UPDATE extraction_facts
+            SET value = %s, status = %s, updated_at = now()
+            WHERE id = %s
+            RETURNING *
+            """,
+            (after_value, new_status, fact_id),
+        )
+        return dict(cur.fetchone())
+
+
+def get_extraction_events(conn, fact_id: str) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT * FROM extraction_events WHERE fact_id = %s ORDER BY created_at ASC",
+            (fact_id,),
+        )
+        return cur.fetchall()
+
+
+def save_document_quality(conn, *, document_id: str, used_ocr: bool,
+                          pages_total: int, pages_ocr_low_confidence: int,
+                          avg_ocr_confidence: float | None, notes: list[str]) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO document_quality (
+                document_id, used_ocr, pages_total, pages_ocr_low_confidence,
+                avg_ocr_confidence, notes
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (document_id) DO UPDATE SET
+                used_ocr = EXCLUDED.used_ocr,
+                pages_total = EXCLUDED.pages_total,
+                pages_ocr_low_confidence = EXCLUDED.pages_ocr_low_confidence,
+                avg_ocr_confidence = EXCLUDED.avg_ocr_confidence,
+                notes = EXCLUDED.notes
+            """,
+            (document_id, used_ocr, pages_total, pages_ocr_low_confidence,
+             avg_ocr_confidence, Jsonb(notes)),
+        )
+
+
+def get_document_quality(conn, document_id: str) -> dict | None:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM document_quality WHERE document_id = %s", (document_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None

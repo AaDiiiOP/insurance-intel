@@ -187,8 +187,10 @@ def parse_file(filename: str, data: bytes) -> ParsedDocument:
     Parse one uploaded file.
 
     Raises ParseError with a user-facing message on any failure — unsupported
-    type, oversized, corrupt, or a PDF with no text layer. Callers store that
-    message against the document so the UI can show why it failed.
+    type, oversized, or corrupt. A PDF with a missing or too-thin text layer
+    is no longer an automatic failure: parse_file_with_quality (below) falls
+    back to OCR for that case. This function is kept as the plain, no-OCR
+    path for callers that don't need document_quality bookkeeping.
     """
     if not data:
         raise ParseError("File is empty.")
@@ -222,6 +224,78 @@ def parse_file(filename: str, data: bytes) -> ParsedDocument:
 
     _reject_if_no_text_layer(result, extension)
     return result
+
+
+def parse_file_with_quality(filename: str, data: bytes) -> tuple[ParsedDocument, dict]:
+    """
+    Parse a file, falling back to OCR for a PDF with a thin/missing text
+    layer instead of rejecting it outright.
+
+    Returns (ParsedDocument, quality) — quality is the dict shape
+    ocr.quality_check_and_ocr always returns, suitable for
+    db.save_document_quality regardless of which path was taken. For every
+    format except PDF this is just parse_file plus a quality dict saying OCR
+    was never attempted; DOCX/XLSX/PPTX have no scanned-image failure mode
+    OCR could fix.
+    """
+    if not data:
+        raise ParseError("File is empty.")
+
+    if len(data) > MAX_FILE_BYTES:
+        size_mb = len(data) / (1024 * 1024)
+        limit_mb = MAX_FILE_BYTES // (1024 * 1024)
+        raise ParseError(
+            f"File is {size_mb:.1f} MB, over the {limit_mb} MB limit."
+        )
+
+    extension = extension_of(filename)
+    if extension not in SUPPORTED_EXTENSIONS:
+        supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+        raise ParseError(
+            f"Unsupported file type '{extension or 'unknown'}'. Supported: {supported}."
+        )
+
+    parser = _PARSERS[extension]
+    try:
+        result = parser(data)
+    except ParseError:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to parse %s", filename)
+        raise ParseError(
+            f"Could not read this file — it may be corrupt or password-protected. ({type(exc).__name__})"
+        ) from exc
+
+    no_quality_check = {
+        "used_ocr": False, "text": result.text, "pages": result.pages,
+        "avg_ocr_confidence": None, "low_confidence_pages": [], "notes": [],
+    }
+
+    if extension != ".pdf":
+        # A blank DOCX/XLSX/PPTX is still a real failure — there is no OCR
+        # fallback for a format that was never an image in the first place.
+        _reject_if_no_text_layer(result, extension)
+        return result, no_quality_check
+
+    import ocr as ocr_module
+
+    try:
+        quality = ocr_module.quality_check_and_ocr(data, result)
+    except ocr_module.OCRError as exc:
+        raise ParseError(
+            f"This looks like a scanned PDF with no text layer, and OCR "
+            f"could not run: {exc}"
+        ) from exc
+
+    final_text = quality["text"]
+    if not final_text.strip():
+        raise ParseError(
+            "No text could be extracted, even after OCR. The scan quality "
+            "may be too poor to read — try a clearer copy."
+        )
+
+    final_result = ParsedDocument(text=final_text, pages=quality["pages"])
+    return final_result, quality
 
 
 def _reject_if_no_text_layer(result: ParsedDocument, extension: str) -> None:
