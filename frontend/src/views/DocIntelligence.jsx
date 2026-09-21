@@ -1,7 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
+  createSubmission,
   getExtractionFact,
+  getSubmission,
+  listSubmissions,
   reviewExtractionFact,
   uploadForExtraction,
 } from '../api'
@@ -9,17 +12,19 @@ import {
 /**
  * The Document Intelligence vertical slice.
  *
- * One path only: upload a policy document, see the one fact extracted from
- * it (the coverage limit), with its evidence and typed confidence, and
- * verify or correct it. This is deliberately narrow — the point of a
- * vertical slice is to prove upload -> OCR -> fact -> evidence -> confidence
- * -> review -> audit works end to end on one thing, not to cover every
- * extraction path at once.
+ * A submission groups several documents believed to belong to the same
+ * case - a policy, its own coverage schedule, an endorsement - so facts
+ * extracted from them can be compared to each other. Upload two documents
+ * into one submission and, if they state different figures for the same
+ * thing, both are flagged rather than one silently winning. Upload a
+ * document with no submission and it is scored on its own, same as before.
+ *
+ * Still deliberately narrow: one fact type (the coverage limit), proving
+ * upload -> OCR -> fact -> evidence -> confidence -> cross-document check
+ * -> review -> audit works end to end before the same shapes are used for
+ * anything else.
  */
 
-// How each confidence TYPE is presented, per the explicit instruction: never
-// show a bare percentage. A number means something different depending on
-// where it came from, and the label has to say which claim is being made.
 const CONFIDENCE_COPY = {
   deterministic: {
     label: 'Verified — deterministic check',
@@ -28,14 +33,21 @@ const CONFIDENCE_COPY = {
   },
   ocr_engine: {
     label: (c) => `${Math.round(c.value * 100)}% OCR confidence`,
-    detail: () => 'Tesseract\u2019s own recognition score for this page.',
+    detail: () => "Tesseract's own recognition score for this page.",
     tone: (c) => (c.value >= 0.75 ? 'ok' : c.value >= 0.5 ? 'warn' : 'bad'),
   },
   model_self_reported: {
     label: (c) => `${Math.round(c.value * 100)}% model confidence`,
-    detail: () => 'The model\u2019s own stated plausibility — not a measurement.',
+    detail: () => "The model's own stated plausibility — not a measurement.",
     tone: (c) => (c.value >= 0.75 ? 'ok' : c.value >= 0.5 ? 'warn' : 'bad'),
   },
+}
+
+const STATUS_COPY = {
+  needs_review: { label: 'Needs review', tone: 'warn' },
+  verified: { label: 'Verified', tone: 'ok' },
+  corrected: { label: 'Corrected', tone: 'ok' },
+  contradiction_flagged: { label: 'Contradicts another document', tone: 'bad' },
 }
 
 function ConfidenceBadge({ confidence }) {
@@ -53,69 +65,28 @@ function ConfidenceBadge({ confidence }) {
   )
 }
 
-const STATUS_COPY = {
-  needs_review: { label: 'Needs review', tone: 'warn' },
-  verified: { label: 'Verified', tone: 'ok' },
-  corrected: { label: 'Corrected', tone: 'ok' },
-}
-
-export default function DocIntelligence() {
-  const [uploading, setUploading] = useState(false)
-  const [fact, setFact] = useState(null)
-  const [quality, setQuality] = useState(null)
-  const [documentId, setDocumentId] = useState(null)
-  const [extractionError, setExtractionError] = useState(null)
-  const [error, setError] = useState(null)
-
+function FactCard({ fact, filename, onUpdated, onError }) {
   const [reviewer, setReviewer] = useState('')
   const [correcting, setCorrecting] = useState(false)
   const [correctedValue, setCorrectedValue] = useState('')
   const [reason, setReason] = useState('')
   const [acting, setActing] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [history, setHistory] = useState(fact.history || null)
 
-  const fileRef = useRef(null)
-
-  function reset() {
-    setFact(null)
-    setQuality(null)
-    setDocumentId(null)
-    setExtractionError(null)
-    setError(null)
-    setCorrecting(false)
-    setCorrectedValue('')
-    setReason('')
-  }
-
-  async function handleUpload(file) {
-    if (!file) return
-    reset()
-    setUploading(true)
-    try {
-      const result = await uploadForExtraction(file)
-      setDocumentId(result.document_id)
-      setQuality(result.quality)
-      setFact(result.fact)
-      setExtractionError(result.extraction_error)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setUploading(false)
-    }
-  }
+  const statusCopy = STATUS_COPY[fact.status] || STATUS_COPY.needs_review
 
   async function act(action) {
-    if (!fact) return
     if (!reviewer.trim()) {
-      setError('Enter your name first.')
+      onError('Enter your name first.')
       return
     }
     if (action === 'corrected' && !correctedValue.trim()) {
-      setError('Enter the corrected value.')
+      onError('Enter the corrected value.')
       return
     }
 
     setActing(true)
-    setError(null)
     try {
       const updated = await reviewExtractionFact(
         fact.fact_id,
@@ -124,27 +95,258 @@ export default function DocIntelligence() {
         action === 'corrected' ? correctedValue : null,
         reason,
       )
-      setFact(updated)
+      onUpdated(updated)
+      setHistory(updated.history || null)
       setCorrecting(false)
       setCorrectedValue('')
       setReason('')
     } catch (e) {
-      setError(e.message)
+      onError(e.message)
     } finally {
       setActing(false)
     }
   }
 
-  async function refreshHistory() {
-    if (!fact) return
+  async function toggleHistory() {
+    if (!showHistory && !history) {
+      try {
+        const full = await getExtractionFact(fact.fact_id)
+        setHistory(full.history || [])
+      } catch (e) {
+        onError(e.message)
+      }
+    }
+    setShowHistory((v) => !v)
+  }
+
+  return (
+    <div
+      className={`extracted-fact-block ${
+        fact.status === 'contradiction_flagged' ? 'is-contradiction' : ''
+      }`}
+    >
+      <div className="section-head" style={{ marginBottom: 10 }}>
+        <h2 style={{ fontSize: 16 }}>{filename}</h2>
+        <span
+          className={`pill ${
+            statusCopy.tone === 'ok' ? 'ok' : statusCopy.tone === 'bad' ? 'bad' : ''
+          }`}
+        >
+          {statusCopy.label}
+        </span>
+      </div>
+
+      <div className="extracted-fact">
+        <div className="extracted-fact-label">{fact.label}</div>
+        <div className="extracted-fact-value">{fact.value}</div>
+        {fact.original_value && fact.original_value !== fact.value && (
+          <div className="extracted-fact-original">
+            Originally extracted as: {fact.original_value}
+          </div>
+        )}
+      </div>
+
+      <ConfidenceBadge confidence={fact.confidence} />
+
+      {fact.status === 'contradiction_flagged' && fact.contradiction_note && (
+        <div className="banner bad" style={{ marginTop: 12 }}>
+          {fact.contradiction_note}
+        </div>
+      )}
+
+      <div className="evidence-block">
+        <div className="plan-exclusions-label">Evidence</div>
+        <div className="evidence-source">
+          {[
+            fact.evidence.page ? `Page ${fact.evidence.page}` : null,
+            fact.evidence.section,
+            fact.evidence.source === 'ocr' ? 'read via OCR' : 'read from text layer',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </div>
+        {fact.evidence.snippet && (
+          <blockquote className="evidence-snippet">"{fact.evidence.snippet}"</blockquote>
+        )}
+      </div>
+
+      <div className="review-bar">
+        <input
+          className="approve-name"
+          placeholder="Your name"
+          value={reviewer}
+          onChange={(e) => setReviewer(e.target.value)}
+        />
+
+        {!correcting ? (
+          <>
+            <button className="btn-primary" onClick={() => act('verified')} disabled={acting}>
+              ✓ Verify
+            </button>
+            <button
+              className="btn-ghost"
+              onClick={() => {
+                setCorrectedValue(fact.value)
+                setCorrecting(true)
+              }}
+              disabled={acting}
+            >
+              ✎ Correct
+            </button>
+            <button className="btn-danger" onClick={() => act('flagged')} disabled={acting}>
+              ⚠ Needs review
+            </button>
+          </>
+        ) : (
+          <div className="correction-form">
+            <input
+              className="approve-note"
+              placeholder="Corrected value"
+              value={correctedValue}
+              onChange={(e) => setCorrectedValue(e.target.value)}
+            />
+            <input
+              className="approve-note"
+              placeholder="Reason (optional)"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            <button className="btn-ghost" onClick={() => setCorrecting(false)}>
+              Cancel
+            </button>
+            <button className="btn-primary" onClick={() => act('corrected')} disabled={acting}>
+              Save correction
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="history">
+        <button className="history-toggle" onClick={toggleHistory}>
+          {showHistory ? 'Hide' : 'Show'} history
+        </button>
+        {showHistory &&
+          history?.map((h, i) => (
+            <div className="history-row" key={i}>
+              <span className={`history-event ${h.event === 'flagged' ? 'edited' : h.event}`}>
+                {h.event}
+              </span>
+              <span className="history-when">{new Date(h.at).toLocaleString()}</span>
+              <span className="history-detail">
+                {h.reviewer}
+                {h.event === 'corrected' && ` — "${h.before_value}" → "${h.after_value}"`}
+                {h.reason && ` (${h.reason})`}
+              </span>
+            </div>
+          ))}
+      </div>
+    </div>
+  )
+}
+
+export default function DocIntelligence() {
+  const [submissions, setSubmissions] = useState([])
+  const [submissionId, setSubmissionId] = useState('')
+  const [newLabel, setNewLabel] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  const [documents, setDocuments] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const [extractionError, setExtractionError] = useState(null)
+  const [error, setError] = useState(null)
+
+  const fileRef = useRef(null)
+
+  useEffect(() => {
+    listSubmissions()
+      .then((d) => setSubmissions(d.submissions || []))
+      .catch(() => setSubmissions([]))
+  }, [])
+
+  async function handleCreateSubmission() {
+    if (!newLabel.trim()) {
+      setError('Give the submission a name — e.g. the company or case it belongs to.')
+      return
+    }
+    setCreating(true)
+    setError(null)
     try {
-      setFact(await getExtractionFact(fact.fact_id))
+      const created = await createSubmission(newLabel.trim())
+      setSubmissions((current) => [created, ...current])
+      setSubmissionId(created.submission_id)
+      setNewLabel('')
+      setDocuments([])
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  async function loadSubmission(id) {
+    if (!id) {
+      setDocuments([])
+      return
+    }
+    try {
+      const full = await getSubmission(id)
+      const byDocument = {}
+      for (const doc of full.documents) {
+        byDocument[doc.document_id] = {
+          document_id: doc.document_id,
+          filename: doc.filename,
+          fact: null,
+        }
+      }
+      for (const fact of full.facts) {
+        if (byDocument[fact.document_id]) byDocument[fact.document_id].fact = fact
+      }
+      setDocuments(Object.values(byDocument))
     } catch (e) {
       setError(e.message)
     }
   }
 
-  const statusCopy = fact ? STATUS_COPY[fact.status] : null
+  function selectSubmission(id) {
+    setSubmissionId(id)
+    setError(null)
+    setExtractionError(null)
+    loadSubmission(id)
+  }
+
+  async function handleUpload(file) {
+    if (!file) return
+    setError(null)
+    setExtractionError(null)
+    setUploading(true)
+    try {
+      const result = await uploadForExtraction(file, submissionId || null)
+      setDocuments((current) => [
+        ...current,
+        {
+          document_id: result.document_id,
+          filename: file.name,
+          quality: result.quality,
+          fact: result.fact,
+        },
+      ])
+      setExtractionError(result.extraction_error)
+
+      if (result.contradiction_detected && submissionId) {
+        loadSubmission(submissionId)
+      }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function updateFact(documentId, updatedFact) {
+    setDocuments((current) =>
+      current.map((d) => (d.document_id === documentId ? { ...d, fact: updatedFact } : d)),
+    )
+  }
 
   return (
     <>
@@ -153,16 +355,53 @@ export default function DocIntelligence() {
           <p className="eyebrow">Vertical slice</p>
           <h1>Document Intelligence</h1>
           <p className="subtitle">
-            One path, end to end: upload a policy document, extract its
-            coverage limit with evidence and a typed confidence, then verify
-            or correct it. Everything here stays local — OCR runs with
-            Tesseract, extraction with the same local model as the rest of
-            the tool.
+            Group a few documents into one submission — a policy and its own
+            coverage schedule, say — and each one's coverage limit is
+            extracted and checked against the others. If two disagree, both
+            are flagged rather than one silently winning. Upload with no
+            submission selected to score a single document on its own.
+            Everything stays local — OCR runs with Tesseract, extraction
+            with the same local model as the rest of the tool.
           </p>
         </div>
       </header>
 
       {error && <div className="banner bad">{error}</div>}
+
+      <div className="section">
+        <div className="section-head">
+          <h2>Submission</h2>
+        </div>
+
+        <div className="scope-row" style={{ marginBottom: 10 }}>
+          <label htmlFor="submission-picker">Working in</label>
+          <select
+            id="submission-picker"
+            value={submissionId}
+            onChange={(e) => selectSubmission(e.target.value)}
+          >
+            <option value="">no submission — score documents one at a time</option>
+            {submissions.map((s) => (
+              <option key={s.submission_id} value={s.submission_id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="actions" style={{ marginTop: 0 }}>
+          <input
+            className="approve-note"
+            style={{ maxWidth: 260 }}
+            placeholder="New submission name — e.g. a company name"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+          />
+          <button className="btn-ghost" onClick={handleCreateSubmission} disabled={creating}>
+            {creating ? 'Creating…' : '+ New submission'}
+          </button>
+        </div>
+      </div>
 
       <input
         ref={fileRef}
@@ -175,209 +414,70 @@ export default function DocIntelligence() {
         }}
       />
 
-      {!fact && (
-        <button
-          type="button"
-          className={`dropzone ${uploading ? 'is-over' : ''}`}
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-        >
-          <div className="dropzone-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-              <path
-                d="M10 14V4m0 0L6 8m4-4l4 4M3 15v1a2 2 0 002 2h10a2 2 0 002-2v-1"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <p className="dropzone-hint">
-            {uploading
-              ? 'Reading the document \u2014 OCR runs automatically if it is scanned…'
-              : 'Drop a policy document here \u2014 a scanned copy is fine'}
-          </p>
-        </button>
-      )}
-
-      {quality && (
-        <div className="section">
-          <div className="section-head">
-            <h2>Document quality</h2>
-          </div>
-          <div className="facts">
-            <div className="fact">
-              <div className="fact-label">Text source</div>
-              <div className="fact-value">
-                {quality.used_ocr ? 'OCR (scanned document)' : 'Native text layer'}
-              </div>
-            </div>
-            <div className="fact">
-              <div className="fact-label">Pages</div>
-              <div className="fact-value">{quality.pages}</div>
-            </div>
-            {quality.used_ocr && (
-              <div className="fact">
-                <div className="fact-label">Average OCR confidence</div>
-                <div className="fact-value">
-                  {quality.avg_ocr_confidence?.toFixed(1)}%
-                </div>
-              </div>
-            )}
-          </div>
-          {quality.notes?.length > 0 && (
-            <div className="banner info" style={{ marginTop: 12 }}>
-              {quality.notes.join(' ')}
-            </div>
-          )}
+      <button
+        type="button"
+        className={`dropzone ${uploading ? 'is-over' : ''}`}
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        style={{ marginTop: 18 }}
+      >
+        <div className="dropzone-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M10 14V4m0 0L6 8m4-4l4 4M3 15v1a2 2 0 002 2h10a2 2 0 002-2v-1"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
-      )}
+        <p className="dropzone-hint">
+          {uploading
+            ? 'Reading the document — OCR runs automatically if it is scanned…'
+            : submissionId
+              ? 'Drop the next document for this submission here'
+              : 'Drop a policy document here — a scanned copy is fine'}
+        </p>
+      </button>
 
       {extractionError && (
-        <div className="banner bad">
-          No fact was recorded. {extractionError}
+        <div className="banner bad" style={{ marginTop: 14 }}>
+          No fact was recorded for that upload. {extractionError}
         </div>
       )}
 
-      {fact && (
+      {documents.length > 0 && (
         <div className="section">
           <div className="section-head">
-            <h2>Extracted fact</h2>
-            <span className={`pill ${statusCopy.tone === 'ok' ? 'ok' : ''}`}>
-              {statusCopy.label}
-            </span>
+            <h2>{submissionId ? 'Documents in this submission' : 'Extracted fact'}</h2>
+            <span className="section-count">{documents.length}</span>
           </div>
 
-          <div className="extracted-fact">
-            <div className="extracted-fact-label">{fact.label}</div>
-            <div className="extracted-fact-value">{fact.value}</div>
-            {fact.original_value && fact.original_value !== fact.value && (
-              <div className="extracted-fact-original">
-                Originally extracted as: {fact.original_value}
+          {documents.map((d) =>
+            d.fact ? (
+              <div key={d.document_id} style={{ marginBottom: 16 }}>
+                <FactCard
+                  fact={d.fact}
+                  filename={d.filename}
+                  onUpdated={(updated) => updateFact(d.document_id, updated)}
+                  onError={setError}
+                />
               </div>
-            )}
-          </div>
-
-          <ConfidenceBadge confidence={fact.confidence} />
-
-          <div className="evidence-block">
-            <div className="plan-exclusions-label">Evidence</div>
-            <div className="evidence-source">
-              {[
-                fact.evidence.page ? `Page ${fact.evidence.page}` : null,
-                fact.evidence.section,
-                fact.evidence.source === 'ocr' ? 'read via OCR' : 'read from text layer',
-              ]
-                .filter(Boolean)
-                .join(' \u00b7 ')}
-            </div>
-            {fact.evidence.snippet && (
-              <blockquote className="evidence-snippet">
-                “{fact.evidence.snippet}”
-              </blockquote>
-            )}
-          </div>
-
-          <div className="review-bar">
-            <input
-              className="approve-name"
-              placeholder="Your name"
-              value={reviewer}
-              onChange={(e) => setReviewer(e.target.value)}
-            />
-
-            {!correcting ? (
-              <>
-                <button
-                  className="btn-primary"
-                  onClick={() => act('verified')}
-                  disabled={acting}
-                >
-                  ✓ Verify
-                </button>
-                <button
-                  className="btn-ghost"
-                  onClick={() => {
-                    setCorrectedValue(fact.value)
-                    setCorrecting(true)
-                  }}
-                  disabled={acting}
-                >
-                  ✎ Correct
-                </button>
-                <button
-                  className="btn-danger"
-                  onClick={() => act('flagged')}
-                  disabled={acting}
-                >
-                  ⚠ Needs review
-                </button>
-              </>
             ) : (
-              <div className="correction-form">
-                <input
-                  className="approve-note"
-                  placeholder="Corrected value"
-                  value={correctedValue}
-                  onChange={(e) => setCorrectedValue(e.target.value)}
-                />
-                <input
-                  className="approve-note"
-                  placeholder="Reason (optional)"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-                <button className="btn-ghost" onClick={() => setCorrecting(false)}>
-                  Cancel
-                </button>
-                <button
-                  className="btn-primary"
-                  onClick={() => act('corrected')}
-                  disabled={acting}
-                >
-                  Save correction
-                </button>
+              <div className="listing-item" key={d.document_id}>
+                <div className="listing-text">{d.filename} — no fact extracted</div>
               </div>
-            )}
-          </div>
-
-          <div className="history">
-            <button className="history-toggle" onClick={refreshHistory}>
-              Refresh history
-            </button>
-            {fact.history?.map((h, i) => (
-              <div className="history-row" key={i}>
-                <span className={`history-event ${h.event === 'flagged' ? 'edited' : h.event}`}>
-                  {h.event}
-                </span>
-                <span className="history-when">
-                  {new Date(h.at).toLocaleString()}
-                </span>
-                <span className="history-detail">
-                  {h.reviewer}
-                  {h.event === 'corrected' &&
-                    ` — "${h.before_value}" → "${h.after_value}"`}
-                  {h.reason && ` (${h.reason})`}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="actions">
-            <span className="hint" />
-            <button className="btn-ghost" onClick={reset}>
-              Upload another document
-            </button>
-          </div>
+            ),
+          )}
         </div>
       )}
 
       <div className="setup-note">
         This is a vertical slice, not the finished extraction system — it
-        proves one path end to end (evidence, typed confidence, review,
-        audit) on one fact type before the same shapes are used for anything
-        else. Document ID: <code>{documentId || '—'}</code>
+        proves one path end to end (evidence, typed confidence,
+        cross-document comparison, review, audit) on one fact type before
+        the same shapes are used for anything else.
       </div>
     </>
   )

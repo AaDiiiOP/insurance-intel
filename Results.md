@@ -123,15 +123,24 @@ policy and schedule both extracted ₹600,000,000, and correctly stayed
 `needs_review` with no contradiction flagged. The 1% tolerance does not
 fire on agreement.
 
-**What this does not yet cover:** `eval_harness.py` calls
-`doc_intelligence.extract_coverage_limit()` directly, one document at a
-time, and does not go through the `/doc-intelligence/upload` endpoint — so
-the automated eval run's summary numbers do not themselves exercise this
-check (see `contradiction_test: "fixed_not_covered_by_this_harness"` in
-`eval_results.json`). The verification above was done manually against the
-running API instead. A future improvement would be extending the harness
-itself to create a real submission and upload a company's documents through
-the actual endpoint, so this gets covered by the automated run too.
+**What this does not yet cover:** `eval_harness.py`'s main per-document loop
+still calls `doc_intelligence.extract_coverage_limit()` directly, one
+document at a time, and does not go through the `/doc-intelligence/upload`
+endpoint — so the extraction accuracy numbers above don't themselves
+exercise the submission/upload wiring. Contradiction detection specifically
+is now covered separately (see next paragraph): the harness calls
+`doc_intelligence.find_contradiction()` directly with the same fact shapes
+the real endpoint builds, which tests the actual comparison logic without
+needing a running server.
+
+**Now covered by the automated run, not just the manual check above.**
+`eval_harness.py` runs a dedicated contradiction check for all 4 test
+companies plus a negative control (checking that a genuinely agreeing pair
+is never flagged), reported in its own section of `eval_results.json`
+(`contradiction_checks`) and summarised as `contradiction_accuracy_pct` and
+`contradiction_false_positives`. Latest run: **4/4 caught (100%), 0 false
+positives** — matching the manual verification above exactly, now
+re-runnable on demand rather than a one-off check.
 
 ### 2. The regex used for the deterministic extraction path was too narrow — partially fixed, one risk found and reverted
 
@@ -203,8 +212,13 @@ short manual test pass before calling Phase 0 done**, not a coding gap.
    (persistence across restart) against the running app once, and record
    the outcome somewhere (this file, or a follow-up to it) — this harness
    does not test either.
-6. **New:** extend `eval_harness.py` itself to create a real submission and
-   upload each contradiction-test company's documents through the actual
-   `/doc-intelligence/upload` endpoint, so contradiction detection is
-   covered by the automated run rather than only by the manual check
-   recorded in this file.
+6. ~~Extend `eval_harness.py` to cover contradiction detection
+   automatically.~~ **Done** — see `contradiction_checks` in
+   `eval_results.json` and the summary fields `contradiction_accuracy_pct`
+   / `contradiction_false_positives`.
+7. **New:** a submission-picker UI now exists in the Doc Intelligence
+   screen (create a submission, upload documents into it, contradictions
+   highlighted with a red border and pill on the fact card) — verified with
+   real screenshots against the real AUR-SYN-004 case. Not yet done: an
+   equivalent for P0-06/P0-07 (org isolation, persistence) has no UI either,
+   and remains a manual API-level check per item 5.

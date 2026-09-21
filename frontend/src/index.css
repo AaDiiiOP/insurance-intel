@@ -1633,3 +1633,15 @@ button.suggestion:hover { border-color: var(--accent-line); color: var(--accent-
   flex-wrap: wrap;
   flex: 1;
 }
+
+/* Contradiction highlight on a fact card inside Document Intelligence — a
+   distinct left border in the "bad" tone so a disagreeing pair of documents
+   is visible even before reading the status pill or the note. */
+.extracted-fact-block {
+  padding-left: 14px;
+  border-left: 3px solid transparent;
+}
+
+.extracted-fact-block.is-contradiction {
+  border-left-color: var(--bad);
+}

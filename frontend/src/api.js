@@ -322,10 +322,25 @@ export async function fillProposalForm(clientId, file, carrierId) {
 
 /** Upload one policy document: quality check, OCR fallback, one extracted
  * fact with evidence and typed confidence, awaiting human review. */
-export function uploadForExtraction(file) {
+export function uploadForExtraction(file, submissionId) {
   const form = new FormData()
   form.append('file', file)
+  if (submissionId) form.append('submission_id', submissionId)
   return request('/doc-intelligence/upload', { method: 'POST', body: form })
+}
+
+export function createSubmission(label) {
+  const form = new FormData()
+  form.append('label', label)
+  return request('/doc-intelligence/submissions', { method: 'POST', body: form })
+}
+
+export function listSubmissions() {
+  return request('/doc-intelligence/submissions')
+}
+
+export function getSubmission(submissionId) {
+  return request(`/doc-intelligence/submissions/${submissionId}`)
 }
 
 export function getExtractionFact(factId) {

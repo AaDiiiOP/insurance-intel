@@ -108,6 +108,73 @@ def run_one_document(pdf_path: Path) -> dict:
     return {"error": None, "quality": quality, "fact": fact}
 
 
+def evaluate_contradiction_case(company_dir: Path) -> dict | None:
+    """
+    For a company whose ground truth deliberately makes the policy and its
+    coverage schedule disagree, check that doc_intelligence.find_contradiction
+    actually catches it — the real comparison logic wired into
+    main.py's /doc-intelligence/upload, called directly here rather than
+    through the API so this harness keeps working without a running server.
+
+    Returns None for a company with no contradiction test in its ground
+    truth (nothing to check). Otherwise returns whether the mismatch was
+    caught, and separately, that a genuinely agreeing pair is NOT flagged
+    -- a check that never fires is as useless as one that always does.
+    """
+    ground_truth = load_company(company_dir)
+    tests = ground_truth.get("tests", {})
+    if not tests.get("intentional_contradiction"):
+        return None
+
+    target = find_target_fact(ground_truth)
+    schedule_target = find_schedule_fact(ground_truth)
+    if not target or not schedule_target:
+        return {
+            "company_id": company_dir.name,
+            "skipped": "Ground truth marks this a contradiction case but is "
+                       "missing one of the two expected fact entries.",
+        }
+
+    # The comparison logic itself, exercised directly: one fact already "on
+    # record" (the policy's), one newly "extracted" (the schedule's) -- the
+    # same shape db.list_submission_facts returns, trimmed to what
+    # find_contradiction actually reads.
+    existing_facts = [{
+        "id": "policy-fact",
+        "fact_type": doc_intelligence.FACT_TYPE_COVERAGE_LIMIT,
+        "value": f"₹{target['value_inr']}",
+        "document_filename": target["source_document"],
+    }]
+    contradiction = doc_intelligence.find_contradiction(
+        doc_intelligence.FACT_TYPE_COVERAGE_LIMIT,
+        f"₹{schedule_target['value_inr']}",
+        existing_facts,
+    )
+
+    # Negative control: two facts that genuinely agree must NOT be flagged.
+    # Without this, a check that always says "contradiction" would score
+    # 100% on every real test case above and be worthless.
+    agreeing_facts = [{
+        "id": "policy-fact",
+        "fact_type": doc_intelligence.FACT_TYPE_COVERAGE_LIMIT,
+        "value": f"₹{target['value_inr']}",
+        "document_filename": target["source_document"],
+    }]
+    false_positive_check = doc_intelligence.find_contradiction(
+        doc_intelligence.FACT_TYPE_COVERAGE_LIMIT,
+        f"₹{target['value_inr']}",  # identical value -- must not flag
+        agreeing_facts,
+    )
+
+    return {
+        "company_id": company_dir.name,
+        "policy_value": target["value_inr"],
+        "schedule_value": schedule_target["value_inr"],
+        "contradiction_caught": contradiction is not None,
+        "false_positive_on_agreement": false_positive_check is not None,
+    }
+
+
 def evaluate_company(company_dir: Path) -> dict:
     company_id = company_dir.name
     ground_truth = load_company(company_dir)
@@ -217,7 +284,7 @@ def evaluate_company(company_dir: Path) -> dict:
     return result
 
 
-def summarise(results: list[dict]) -> dict:
+def summarise(results: list[dict], contradiction_results: list[dict]) -> dict:
     scored = [r for r in results if "skipped" not in r]
     n = len(scored)
 
@@ -229,6 +296,13 @@ def summarise(results: list[dict]) -> dict:
 
     ocr_cases = [r for r in scored if r["ocr_should_trigger"]]
     contradiction_cases = [r for r in scored if r["intentional_contradiction"]]
+
+    checked = [r for r in contradiction_results if "skipped" not in r]
+    contradiction_accuracy = (
+        round(sum(1 for r in checked if r["contradiction_caught"]) / len(checked) * 100, 1)
+        if checked else None
+    )
+    false_positives = sum(1 for r in checked if r["false_positive_on_agreement"])
 
     return {
         "companies_total": len(results),
@@ -253,6 +327,13 @@ def summarise(results: list[dict]) -> dict:
         },
         "contradiction_cases_total": len(contradiction_cases),
         "contradiction_detection_implemented": True,
+        # Now genuinely measured by this harness, not just asserted:
+        # contradiction_accuracy_pct is the fraction of deliberate mismatches
+        # doc_intelligence.find_contradiction actually caught, and
+        # contradiction_false_positives is how many genuinely agreeing pairs
+        # were wrongly flagged (must be 0 for the check to be trustworthy).
+        "contradiction_accuracy_pct": contradiction_accuracy,
+        "contradiction_false_positives": false_positives,
         "silent_guess_suspected_count": sum(
             1 for r in scored if r.get("silent_guess_suspected")
         ),
@@ -297,9 +378,30 @@ def main():
                 f"confidence={result['confidence_type']}"
             )
 
-    summary = summarise(results)
+    print("\nChecking contradiction detection (P0-03)...")
+    contradiction_results = []
+    for company_dir in company_dirs:
+        check = evaluate_contradiction_case(company_dir)
+        if check is None:
+            continue  # not a contradiction-test company, nothing to check
+        contradiction_results.append(check)
+        if "skipped" in check:
+            print(f"  {check['company_id']}... SKIPPED ({check['skipped']})")
+        else:
+            mark = "OK" if check["contradiction_caught"] else "MISSED"
+            fp = " FALSE POSITIVE ON AGREEMENT" if check["false_positive_on_agreement"] else ""
+            print(
+                f"  {check['company_id']}... {mark}  "
+                f"policy={check['policy_value']} schedule={check['schedule_value']}{fp}"
+            )
 
-    output = {"summary": summary, "companies": results}
+    summary = summarise(results, contradiction_results)
+
+    output = {
+        "summary": summary,
+        "companies": results,
+        "contradiction_checks": contradiction_results,
+    }
     out_path = Path(__file__).parent / "eval_results.json"
     out_path.write_text(json.dumps(output, indent=2))
 

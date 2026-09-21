@@ -241,13 +241,14 @@ difference. Two values are treated as agreeing within 1% (rounding,
 formatting differences), so genuine disagreement is what actually gets
 flagged. Verified against real cases — see `Results.md`.
 
-**Not yet in the UI.** Submissions and contradiction flagging are API-level
-today (`POST /doc-intelligence/submissions`, and `submission_id` on
-`POST /doc-intelligence/upload`) — the "Doc Intelligence" screen itself
-still uploads one document at a time with no submission picker. Verified
-by calling the endpoints directly; a UI for creating a submission and
-uploading several documents against it is the next piece of this slice,
-not yet built.
+**Now in the UI too.** The "Doc Intelligence" screen has a submission
+picker — create a submission, upload several documents into it, and each
+one's extracted fact appears as its own card. A contradiction is visible
+immediately: both cards get a red left border and a "Contradicts another
+document" pill, with the note naming the other document and the size of the
+disagreement. Verified with the real AUR-SYN-004 case end to end (screenshot
+in the development history for this feature). Uploading with no submission
+selected still scores a single document on its own, exactly as before.
 
 **Why only one fact type.** This exists to answer one question before
 anything is built on top of it: do the evidence/confidence/review/audit
