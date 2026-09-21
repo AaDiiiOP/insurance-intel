@@ -252,3 +252,106 @@ def needs_priority_review(confidence: dict) -> bool:
     if confidence["type"] == "deterministic":
         return False
     return confidence["value"] < LOW_MODEL_CONFIDENCE
+
+
+# --------------------------------------------------------------------------
+# Cross-document contradiction detection
+#
+# Everything above this line extracts a fact from ONE document. This part
+# runs after every document in a submission has been extracted, and answers
+# a different question: do two documents that were both supposed to state
+# the same real-world figure actually agree?
+#
+# The gap this closes: before it existed, a policy stating one sum insured
+# and its own coverage schedule stating a different one were never compared
+# at all — each was scored as an independent, individually-correct fact, and
+# nothing in the system would ever have noticed the two disagreed. That is
+# exactly the "silent guessing" failure mode the whole slice exists to rule
+# out, just at the cross-document level rather than within one document.
+# --------------------------------------------------------------------------
+
+# Which fact types are considered "the same real-world figure" for the
+# purpose of comparison, even though they came from asking about different
+# document kinds. Coverage limit is the one fact type this slice extracts,
+# so there is only one group today — this is a dict rather than a flat
+# constant so a second fact type can be added as its own group later without
+# the comparison logic needing to change, only this table.
+COMPARABLE_FACT_TYPES = {
+    FACT_TYPE_COVERAGE_LIMIT: {FACT_TYPE_COVERAGE_LIMIT},
+}
+
+# Two figures are treated as agreeing if they are within this fraction of
+# each other, not just byte-identical. Real documents round differently —
+# "₹35,00,00,000" vs "Rs 3,50,00,000" written with one extra digit dropped is
+# a formatting difference, not a contradiction, but a genuinely different
+# figure (350000000 vs 370000000, roughly 5.7% apart) should not slip through
+# under too generous a tolerance. 1% is deliberately tight: it exists to
+# absorb rounding, not real disagreement.
+CONTRADICTION_TOLERANCE = 0.01
+
+
+def _numeric_value(value: str) -> float | None:
+    """
+    Pull a comparable number out of an extracted value string.
+
+    Extracted values are free text ("₹350,000,000", "INR 370,000,000") kept
+    exactly as written, on purpose — comparison needs a number, so this
+    strips everything else. Returns None when no digits are present at all,
+    which the caller treats as "cannot compare" rather than "equal" or
+    "different": a fact with no recoverable number should never silently
+    count as agreeing with another one.
+    """
+    if not value:
+        return None
+    digits = re.sub(r"[^\d.]", "", value)
+    if not digits:
+        return None
+    try:
+        return float(digits)
+    except ValueError:
+        return None
+
+
+def find_contradiction(new_fact_type: str, new_value: str,
+                       existing_facts: list[dict]) -> dict | None:
+    """
+    Check one newly-extracted fact against every fact already on record for
+    the same submission, and return the first one it disagrees with.
+
+    `existing_facts` is every fact already stored for the submission (see
+    db.list_submission_facts) — checked regardless of which document they
+    came from, since the whole point is comparing across documents. A fact
+    from the SAME document as the new one is skipped: two mentions of a
+    figure within one document restating each other is not the scenario
+    this exists to catch, and would just be noise.
+
+    Returns None when nothing comparable disagrees — either no other fact
+    of a comparable type exists yet, or every comparable one agrees within
+    tolerance.
+    """
+    comparable_types = COMPARABLE_FACT_TYPES.get(new_fact_type, {new_fact_type})
+    new_number = _numeric_value(new_value)
+    if new_number is None:
+        return None
+
+    for existing in existing_facts:
+        if existing["fact_type"] not in comparable_types:
+            continue
+
+        existing_number = _numeric_value(existing["value"])
+        if existing_number is None:
+            continue
+
+        if existing_number == 0:
+            continue  # avoid a division by zero on a degenerate value
+
+        relative_difference = abs(new_number - existing_number) / existing_number
+        if relative_difference > CONTRADICTION_TOLERANCE:
+            return {
+                "fact_id": existing["id"],
+                "document_filename": existing.get("document_filename"),
+                "value": existing["value"],
+                "relative_difference": round(relative_difference, 4),
+            }
+
+    return None

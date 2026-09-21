@@ -74,7 +74,7 @@ and don't test, not about the trustworthiness of the numbers above.
 
 ## Real findings — things that need attention, in priority order
 
-### 1. Contradiction detection does not exist yet (P0-03 — FAILING)
+### 1. Contradiction detection — was missing, now built and verified against all 4 real cases
 
 The dataset deliberately builds 4 companies (`AUR-SYN-004`, `AUR-SYN-009`,
 `AUR-SYN-015`, `AUR-SYN-019`) where the property policy states one sum
@@ -82,18 +82,56 @@ insured and the coverage schedule states a different one — testing exactly
 the acceptance criterion: *"Cross-document contradiction: Do not silently
 merge conflicting values; flag for review."*
 
-**Current behavior: this scenario cannot be caught, structurally.** The
-Phase 0 slice (`doc_intelligence.extract_coverage_limit`) reads and scores
-one document at a time. There is no code path anywhere that loads two
-documents for the same company and compares their extracted values. All 4
-contradiction cases are marked `contradiction_test: "not_implemented"` in
-the results rather than silently passing — see each company's entry in
-`eval_results.json` for the exact expected-vs-actual mismatch.
+**Status: fixed.** Three pieces were added:
 
-**This is the single most important gap this evaluation surfaced.** It's
-explicitly named in the plan's own acceptance criteria and is not a minor
-edge case — a policy/schedule mismatch is a realistic, common real-world
-document problem, and right now the system has no way to notice one.
+- A `submissions` table (`db.py`) — a named group of documents believed to
+  belong to the same case. This did not exist before: every upload was
+  previously its own unrelated document with no way to express "these five
+  files are the same company." `POST /doc-intelligence/submissions` creates
+  one; `POST /doc-intelligence/upload` now takes an optional
+  `submission_id` to attach a document to it.
+- `doc_intelligence.find_contradiction()` — after a new fact is extracted,
+  it is compared against every other fact already on record for the same
+  submission (skipping facts from the same document). Two values are
+  treated as agreeing if they are within 1% of each other, which absorbs
+  rounding/formatting differences without missing a real mismatch. Values
+  are compared numerically after stripping currency symbols and formatting
+  (`"₹350,000,000"` vs `"INR 350,000,000"` correctly agree).
+- `db.flag_contradiction()` — when a mismatch is found, **both** facts are
+  moved to a new `contradiction_flagged` status (not just the one uploaded
+  second), each carrying a note naming the other document, its value, and
+  the percentage difference. A reviewer opening either fact sees the
+  dispute.
+
+**Verified against real data, not just unit tests.** Ran all 4 deliberate-
+contradiction companies through the real `/doc-intelligence/submissions` +
+`/doc-intelligence/upload` endpoints (a stand-in extraction model was used
+for this check, same caveat as the confidence-clustering finding below —
+the comparison LOGIC itself does not depend on which model produced the
+values being compared):
+
+| Company | Policy value | Schedule value | Flagged? |
+|---|---|---|---|
+| AUR-SYN-004 | ₹350,000,000 | ₹370,000,000 | ✅ both facts `contradiction_flagged` |
+| AUR-SYN-009 | ₹400,000,000 | ₹420,000,000 | ✅ both facts `contradiction_flagged` |
+| AUR-SYN-015 | ₹400,000,000 | ₹420,000,000 | ✅ both facts `contradiction_flagged` |
+| AUR-SYN-019 | ₹250,000,000 | ₹270,000,000 | ✅ both facts `contradiction_flagged` |
+
+**False-positive check, also verified:** ran `AUR-SYN-001` (no deliberate
+contradiction in its ground truth) through the same two-document flow —
+policy and schedule both extracted ₹600,000,000, and correctly stayed
+`needs_review` with no contradiction flagged. The 1% tolerance does not
+fire on agreement.
+
+**What this does not yet cover:** `eval_harness.py` calls
+`doc_intelligence.extract_coverage_limit()` directly, one document at a
+time, and does not go through the `/doc-intelligence/upload` endpoint — so
+the automated eval run's summary numbers do not themselves exercise this
+check (see `contradiction_test: "fixed_not_covered_by_this_harness"` in
+`eval_results.json`). The verification above was done manually against the
+running API instead. A future improvement would be extending the harness
+itself to create a real submission and upload a company's documents through
+the actual endpoint, so this gets covered by the automated run too.
 
 ### 2. The regex used for the deterministic extraction path was too narrow — partially fixed, one risk found and reverted
 
@@ -153,9 +191,9 @@ short manual test pass before calling Phase 0 done**, not a coding gap.
 
 1. ~~Get a real Ollama instance in front of this harness and re-run it.~~
    **Done.** The numbers above are from a real `qwen2.5:7b` run.
-2. **Build contradiction detection** (item 1 above) before claiming Phase 0's
-   acceptance criteria are met — it's explicitly in the test list and
-   currently has zero implementation. This is the main remaining gap.
+2. ~~Build contradiction detection.~~ **Done and verified against all 4
+   real contradiction cases in this dataset**, plus a false-positive check
+   against a clean company. See item 1 above.
 3. The deterministic regex fix (item 2 above) is already in the codebase.
 4. Treat this dataset's OCR cases as "proves the wiring works," not "proves
    OCR is production-ready" — a harder scan test (real noise/blur/rotation,
@@ -165,3 +203,8 @@ short manual test pass before calling Phase 0 done**, not a coding gap.
    (persistence across restart) against the running app once, and record
    the outcome somewhere (this file, or a follow-up to it) — this harness
    does not test either.
+6. **New:** extend `eval_harness.py` itself to create a real submission and
+   upload each contradiction-test company's documents through the actual
+   `/doc-intelligence/upload` endpoint, so contradiction detection is
+   covered by the automated run rather than only by the manual check
+   recorded in this file.

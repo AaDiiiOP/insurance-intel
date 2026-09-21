@@ -454,6 +454,27 @@ CREATE TABLE IF NOT EXISTS document_quality (
     notes           JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- A submission: the grouping the vertical slice was missing before
+-- contradiction detection could exist at all. Every document uploaded for
+-- doc-intelligence belongs to exactly one submission; comparing facts
+-- ACROSS documents (a policy vs. its own coverage schedule) requires
+-- knowing they belong together in the first place, which nothing before
+-- this table could express — each upload was previously its own unrelated
+-- "carrier" with no link to any other document.
+CREATE TABLE IF NOT EXISTS submissions (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    -- Free text the uploader supplies (a company name, a reference) — not a
+    -- foreign key to `clients`, since a doc-intelligence submission is not
+    -- necessarily tied to a client record in the main app yet. Deliberately
+    -- loose for the same reason the rest of this vertical slice is loose:
+    -- this proves the shape works before it is wired into the main flow.
+    label             TEXT NOT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS submissions_org_idx ON submissions(organization_id);
 """
 
 
@@ -501,6 +522,37 @@ ALTER TABLE clients
 UPDATE clients SET organization_id = '00000000-0000-0000-0000-000000000001'
     WHERE organization_id IS NULL;
 ALTER TABLE clients ALTER COLUMN organization_id SET NOT NULL;
+
+-- Contradiction detection needs two things existing rows predate:
+-- (1) a link from a document to the submission it belongs to, so documents
+--     can be grouped by company/case at all;
+-- (2) fields on a fact recording that it was found to disagree with another
+--     fact of the same type in the same submission, and what that other
+--     fact said.
+--
+-- Nullable throughout: existing documents/facts from before this migration
+-- have no submission and are simply never compared — they are not backfilled
+-- into a submission, because there is no reliable way to know which
+-- historical uploads belonged together after the fact. New uploads through
+-- the updated endpoint always get a submission_id.
+ALTER TABLE documents
+    ADD COLUMN IF NOT EXISTS submission_id UUID
+    REFERENCES submissions(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS documents_submission_idx ON documents(submission_id);
+
+ALTER TABLE extraction_facts
+    ADD COLUMN IF NOT EXISTS contradicts_fact_id UUID
+    REFERENCES extraction_facts(id) ON DELETE SET NULL;
+ALTER TABLE extraction_facts
+    ADD COLUMN IF NOT EXISTS contradiction_note TEXT;
+
+-- 'contradiction_flagged' distinguishes "nobody has reviewed this yet" from
+-- "two documents disagree and a human must decide which is right" — the
+-- original CHECK predates this status and has to be replaced rather than
+-- extended in place, same pattern as draft_events_event_check above.
+ALTER TABLE extraction_facts DROP CONSTRAINT IF EXISTS extraction_facts_status_check;
+ALTER TABLE extraction_facts ADD CONSTRAINT extraction_facts_status_check
+    CHECK (status IN ('needs_review', 'verified', 'corrected', 'contradiction_flagged'));
 """
 
 
@@ -1572,3 +1624,110 @@ def get_document_quality(conn, document_id: str) -> dict | None:
         cur.execute("SELECT * FROM document_quality WHERE document_id = %s", (document_id,))
         row = cur.fetchone()
         return dict(row) if row else None
+
+
+# --------------------------------------------------------------------------
+# Submissions and cross-document contradiction detection
+# --------------------------------------------------------------------------
+
+
+def create_submission(conn, *, organization_id: str, label: str) -> dict:
+    """A new group of documents believed to belong to the same case/company."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO submissions (organization_id, label) VALUES (%s, %s) "
+            "RETURNING id, organization_id, label, created_at",
+            (organization_id, label),
+        )
+        return dict(cur.fetchone())
+
+
+def get_submission(conn, submission_id: str) -> dict | None:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM submissions WHERE id = %s", (submission_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def list_submissions(conn, organization_id: str) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT * FROM submissions WHERE organization_id = %s ORDER BY created_at DESC",
+            (organization_id,),
+        )
+        return cur.fetchall()
+
+
+def set_document_submission(conn, document_id: str, submission_id: str) -> None:
+    """
+    Attach an already-created document to a submission.
+
+    Kept separate from create_document rather than added as a new parameter
+    to it: create_document is also called by the carrier-briefing flow,
+    which has no concept of a submission at all, and every call site would
+    otherwise need updating for a feature it doesn't use.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE documents SET submission_id = %s WHERE id = %s",
+            (submission_id, document_id),
+        )
+
+
+def list_submission_documents(conn, submission_id: str) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT * FROM documents WHERE submission_id = %s ORDER BY uploaded_at ASC",
+            (submission_id,),
+        )
+        return cur.fetchall()
+
+
+def list_submission_facts(conn, submission_id: str) -> list[dict]:
+    """
+    Every extraction_facts row for every document in one submission.
+
+    This is what a contradiction check compares — every fact currently on
+    record for the submission, joined back to which document it came from
+    so the comparison can name both sources when it flags a mismatch.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT f.*, d.filename AS document_filename
+            FROM extraction_facts f
+            JOIN documents d ON d.id = f.document_id
+            WHERE d.submission_id = %s
+            ORDER BY f.created_at ASC
+            """,
+            (submission_id,),
+        )
+        return cur.fetchall()
+
+
+def flag_contradiction(conn, *, fact_id: str, contradicts_fact_id: str,
+                       note: str) -> dict | None:
+    """
+    Mark a fact as disagreeing with another fact in the same submission.
+
+    Both facts are flagged, symmetrically — a reviewer opening either one
+    should see that it is in dispute, not just the one that happened to be
+    extracted second. Status moves to 'contradiction_flagged' regardless of
+    whatever it was before, since a disagreement between two documents is a
+    more specific and more urgent reason for review than the generic
+    'needs_review' state it may have already been in.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE extraction_facts
+            SET status = 'contradiction_flagged',
+                contradicts_fact_id = %s,
+                contradiction_note = %s,
+                updated_at = now()
+            WHERE id = %s
+            RETURNING *
+            """,
+            (contradicts_fact_id, note, fact_id),
+        )
+        return dict(cur.fetchone()) if cur.rowcount else None

@@ -1,13 +1,18 @@
 /* ==========================================================================
-   Insurance Intelligence
+   Aurevia BrokerOS
 
    A tool people read documents in all day, so the palette is warm paper and
    warm ink rather than white and black. Pure #fff on #000 is the highest
    contrast a screen can make, which is why it tires eyes fastest; this sits
    around 11:1 — comfortably readable, noticeably softer.
 
-   Colour carries meaning and nothing else: clay for what you can act on,
-   sage for settled, rust for wrong, ochre for needs-a-look. Everything
+   The accent is a deep verdigris — aged copper/brass patina, not amber.
+   Chosen to read as its own mark against the paper rather than a generic
+   "warm UI" orange; it still sits inside the same warm-paper family so
+   nothing else in the palette needed re-tuning for contrast.
+
+   Colour carries meaning and nothing else: verdigris for what you can act
+   on, sage for settled, rust for wrong, ochre for needs-a-look. Everything
    structural is paper and ink.
    ========================================================================== */
 
@@ -38,16 +43,16 @@
   --rail-soft:   #a99c8b;
 
   /* Amber — the accent. Warm and legible on both the rail and the paper. */
-  --accent:      #b4622a;
-  --accent-deep: #8f4c1e;
-  --accent-soft: #f8ece1;
-  --accent-line: #e6cbb2;
-  --accent-glow: #e08a44;
+  --accent:      #3d6b5e;
+  --accent-deep: #2c5148;
+  --accent-soft: #e8efec;
+  --accent-line: #bfd3cb;
+  --accent-glow: #5a9483;
 
   /* Status */
-  --ok:        #4a6b4a;
-  --ok-bg:     #eaf0e6;
-  --ok-line:   #cbd9c2;
+  --ok:        #6b7a3a;
+  --ok-bg:     #eff1e3;
+  --ok-line:   #d3d8b8;
 
   --warn:      #8a6512;
   --warn-bg:   #f8efd9;

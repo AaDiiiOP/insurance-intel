@@ -182,18 +182,26 @@ def evaluate_company(company_dir: Path) -> dict:
     result["found_a_fact"] = fact is not None
 
     # ---- P0-03: cross-document contradiction ----
-    # The current Phase 0 slice extracts ONE document at a time and has no
-    # code path that compares two documents against each other at all --
-    # there is no contradiction-detection logic to test yet. Recorded
-    # explicitly as not-implemented rather than silently skipped, so this
-    # gap is visible in the report rather than absent from it.
+    # Fixed: main.py's /doc-intelligence/upload now compares a newly
+    # extracted fact against every other fact already on record for the
+    # same submission (doc_intelligence.find_contradiction), and flags both
+    # sides as 'contradiction_flagged' when they disagree beyond a 1%
+    # tolerance. This harness still runs each document through the bare
+    # extraction function directly (not the API endpoint), so it does not
+    # exercise that comparison step itself — see
+    # backend/main.py's doc_intelligence_upload and the manual verification
+    # in Results.md for the actual end-to-end proof against all 4
+    # deliberate-contradiction companies in this dataset.
     if schedule_target and tests.get("intentional_contradiction"):
-        result["contradiction_test"] = "not_implemented"
+        result["contradiction_test"] = "fixed_not_covered_by_this_harness"
         result["contradiction_note"] = (
             f"Ground truth has a deliberate mismatch (policy: {expected_value}, "
-            f"schedule: {schedule_target['value_inr']}) but the current slice "
-            "extracts one document at a time and never compares documents "
-            "against each other -- there is no code path that could catch this."
+            f"schedule: {schedule_target['value_inr']}). Contradiction "
+            "detection now exists (doc_intelligence.find_contradiction, "
+            "wired into the /doc-intelligence/upload endpoint) and was "
+            "verified manually against this exact case — see Results.md. "
+            "This harness calls extraction directly and does not go through "
+            "the endpoint, so it does not itself exercise the check."
         )
     else:
         result["contradiction_test"] = "not_applicable"
@@ -244,7 +252,7 @@ def summarise(results: list[dict]) -> dict:
             for t in ("deterministic", "ocr_engine", "model_self_reported", None)
         },
         "contradiction_cases_total": len(contradiction_cases),
-        "contradiction_detection_implemented": False,
+        "contradiction_detection_implemented": True,
         "silent_guess_suspected_count": sum(
             1 for r in scored if r.get("silent_guess_suspected")
         ),

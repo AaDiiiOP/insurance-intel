@@ -2472,12 +2472,88 @@ def _fact_response(row: dict) -> dict:
     }
 
 
+@app.post("/doc-intelligence/submissions")
+def create_doc_intelligence_submission(label: str = Form(...)):
+    """
+    Start a new submission — a named group of documents believed to belong
+    to the same case or company. Created explicitly, up front, rather than
+    inferred from upload order: the upload endpoint has no reliable way to
+    guess that two files are related, and asking for a submission first is
+    the only honest way to record that grouping.
+    """
+    label = " ".join((label or "").split())
+    if not label:
+        raise HTTPException(status_code=400, detail="Give this submission a name.")
+
+    with db.get_connection() as conn:
+        organization_id = db.get_or_create_default_organization(conn)
+        row = db.create_submission(conn, organization_id=organization_id, label=label)
+
+    return {
+        "submission_id": str(row["id"]),
+        "label": row["label"],
+        "created_at": row["created_at"].isoformat(),
+    }
+
+
+@app.get("/doc-intelligence/submissions")
+def list_doc_intelligence_submissions():
+    with db.get_connection() as conn:
+        organization_id = db.get_or_create_default_organization(conn)
+        rows = db.list_submissions(conn, organization_id)
+    return {
+        "submissions": [
+            {
+                "submission_id": str(r["id"]),
+                "label": r["label"],
+                "created_at": r["created_at"].isoformat(),
+            }
+            for r in rows
+        ]
+    }
+
+
+@app.get("/doc-intelligence/submissions/{submission_id}")
+def get_doc_intelligence_submission(submission_id: str):
+    submission_id = _validate_uuid(submission_id, "submission id")
+    with db.get_connection() as conn:
+        submission = db.get_submission(conn, submission_id)
+        if not submission:
+            raise HTTPException(status_code=404, detail="Submission not found.")
+        documents = db.list_submission_documents(conn, submission_id)
+        facts = db.list_submission_facts(conn, submission_id)
+
+    return {
+        "submission_id": submission_id,
+        "label": submission["label"],
+        "documents": [
+            {
+                "document_id": str(d["id"]),
+                "filename": d["filename"],
+                "status": d["status"],
+            }
+            for d in documents
+        ],
+        "facts": [_fact_response(f) for f in facts],
+    }
+
+
 @app.post("/doc-intelligence/upload")
-async def doc_intelligence_upload(file: UploadFile = File(...)):
+async def doc_intelligence_upload(
+    file: UploadFile = File(...), submission_id: str | None = Form(None)
+):
     """
     Upload one policy document for the vertical slice: quality check, OCR
     fallback if needed, extraction of the coverage-limit fact, all stored
     with evidence and typed confidence, awaiting human review.
+
+    If `submission_id` is given, the document is attached to that submission
+    and, once its fact is extracted, checked against every other fact
+    already on record for the submission — this is what lets a policy and
+    its own coverage schedule be compared to each other at all. Without a
+    submission_id, the document is scored in isolation exactly as before;
+    contradiction detection has nothing to compare against for a document
+    with no declared siblings.
 
     Pilot-stage tenant scoping: every document and fact created here belongs
     to the default organization (db.DEFAULT_ORGANIZATION_ID). Filtering by
@@ -2492,8 +2568,15 @@ async def doc_intelligence_upload(file: UploadFile = File(...)):
     except ParseError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+    submission_id = (
+        _validate_uuid(submission_id, "submission id") if submission_id else None
+    )
+
     with db.get_connection() as conn:
         organization_id = db.get_or_create_default_organization(conn)
+
+        if submission_id and not db.get_submission(conn, submission_id):
+            raise HTTPException(status_code=404, detail="Submission not found.")
 
         # Reuses the existing documents table and carrier_id's nullability —
         # a doc-intelligence upload is not attached to any carrier, which the
@@ -2513,6 +2596,9 @@ async def doc_intelligence_upload(file: UploadFile = File(...)):
         )
         document_id = str(document_row["id"])
 
+        if submission_id:
+            db.set_document_submission(conn, document_id, submission_id)
+
         db.save_document_quality(
             conn,
             document_id=document_id,
@@ -2531,6 +2617,7 @@ async def doc_intelligence_upload(file: UploadFile = File(...)):
         # fact rather than admit the model is unreachable.
         return {
             "document_id": document_id,
+            "submission_id": submission_id,
             "quality": quality,
             "fact": None,
             "extraction_error": (
@@ -2551,6 +2638,7 @@ async def doc_intelligence_upload(file: UploadFile = File(...)):
         # invented value.
         return {
             "document_id": document_id,
+            "submission_id": submission_id,
             "quality": quality,
             "fact": None,
             "extraction_error": (
@@ -2573,11 +2661,61 @@ async def doc_intelligence_upload(file: UploadFile = File(...)):
             produced_by=extracted["produced_by"],
         )
 
-    return {
+        contradiction = None
+        if submission_id:
+            # Every fact already on record for this submission, from every
+            # document in it — including ones extracted before this one.
+            # The just-saved fact is excluded by document_id, not by fact
+            # id, so a policy's own restated figure on a later page of the
+            # SAME document is never compared against itself.
+            existing_facts = [
+                f
+                for f in db.list_submission_facts(conn, submission_id)
+                if str(f["document_id"]) != document_id
+            ]
+            contradiction = doc_intelligence.find_contradiction(
+                extracted["fact_type"], extracted["value"], existing_facts
+            )
+
+            if contradiction:
+                note = (
+                    f"Disagrees with {contradiction['document_filename']}, "
+                    f"which states {contradiction['value']} "
+                    f"({contradiction['relative_difference'] * 100:.1f}% different)."
+                )
+                fact_row = db.flag_contradiction(
+                    conn,
+                    fact_id=str(fact_row["id"]),
+                    contradicts_fact_id=contradiction["fact_id"],
+                    note=note,
+                ) or fact_row
+
+                # Symmetric: the OTHER fact is flagged too, with a note
+                # pointing back at this document. A reviewer opening either
+                # document's fact should see the dispute, not just whichever
+                # one happened to be uploaded second.
+                other_note = (
+                    f"Disagrees with {filename}, which states "
+                    f"{extracted['value']} "
+                    f"({contradiction['relative_difference'] * 100:.1f}% different)."
+                )
+                db.flag_contradiction(
+                    conn,
+                    fact_id=contradiction["fact_id"],
+                    contradicts_fact_id=str(fact_row["id"]),
+                    note=other_note,
+                )
+
+    payload = {
         "document_id": document_id,
+        "submission_id": submission_id,
         "quality": quality,
         "fact": _fact_response(fact_row),
     }
+    if contradiction:
+        payload["contradiction_detected"] = True
+    return payload
+
 
 
 @app.get("/doc-intelligence/documents/{document_id}/facts")

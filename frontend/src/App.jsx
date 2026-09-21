@@ -83,7 +83,7 @@ export default function App() {
       <aside className="sidebar">
         <div>
           <h2 className="wordmark">
-            Insurance<span> Intelligence</span>
+            Aurevia<span> BrokerOS</span>
           </h2>
           <p className="wordmark-sub">Local · Reviewed · Auditable</p>
         </div>

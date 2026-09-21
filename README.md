@@ -1,4 +1,7 @@
-# Insurance Intelligence
+# Aurevia BrokerOS
+
+*(Previously "Insurance Intelligence" — renamed, same codebase, same
+principles: everything below still applies.)*
 
 An internal tool for an insurance broking team, built around one idea: an AI
 that reads and writes insurance paperwork, running entirely on the broker's
@@ -226,6 +229,26 @@ review**. Every action appends a row to an audit trail that is never edited
 or deleted — the same principle as the draft-approval trail elsewhere in
 this tool.
 
+**Cross-document contradiction detection.** A `submission` groups documents
+believed to belong to the same case (`POST /doc-intelligence/submissions`),
+and every document uploaded against one (`POST /doc-intelligence/upload`
+with a `submission_id`) is checked against every other fact already on
+record for that submission. If a policy states one sum insured and its own
+coverage schedule states a different one, both facts move to a
+`contradiction_flagged` status — neither is silently kept over the other —
+each carrying a note naming the other document and the percentage
+difference. Two values are treated as agreeing within 1% (rounding,
+formatting differences), so genuine disagreement is what actually gets
+flagged. Verified against real cases — see `Results.md`.
+
+**Not yet in the UI.** Submissions and contradiction flagging are API-level
+today (`POST /doc-intelligence/submissions`, and `submission_id` on
+`POST /doc-intelligence/upload`) — the "Doc Intelligence" screen itself
+still uploads one document at a time with no submission picker. Verified
+by calling the endpoints directly; a UI for creating a submission and
+uploading several documents against it is the next piece of this slice,
+not yet built.
+
 **Why only one fact type.** This exists to answer one question before
 anything is built on top of it: do the evidence/confidence/review/audit
 shapes actually hold up against a real document? Extracting broadly before
@@ -251,12 +274,13 @@ every other feature in this tool. No new database, no cloud OCR, no paid API.
 
 `backend/eval_harness.py` runs the real pipeline against a labelled test set
 and reports actual accuracy — not estimated. See **`Results.md`** in the
-project root for the first real run (20 synthetic companies, 100 documents,
-6 scanned/OCR variants, 4 deliberate cross-document contradictions) and, more
-importantly, for the two real gaps it found: **contradiction detection does
-not exist yet** (a policy and its coverage schedule can disagree and nothing
-catches it), and the deterministic extraction regex was narrower than real
-policy wording. One of those is now fixed; the other is still open.
+project root for the full run (20 synthetic companies, 100 documents, 6
+scanned/OCR variants, 4 deliberate cross-document contradictions): 100%
+extraction accuracy with a real `qwen2.5:7b`, all 4 contradiction cases now
+correctly flagged, and one open finding worth reading before treating either
+number as the whole picture — the model's self-reported confidence barely
+varies across genuinely different documents, and this dataset's OCR cases
+are easier than a real messy scan.
 
 Re-run it against any labelled document set with the same folder shape:
 

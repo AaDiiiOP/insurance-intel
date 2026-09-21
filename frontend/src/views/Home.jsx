@@ -105,7 +105,7 @@ export default function Home({ onNavigate, onAddCarrier }) {
   return (
     <>
       <div className="home-hero">
-        <p className="eyebrow">Insurance Intelligence</p>
+        <p className="eyebrow">Aurevia BrokerOS</p>
         <h1 className="home-title">
           Read the wordings. Match the risk.
           <br />
