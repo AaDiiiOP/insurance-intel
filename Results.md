@@ -196,6 +196,141 @@ short manual test pass before calling Phase 0 done**, not a coding gap.
 
 ---
 
+## Test 1 — Multi-organization isolation: fixed, then verified
+
+**Before this could even be tested, it had to be built.** Every
+doc-intelligence endpoint was hardcoded to a single default organization —
+there was no way to act as a second broker at all, so "does Org B see Org
+A's data" was not a test that could be run; it was a missing feature. Fixed
+with an `X-Organization-Id` request header, resolved once per request
+(`main.py`'s `_resolve_organization`) and checked in the database query
+itself for every read and write — `db.get_submission`, `db.get_extraction_fact`,
+`db.list_submission_documents`, `db.list_submission_facts`, and
+`db.review_extraction_fact` all now require and filter on `organization_id`,
+rather than fetching by id alone and checking afterward. A submission or
+fact belonging to a different organization now returns the same 404 as one
+that does not exist — a caller cannot even use the error message to tell
+"not yours" apart from "never existed."
+
+**Verified with real HTTP calls against the real running app, not
+inspected as code:**
+
+| Check | Result |
+|---|---|
+| Org B lists submissions — should not see Org A's | ✅ empty list |
+| Org B fetches Org A's submission by ID directly | ✅ 404 |
+| Org B fetches Org A's fact by ID directly | ✅ 404 |
+| Org B attempts to **correct** Org A's fact | ✅ 404 (not a silent success) |
+| Org A can still access its own data (control) | ✅ 200 |
+| No header sent at all still works (control — the whole existing UI and every earlier test in this file relies on this) | ✅ 200, default organization |
+
+The fourth row is the one that mattered most to get right — a read
+returning nothing is a minor leak; a write silently succeeding against
+another organization's data would not be.
+
+**Still application-level, not database-enforced.** This is a correctly
+implemented boundary, not Postgres row-level security — a caller that sends
+an `X-Organization-Id` it should not have is still trusted by this layer.
+That is the documented pilot-stage decision, not a gap introduced here; what
+changed is that the boundary is now actually enforced everywhere, rather
+than not existing at all.
+
+---
+
+## Test 2 — Persistence across a restart: verified, no code changes needed
+
+Uploaded a real document, extracted a fact, reviewed it (to exercise the
+audit trail specifically, the part most likely to be silently lost if
+anything were held only in memory), recorded the exact state, then **killed
+the running backend process entirely** and started a completely fresh one
+against the same Postgres data.
+
+| Checked after restart | Result |
+|---|---|
+| Organization | ✅ present |
+| Submission | ✅ present, correct label |
+| Extracted fact value | ✅ unchanged: `₹600,000,000` |
+| Review status | ✅ unchanged: `verified` |
+| Audit trail (history) | ✅ 1 event intact, with reviewer name and timestamp |
+
+Expected to pass, since Postgres was always the source of truth and nothing
+in this app holds state only in memory — but now actually proven against a
+real killed-and-restarted process rather than assumed from reading the code.
+
+---
+
+## Test 3 — Hard OCR stress test: real degraded documents, one honest caveat
+
+The dataset's existing "scanned" companies are clean computer-rendered text
+turned into an image — useful for proving OCR triggers correctly, useless
+for testing OCR *accuracy* under real conditions. Built 11 variants from one
+real source page instead, each a genuine image-level degradation (not
+merely relabelled): 3–8° rotation, moderate and heavy Gaussian blur, 65%
+contrast reduction, one-third resolution, a diagonal shadow gradient,
+Gaussian sensor noise, an affine perspective skew, and a combined
+multi-distortion "phone photo" case — every non-baseline variant also passed
+through JPEG recompression at a random quality between 35–60, since a real
+scan is essentially never a pristine lossless image by the time it reaches
+an inbox. Ran all 11 through the actual pipeline
+(`parsers.parse_file_with_quality` → `doc_intelligence.extract_coverage_limit`).
+
+| Variant | OCR confidence | Result |
+|---|---|---|
+| Clean baseline | 88.7% | ✅ correct |
+| Rotated 3° | 81.2% | ✅ correct |
+| Rotated 8° | 0.0% | Abstained — genuine failure, 8 chars recovered |
+| Blur (moderate) | 34.7% | Abstained — genuine failure, OCR output was gibberish |
+| Blur (heavy) | 0.0% | Abstained — genuine failure, 8 chars recovered |
+| Low contrast | 80.9% | ✅ correct |
+| Low resolution | 26.5% | Abstained — genuine failure, 16 chars recovered |
+| Shadow band | 87.2% | ✅ correct |
+| Sensor noise | 28.4% | ✅ correct — borderline; see caveat below |
+| Perspective skew | 57.6% | Abstained — see caveat below |
+| Multi-distortion phone photo | 0.0% | Abstained — genuine failure |
+
+**The number that matters most: zero silent wrong answers, across two
+separate runs.** Tesseract is not perfectly deterministic on borderline
+images — re-running produced `sensor_noise` as a correct extraction instead
+of an abstention the second time, at 28.4% confidence — but in both runs,
+every case that did not extract correctly abstained rather than guess. No
+instance, in either run, of a high-confidence wrong figure. That is the
+actual property Phase 0's "no silent guessing" rule exists to guarantee,
+and it held under real degraded input on both passes, not just clean
+synthetic scans.
+
+**One honest caveat, narrowed by the second run.** `perspective_skew`
+remains an abstention in both runs, but checking the raw OCR output
+directly (rather than trusting the pass/fail alone) shows Tesseract read
+`"Property Sum insured: INR'500,000,000"` — human-legible, with only the
+currency prefix corrupted (`INR'` instead of `INR`). The extraction fell
+through to the model path as designed, but the *stand-in* model used for
+this test (a regex requiring an exact `INR`/`Rs`/`₹` prefix, the same
+limitation noted throughout this file wherever the real model was
+unavailable) missed it on that technicality. **A real LLM reading that text
+would very plausibly still recognise "500,000,000" as the sum insured** —
+fuzzy recognition around a corrupted label is exactly what a language model
+does well and a rigid pattern match does not. This should be re-verified
+against the real `qwen2.5:7b` before treating `perspective_skew` as a
+confirmed OCR failure rather than a stand-in-model limitation. The other
+four consistent abstentions (`rotated_8deg`, `blur_moderate`, `blur_heavy`,
+`low_resolution`, `multi_distortion`) recovered only 0–22 characters of
+genuine gibberish and are real failures regardless of which model reads
+them.
+
+**What this establishes and what it doesn't.** It establishes that
+degraded-but-legible scans (mild rotation, moderate contrast loss, a shadow)
+are handled correctly, and that badly degraded scans fail safely rather than
+silently wrong. It does not establish a production-ready OCR accuracy rate —
+a sample of 1 source document and 11 synthetic degradations is a stress
+test, not a statistically meaningful benchmark, and a re-run against the
+real model (closing the caveat above) is needed before citing an accuracy
+percentage from this test.
+
+Reproducible: `python3 build_hard_ocr_set.py` then `python3 run_hard_ocr_test.py`,
+full detail in `hard_ocr_results.json`.
+
+---
+
 ## What to actually do with this
 
 1. ~~Get a real Ollama instance in front of this harness and re-run it.~~
@@ -204,14 +339,16 @@ short manual test pass before calling Phase 0 done**, not a coding gap.
    real contradiction cases in this dataset**, plus a false-positive check
    against a clean company. See item 1 above.
 3. The deterministic regex fix (item 2 above) is already in the codebase.
-4. Treat this dataset's OCR cases as "proves the wiring works," not "proves
-   OCR is production-ready" — a harder scan test (real noise/blur/rotation,
-   not computer-rendered text turned into an image) is still needed before
-   trusting OCR accuracy on a genuinely poor real-world scan.
-5. Manually walk through P0-06 (cross-organization isolation) and P0-07
-   (persistence across restart) against the running app once, and record
-   the outcome somewhere (this file, or a follow-up to it) — this harness
-   does not test either.
+4. ~~Treat this dataset's OCR cases as "proves the wiring works," not
+   "proves OCR is production-ready."~~ **Done** — see Test 3 above for a
+   genuine degraded-scan stress test. One caveat remains: re-run Test 3
+   against the real `qwen2.5:7b` to confirm the two borderline abstentions
+   (`sensor_noise`, `perspective_skew`) are real OCR failures and not an
+   artifact of the stand-in model used for this pass.
+5. ~~Manually walk through P0-06 (cross-organization isolation) and P0-07
+   (persistence across restart).~~ **Done** — see Test 1 and Test 2 above.
+   P0-06 required a real fix (organization scoping did not previously
+   exist), not just a test.
 6. ~~Extend `eval_harness.py` to cover contradiction detection
    automatically.~~ **Done** — see `contradiction_checks` in
    `eval_results.json` and the summary fields `contradiction_accuracy_pct`

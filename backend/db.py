@@ -1499,6 +1499,18 @@ def list_organizations(conn) -> list[dict]:
         return cur.fetchall()
 
 
+def get_organization(conn, organization_id: str) -> dict | None:
+    """Used to confirm an X-Organization-Id header actually names a real
+    organization, before trusting it to scope every other query."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, name, created_at FROM organizations WHERE id = %s",
+            (organization_id,),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
 def save_extraction_fact(conn, *, organization_id: str, document_id: str,
                          fact_type: str, label: str, value: str,
                          evidence: dict, confidence: dict,
@@ -1543,23 +1555,39 @@ def list_extraction_facts(conn, document_id: str) -> list[dict]:
         return cur.fetchall()
 
 
-def get_extraction_fact(conn, fact_id: str) -> dict | None:
+def get_extraction_fact(conn, fact_id: str, organization_id: str) -> dict | None:
+    """
+    Fetch one fact, scoped to the caller's organization.
+
+    Same reasoning as get_submission: filtered in the query itself, so a
+    fact belonging to a different organization is indistinguishable from
+    one that does not exist, rather than fetched and rejected afterward.
+    """
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM extraction_facts WHERE id = %s", (fact_id,))
+        cur.execute(
+            "SELECT * FROM extraction_facts WHERE id = %s AND organization_id = %s",
+            (fact_id, organization_id),
+        )
         row = cur.fetchone()
         return dict(row) if row else None
 
 
-def review_extraction_fact(conn, fact_id: str, *, event: str, reviewer: str,
-                           new_value: str | None, reason: str | None) -> dict | None:
+def review_extraction_fact(conn, fact_id: str, *, organization_id: str, event: str,
+                           reviewer: str, new_value: str | None,
+                           reason: str | None) -> dict | None:
     """
     Record a human review action and update the fact's current state.
 
-    The extraction_events row is the permanent record of what happened;
-    the extraction_facts row is updated to reflect current status so the UI
-    can show "corrected" without replaying the event log every time.
+    Requires organization_id and checks it before writing anything — a
+    review action changes data, so the ownership check here matters even
+    more than on a read: without it, a caller who obtained or guessed
+    another organization's fact_id could not just see the fact but alter
+    it. The extraction_events row is the permanent record of what
+    happened; the extraction_facts row is updated to reflect current
+    status so the UI can show "corrected" without replaying the event log
+    every time.
     """
-    fact = get_extraction_fact(conn, fact_id)
+    fact = get_extraction_fact(conn, fact_id, organization_id)
     if not fact:
         return None
 
@@ -1579,10 +1607,10 @@ def review_extraction_fact(conn, fact_id: str, *, event: str, reviewer: str,
             """
             UPDATE extraction_facts
             SET value = %s, status = %s, updated_at = now()
-            WHERE id = %s
+            WHERE id = %s AND organization_id = %s
             RETURNING *
             """,
-            (after_value, new_status, fact_id),
+            (after_value, new_status, fact_id, organization_id),
         )
         return dict(cur.fetchone())
 
@@ -1642,9 +1670,24 @@ def create_submission(conn, *, organization_id: str, label: str) -> dict:
         return dict(cur.fetchone())
 
 
-def get_submission(conn, submission_id: str) -> dict | None:
+def get_submission(conn, submission_id: str, organization_id: str) -> dict | None:
+    """
+    Fetch a submission, scoped to the caller's organization.
+
+    Deliberately requires organization_id and filters on it, rather than
+    fetching by id alone and letting the caller check afterward: a
+    submission that belongs to a different organization must not exist as
+    far as this query is concerned, not exist-but-get-rejected one layer up
+    where a future call site could forget the check. Returns None for a
+    submission that exists but belongs to someone else, same as one that
+    does not exist at all — a 404 either way, so a caller ownership probe
+    cannot even distinguish "not found" from "not yours".
+    """
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM submissions WHERE id = %s", (submission_id,))
+        cur.execute(
+            "SELECT * FROM submissions WHERE id = %s AND organization_id = %s",
+            (submission_id, organization_id),
+        )
         row = cur.fetchone()
         return dict(row) if row else None
 
@@ -1674,18 +1717,30 @@ def set_document_submission(conn, document_id: str, submission_id: str) -> None:
         )
 
 
-def list_submission_documents(conn, submission_id: str) -> list[dict]:
+def list_submission_documents(conn, submission_id: str, organization_id: str) -> list[dict]:
+    """
+    Documents in a submission, scoped to the caller's organization via a
+    join back to submissions — belt-and-braces alongside the caller
+    checking get_submission() first, so this function is safe to call even
+    if a future call site forgets that check.
+    """
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT * FROM documents WHERE submission_id = %s ORDER BY uploaded_at ASC",
-            (submission_id,),
+            """
+            SELECT d.* FROM documents d
+            JOIN submissions s ON s.id = d.submission_id
+            WHERE d.submission_id = %s AND s.organization_id = %s
+            ORDER BY d.uploaded_at ASC
+            """,
+            (submission_id, organization_id),
         )
         return cur.fetchall()
 
 
-def list_submission_facts(conn, submission_id: str) -> list[dict]:
+def list_submission_facts(conn, submission_id: str, organization_id: str) -> list[dict]:
     """
-    Every extraction_facts row for every document in one submission.
+    Every extraction_facts row for every document in one submission, scoped
+    to the caller's organization.
 
     This is what a contradiction check compares — every fact currently on
     record for the submission, joined back to which document it came from
@@ -1697,10 +1752,11 @@ def list_submission_facts(conn, submission_id: str) -> list[dict]:
             SELECT f.*, d.filename AS document_filename
             FROM extraction_facts f
             JOIN documents d ON d.id = f.document_id
-            WHERE d.submission_id = %s
+            JOIN submissions s ON s.id = d.submission_id
+            WHERE d.submission_id = %s AND s.organization_id = %s
             ORDER BY f.created_at ASC
             """,
-            (submission_id,),
+            (submission_id, organization_id),
         )
         return cur.fetchall()
 

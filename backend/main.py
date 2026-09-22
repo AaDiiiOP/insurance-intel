@@ -23,7 +23,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 import psycopg
-from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -2472,8 +2472,80 @@ def _fact_response(row: dict) -> dict:
     }
 
 
+def _resolve_organization(conn, x_organization_id: str | None) -> str:
+    """
+    Which organization the caller is acting as.
+
+    Reads the X-Organization-Id header if given and confirms it actually
+    exists; falls back to the pilot-stage default organization when no
+    header is sent, so every existing call site and the current UI (which
+    sends no header) keep working exactly as before. This is the ONLY
+    place in the app that decides "who is asking" — every doc-intelligence
+    endpoint calls this first and passes the result to every db function
+    that reads or writes org-scoped data, rather than each endpoint
+    re-deciding it independently.
+
+    This is still application-level scoping, not database-enforced
+    isolation (no Postgres row-level security) — a caller who sends
+    ANY organization_id, including one that is not really theirs, is
+    trusted. That is the documented pilot-stage boundary, not a gap
+    introduced here; what this function adds is that the boundary is now
+    actually enforced at every read and write, instead of not existing at
+    all.
+    """
+    if not x_organization_id:
+        return db.get_or_create_default_organization(conn)
+
+    organization_id = _validate_uuid(x_organization_id, "X-Organization-Id header")
+    org = db.get_organization(conn, organization_id)
+    if not org:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No organization with id {organization_id}.",
+        )
+    return organization_id
+
+
+@app.post("/organizations")
+def create_organization_endpoint(name: str = Form(...)):
+    """
+    Create a new organization — a separate tenant boundary for testing or
+    onboarding a second broker. Returns its id, which the caller then sends
+    as the X-Organization-Id header on every subsequent doc-intelligence
+    request to act as that organization.
+    """
+    name = " ".join((name or "").split())
+    if not name:
+        raise HTTPException(status_code=400, detail="Give the organization a name.")
+    with db.get_connection() as conn:
+        row = db.create_organization(conn, name)
+    return {
+        "organization_id": str(row["id"]),
+        "name": row["name"],
+        "created_at": row["created_at"].isoformat(),
+    }
+
+
+@app.get("/organizations")
+def list_organizations_endpoint():
+    with db.get_connection() as conn:
+        rows = db.list_organizations(conn)
+    return {
+        "organizations": [
+            {
+                "organization_id": str(r["id"]),
+                "name": r["name"],
+                "created_at": r["created_at"].isoformat(),
+            }
+            for r in rows
+        ]
+    }
+
+
 @app.post("/doc-intelligence/submissions")
-def create_doc_intelligence_submission(label: str = Form(...)):
+def create_doc_intelligence_submission(
+    label: str = Form(...), x_organization_id: str | None = Header(None)
+):
     """
     Start a new submission — a named group of documents believed to belong
     to the same case or company. Created explicitly, up front, rather than
@@ -2486,7 +2558,7 @@ def create_doc_intelligence_submission(label: str = Form(...)):
         raise HTTPException(status_code=400, detail="Give this submission a name.")
 
     with db.get_connection() as conn:
-        organization_id = db.get_or_create_default_organization(conn)
+        organization_id = _resolve_organization(conn, x_organization_id)
         row = db.create_submission(conn, organization_id=organization_id, label=label)
 
     return {
@@ -2497,9 +2569,9 @@ def create_doc_intelligence_submission(label: str = Form(...)):
 
 
 @app.get("/doc-intelligence/submissions")
-def list_doc_intelligence_submissions():
+def list_doc_intelligence_submissions(x_organization_id: str | None = Header(None)):
     with db.get_connection() as conn:
-        organization_id = db.get_or_create_default_organization(conn)
+        organization_id = _resolve_organization(conn, x_organization_id)
         rows = db.list_submissions(conn, organization_id)
     return {
         "submissions": [
@@ -2514,14 +2586,21 @@ def list_doc_intelligence_submissions():
 
 
 @app.get("/doc-intelligence/submissions/{submission_id}")
-def get_doc_intelligence_submission(submission_id: str):
+def get_doc_intelligence_submission(
+    submission_id: str, x_organization_id: str | None = Header(None)
+):
     submission_id = _validate_uuid(submission_id, "submission id")
     with db.get_connection() as conn:
-        submission = db.get_submission(conn, submission_id)
+        organization_id = _resolve_organization(conn, x_organization_id)
+        # get_submission is scoped to organization_id in the query itself
+        # (see db.py) — a submission belonging to a different organization
+        # returns None here, identically to one that does not exist, so a
+        # caller cannot even tell the two apart.
+        submission = db.get_submission(conn, submission_id, organization_id)
         if not submission:
             raise HTTPException(status_code=404, detail="Submission not found.")
-        documents = db.list_submission_documents(conn, submission_id)
-        facts = db.list_submission_facts(conn, submission_id)
+        documents = db.list_submission_documents(conn, submission_id, organization_id)
+        facts = db.list_submission_facts(conn, submission_id, organization_id)
 
     return {
         "submission_id": submission_id,
@@ -2540,7 +2619,9 @@ def get_doc_intelligence_submission(submission_id: str):
 
 @app.post("/doc-intelligence/upload")
 async def doc_intelligence_upload(
-    file: UploadFile = File(...), submission_id: str | None = Form(None)
+    file: UploadFile = File(...),
+    submission_id: str | None = Form(None),
+    x_organization_id: str | None = Header(None),
 ):
     """
     Upload one policy document for the vertical slice: quality check, OCR
@@ -2555,10 +2636,15 @@ async def doc_intelligence_upload(
     contradiction detection has nothing to compare against for a document
     with no declared siblings.
 
-    Pilot-stage tenant scoping: every document and fact created here belongs
-    to the default organization (db.DEFAULT_ORGANIZATION_ID). Filtering by
-    organization_id is application-level, not database-enforced — documented
-    explicitly, per the pilot-stage decision, as not yet real isolation.
+    Pilot-stage tenant scoping: the caller acts as whichever organization
+    the X-Organization-Id header names (or the default organization if no
+    header is sent). Every document and fact created here is scoped to
+    that organization, and reading a submission or fact belonging to a
+    DIFFERENT organization is rejected — see _resolve_organization and the
+    organization_id filters in db.py's get_submission / get_extraction_fact.
+    This is application-level scoping, not database-enforced isolation
+    (no Postgres row-level security yet) — documented explicitly as the
+    pilot-stage boundary, not a claim of full multi-tenant isolation.
     """
     data = await file.read()
     filename = file.filename or "unnamed"
@@ -2573,9 +2659,12 @@ async def doc_intelligence_upload(
     )
 
     with db.get_connection() as conn:
-        organization_id = db.get_or_create_default_organization(conn)
+        organization_id = _resolve_organization(conn, x_organization_id)
 
-        if submission_id and not db.get_submission(conn, submission_id):
+        if submission_id and not db.get_submission(conn, submission_id, organization_id):
+            # Same message whether the submission belongs to a different
+            # organization or does not exist at all — a caller cannot use
+            # the error to distinguish "not yours" from "never existed".
             raise HTTPException(status_code=404, detail="Submission not found.")
 
         # Reuses the existing documents table and carrier_id's nullability —
@@ -2670,7 +2759,7 @@ async def doc_intelligence_upload(
             # SAME document is never compared against itself.
             existing_facts = [
                 f
-                for f in db.list_submission_facts(conn, submission_id)
+                for f in db.list_submission_facts(conn, submission_id, organization_id)
                 if str(f["document_id"]) != document_id
             ]
             contradiction = doc_intelligence.find_contradiction(
@@ -2732,10 +2821,11 @@ def list_document_facts(document_id: str):
 
 
 @app.get("/doc-intelligence/facts/{fact_id}")
-def get_fact(fact_id: str):
+def get_fact(fact_id: str, x_organization_id: str | None = Header(None)):
     fact_id = _validate_uuid(fact_id, "fact id")
     with db.get_connection() as conn:
-        row = db.get_extraction_fact(conn, fact_id)
+        organization_id = _resolve_organization(conn, x_organization_id)
+        row = db.get_extraction_fact(conn, fact_id, organization_id)
         if not row:
             raise HTTPException(status_code=404, detail="Fact not found.")
         events = db.get_extraction_events(conn, fact_id)
@@ -2755,14 +2845,20 @@ def get_fact(fact_id: str):
 
 
 @app.post("/doc-intelligence/facts/{fact_id}/review")
-def review_fact(fact_id: str, body: ReviewAction):
+def review_fact(
+    fact_id: str, body: ReviewAction, x_organization_id: str | None = Header(None)
+):
     """
     Record a human review action on one extracted fact.
 
     'corrected' requires new_value — a correction with nothing to correct to
     is not a correction. The event is appended to extraction_events
     regardless of outcome; nothing here is ever deleted or overwritten,
-    matching the same append-only principle as draft_events.
+    matching the same append-only principle as draft_events. Scoped to the
+    caller's organization — reviewing a fact that belongs to a different
+    organization is rejected with the same 404 as a fact that does not
+    exist, so this endpoint cannot be used to even confirm another
+    organization's fact_id is valid, let alone alter it.
     """
     fact_id = _validate_uuid(fact_id, "fact id")
 
@@ -2785,9 +2881,11 @@ def review_fact(fact_id: str, body: ReviewAction):
             )
 
     with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
         row = db.review_extraction_fact(
             conn,
             fact_id,
+            organization_id=organization_id,
             event=action,
             reviewer=reviewer[:120],
             new_value=new_value,

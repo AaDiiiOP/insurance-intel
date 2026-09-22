@@ -258,13 +258,20 @@ building ten extraction paths on it, instead of after building one. Once
 this shape is validated against real use, the same pattern extends to more
 fact types — this is deliberately not that yet.
 
-**Pilot-stage tenant boundary.** Every fact and document created here
-belongs to an `organization_id`. Right now that's a single default
-organization with **application-level filtering, not database-enforced
-isolation** — explicitly not production-grade multi-tenancy. Fine for a
-handful of pilot brokers; something to revisit deliberately (row-level
-security or per-tenant databases) before real customer data at scale. The
-schema is shaped so that upgrade doesn't require rewriting the tables.
+**Pilot-stage tenant boundary — now actually enforced, not just present as a
+column.** An `X-Organization-Id` header controls which organization a
+request acts as (defaulting to a single default organization when omitted,
+so the existing UI and every earlier example above keep working
+unmodified). Every read and write checks it — fetching another
+organization's submission or fact returns the same 404 as one that does not
+exist, and attempting to review or correct another organization's fact is
+rejected the same way. Verified with real HTTP calls between two created
+organizations, including confirming a write is actually blocked, not just a
+read — see `Results.md`, Test 1. Still **application-level filtering, not
+database-enforced isolation** (no Postgres row-level security) — a caller
+that sends an id it should not have is still trusted by this layer. That
+remains the deliberate pilot-stage boundary; what changed is that it is now
+enforced everywhere it applies, rather than not existing.
 
 **Nothing new was added to run this.** OCR uses Tesseract (a system package,
 installed in the backend's own Docker image) and Poppler for PDF rendering —
