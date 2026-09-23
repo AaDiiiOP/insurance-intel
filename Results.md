@@ -235,6 +235,26 @@ That is the documented pilot-stage decision, not a gap introduced here; what
 changed is that the boundary is now actually enforced everywhere, rather
 than not existing at all.
 
+**Follow-up: the isolation above was real but invisible — now it's usable.**
+The table above was verified with raw HTTP calls; there was no way for an
+actual person to try this in the app itself. Added an "Acting as"
+organization switcher to the Doc Intelligence screen — create an
+organization, switch to it, and every request `api.js` makes from then on
+carries that organization automatically (nothing else in the app needed to
+change). Verified with a real browser test, not just the backend calls
+above:
+
+| Step | Result |
+|---|---|
+| Create "Broker A" through the UI | ✅ created, auto-selected |
+| Create a submission while acting as Broker A | ✅ created, visible in the list |
+| Create "Broker B" through the UI (auto-switches to it) | ✅ switched |
+| Submission list after switching to Broker B | ✅ empty — Broker A's submission is gone from view |
+
+Screenshots of all four steps taken during development. The switch also
+clears the on-screen document list immediately, rather than risk showing a
+fetch error where the previous organization's data used to be.
+
 ---
 
 ## Test 2 — Persistence across a restart: verified, no code changes needed
@@ -326,8 +346,23 @@ test, not a statistically meaningful benchmark, and a re-run against the
 real model (closing the caveat above) is needed before citing an accuracy
 percentage from this test.
 
-Reproducible: `python3 build_hard_ocr_set.py` then `python3 run_hard_ocr_test.py`,
-full detail in `hard_ocr_results.json`.
+**Follow-up: the script now states which model actually ran, in the output
+itself.** The confusion above — not being able to tell from the results
+file alone whether a real model or a stand-in produced a given abstention —
+prompted a fix: `run_hard_ocr_test.py` now checks `llm.is_available()`
+before running anything, prints an explicit warning if the model is not
+reachable, and records `model_used`, `model_was_reachable`, and
+`run_is_authoritative_for_model_path_results` directly in
+`hard_ocr_results.json`. Verified by running it with no model reachable at
+all: it correctly reported `reachable=False` and flagged every resulting
+abstention as not authoritative, rather than presenting them as ordinary
+results. **The actual re-run against a real `qwen2.5:7b` still has not
+happened** — this only fixes the ambiguity about which kind of run produced
+a given file, so the next run's result can be trusted without a second
+round of "but which model was this."
+
+Reproducible: `python3 build_hard_ocr_set.py <path-to-source-pdf>` then
+`python3 run_hard_ocr_test.py`, full detail in `hard_ocr_results.json`.
 
 ---
 
@@ -353,9 +388,16 @@ full detail in `hard_ocr_results.json`.
    automatically.~~ **Done** — see `contradiction_checks` in
    `eval_results.json` and the summary fields `contradiction_accuracy_pct`
    / `contradiction_false_positives`.
-7. **New:** a submission-picker UI now exists in the Doc Intelligence
-   screen (create a submission, upload documents into it, contradictions
-   highlighted with a red border and pill on the fact card) — verified with
-   real screenshots against the real AUR-SYN-004 case. Not yet done: an
-   equivalent for P0-06/P0-07 (org isolation, persistence) has no UI either,
-   and remains a manual API-level check per item 5.
+7. ~~A submission-picker UI... Not yet done: an equivalent for P0-06/P0-07
+   (org isolation, persistence) has no UI either.~~ **The org-isolation half
+   is now done too** — see the organization switcher added to Doc
+   Intelligence, verified with a real browser test above. Persistence has
+   no UI equivalent by nature (there is nothing to click to test a
+   restart) and remains a manual check, which is the correct way to test it.
+8. **Remaining, unchanged:** re-run Test 3 against a real, reachable
+   `qwen2.5:7b` to close the `perspective_skew` caveat for real. The
+   ambiguity about which kind of run produced a given results file is now
+   fixed (see Test 3's follow-up note — `hard_ocr_results.json` records
+   `model_was_reachable` directly), so the next run's numbers can be
+   trusted without a repeat of this same caveat, but the actual re-run
+   still needs to happen on a machine with Ollama available.

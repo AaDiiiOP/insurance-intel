@@ -23,6 +23,7 @@ from pathlib import Path
 # (this script already lives in backend/, no path insert needed)
 
 import doc_intelligence  # noqa: E402
+import llm  # noqa: E402
 from parsers import ParseError, parse_file_with_quality  # noqa: E402
 
 VARIANT_DIR = Path(__file__).parent / "hard_ocr_test"
@@ -80,6 +81,24 @@ def main():
         print(f"No variants found in {VARIANT_DIR}. Run build_hard_ocr_set.py first.")
         sys.exit(1)
 
+    # Recorded in the output itself, not just printed, so a results file
+    # found later can never be mistaken for the wrong kind of run — this is
+    # exactly the ambiguity that caused the perspective_skew caveat to need
+    # a second pass in the first place: nothing in the first run's JSON said
+    # which model produced it.
+    model_available = llm.is_available()
+    model_name = llm.OLLAMA_MODEL
+    print(f"Model check: OLLAMA_MODEL={model_name!r}, reachable={model_available}")
+    if not model_available:
+        print(
+            "WARNING: this model is not reachable right now. Any variant that "
+            "falls through to the model path (not caught by the deterministic "
+            "rule) will fail to extract regardless of whether a human could "
+            "have read the text — that is a missing-model result, not an OCR "
+            "accuracy result. Start Ollama and re-run before trusting any "
+            "'abstained' result on this pass.\n"
+        )
+
     print(f"Running {len(variants)} degraded variants through the real pipeline...\n")
     results = []
     for pdf_path in variants:
@@ -101,7 +120,17 @@ def main():
             )
 
     out_path = Path(__file__).parent / "hard_ocr_results.json"
-    out_path.write_text(json.dumps(results, indent=2))
+    output = {
+        "model_used": model_name,
+        "model_was_reachable": model_available,
+        # True only when every non-deterministic extraction in this run came
+        # from a real, reachable Ollama model — the exact condition every
+        # prior review has asked to see before trusting an abstention as a
+        # genuine OCR failure rather than a missing-model artifact.
+        "run_is_authoritative_for_model_path_results": model_available,
+        "results": results,
+    }
+    out_path.write_text(json.dumps(output, indent=2))
 
     total = len(results)
     correct = sum(1 for r in results if r.get("value_correct"))
@@ -110,11 +139,17 @@ def main():
     parse_failed = sum(1 for r in results if r.get("parse_failed"))
 
     print(f"\n{'='*60}")
-    print(f"SUMMARY ({total} variants)")
+    print(f"SUMMARY ({total} variants, model={model_name}, reachable={model_available})")
     print(f"  Correct extraction:        {correct}")
     print(f"  Correctly abstained:       {abstained}")
     print(f"  SILENT WRONG ANSWERS:      {silent_wrong}  <-- the number that matters most")
     print(f"  Parse failures:            {parse_failed}")
+    if not model_available:
+        print(
+            "\n  NOTE: model was not reachable during this run — the counts "
+            "above are not a valid test of model-path OCR accuracy. Re-run "
+            "with Ollama running before trusting these numbers."
+        )
     print(f"\nFull results: {out_path}")
 
 

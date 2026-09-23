@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 
 import {
+  createOrganization,
   createSubmission,
+  getActiveOrganization,
   getExtractionFact,
   getSubmission,
+  listOrganizations,
   listSubmissions,
   reviewExtractionFact,
+  setActiveOrganization,
   uploadForExtraction,
 } from '../api'
 
@@ -245,6 +249,15 @@ function FactCard({ fact, filename, onUpdated, onError }) {
 }
 
 export default function DocIntelligence() {
+  // The pilot-stage tenant boundary, made visible and switchable rather
+  // than an invisible default every request silently used. '' means "no
+  // organization selected" — api.js then sends no header at all, which the
+  // backend treats exactly like every request made before this existed.
+  const [organizations, setOrganizations] = useState([])
+  const [organizationId, setOrganizationId] = useState('')
+  const [newOrgName, setNewOrgName] = useState('')
+  const [creatingOrg, setCreatingOrg] = useState(false)
+
   const [submissions, setSubmissions] = useState([])
   const [submissionId, setSubmissionId] = useState('')
   const [newLabel, setNewLabel] = useState('')
@@ -256,6 +269,57 @@ export default function DocIntelligence() {
   const [error, setError] = useState(null)
 
   const fileRef = useRef(null)
+
+  useEffect(() => {
+    listOrganizations()
+      .then((d) => setOrganizations(d.organizations || []))
+      .catch(() => setOrganizations([]))
+    // Reflects whatever api.js already had active (e.g. if this view
+    // remounts) rather than silently resetting the switcher to blank under
+    // it.
+    setOrganizationId(getActiveOrganization() || '')
+  }, [])
+
+  function selectOrganization(id) {
+    setOrganizationId(id)
+    setActiveOrganization(id)
+    // Everything on screen belonged to whichever organization was active
+    // before — switching identity mid-session must not leave a stale
+    // submission or document list that the new identity may not even be
+    // able to see. Matches the 404-not-a-leak behaviour on the backend: the
+    // UI clears rather than risk showing a fetch error where the old data
+    // used to be.
+    setSubmissionId('')
+    setSubmissions([])
+    setDocuments([])
+    setError(null)
+    listSubmissions()
+      .then((d) => setSubmissions(d.submissions || []))
+      .catch(() => setSubmissions([]))
+  }
+
+  async function handleCreateOrganization() {
+    if (!newOrgName.trim()) {
+      setError('Give the organization a name — e.g. the broker or team it represents.')
+      return
+    }
+    setCreatingOrg(true)
+    setError(null)
+    try {
+      const created = await createOrganization(newOrgName.trim())
+      setOrganizations((current) => [...current, created])
+      setNewOrgName('')
+      // Switching to the organization just created is almost always what
+      // someone testing isolation wants next — creating "Broker B" and
+      // then still acting as the default organization would be a confusing
+      // default.
+      selectOrganization(created.organization_id)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setCreatingOrg(false)
+    }
+  }
 
   useEffect(() => {
     listSubmissions()
@@ -367,6 +431,53 @@ export default function DocIntelligence() {
       </header>
 
       {error && <div className="banner bad">{error}</div>}
+
+      <div className="section">
+        <div className="section-head">
+          <h2>Organization</h2>
+        </div>
+        <p className="subtitle" style={{ marginBottom: 12 }}>
+          The pilot-stage tenant boundary, made visible here rather than
+          invisible: everything below (submissions, documents, facts) is
+          scoped to whichever organization is selected. Switch to a
+          different one and a submission created under another organization
+          is not just hidden — the backend treats it exactly like it does
+          not exist.
+        </p>
+
+        <div className="scope-row" style={{ marginBottom: 10 }}>
+          <label htmlFor="org-picker">Acting as</label>
+          <select
+            id="org-picker"
+            value={organizationId}
+            onChange={(e) => selectOrganization(e.target.value)}
+          >
+            <option value="">default organization (no header sent)</option>
+            {organizations.map((o) => (
+              <option key={o.organization_id} value={o.organization_id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="actions" style={{ marginTop: 0 }}>
+          <input
+            className="approve-note"
+            style={{ maxWidth: 260 }}
+            placeholder="New organization name — e.g. Broker B"
+            value={newOrgName}
+            onChange={(e) => setNewOrgName(e.target.value)}
+          />
+          <button
+            className="btn-ghost"
+            onClick={handleCreateOrganization}
+            disabled={creatingOrg}
+          >
+            {creatingOrg ? 'Creating…' : '+ New organization'}
+          </button>
+        </div>
+      </div>
 
       <div className="section">
         <div className="section-head">

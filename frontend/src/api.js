@@ -1,5 +1,20 @@
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+// Which organization the app acts as, for the doc-intelligence tenant
+// boundary. null means "no header sent" — the backend then falls back to
+// its own default organization, exactly matching every request made before
+// this existed. Set via setActiveOrganization(), called from the org
+// switcher in the Doc Intelligence screen.
+let activeOrganizationId = null
+
+export function setActiveOrganization(organizationId) {
+  activeOrganizationId = organizationId || null
+}
+
+export function getActiveOrganization() {
+  return activeOrganizationId
+}
+
 /**
  * One place that turns a non-2xx response into a thrown Error carrying the
  * backend's own `detail` message. Every view can then just catch and show
@@ -7,8 +22,16 @@ const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
  */
 async function request(path, options = {}) {
   let response
+  const headers = new Headers(options.headers || {})
+  // Sent on every request once an organization is selected — this is the
+  // one place that needs to know about it, so nothing else in api.js (or
+  // any view) has to pass it through by hand.
+  if (activeOrganizationId) {
+    headers.set('X-Organization-Id', activeOrganizationId)
+  }
+
   try {
-    response = await fetch(`${BASE}${path}`, options)
+    response = await fetch(`${BASE}${path}`, { ...options, headers })
   } catch {
     throw new Error(
       'Could not reach the backend. Is it running? (docker-compose up --build)',
@@ -358,4 +381,21 @@ export function reviewExtractionFact(factId, reviewer, action, newValue, reason)
       reason: reason || null,
     }),
   })
+}
+
+// ---- Organizations (pilot-stage tenant boundary) --------------------------
+//
+// Lets the Doc Intelligence screen actually exercise the isolation that is
+// enforced on the backend — before this, the boundary was real but
+// invisible: every request silently used the one default organization, and
+// trying a second one meant hand-crafting an HTTP header outside the app.
+
+export function listOrganizations() {
+  return request('/organizations')
+}
+
+export function createOrganization(name) {
+  const form = new FormData()
+  form.append('name', name)
+  return request('/organizations', { method: 'POST', body: form })
 }

@@ -273,6 +273,16 @@ that sends an id it should not have is still trusted by this layer. That
 remains the deliberate pilot-stage boundary; what changed is that it is now
 enforced everywhere it applies, rather than not existing.
 
+**Now visible and usable in the UI, not just provable via curl.** The Doc
+Intelligence screen has an "Acting as" organization switcher — create a
+second organization and switch to it, and the submission list visibly
+empties, because the backend genuinely treats the other organization's data
+as though it does not exist. Every API call `api.js` makes carries whichever
+organization is currently selected automatically; nothing elsewhere in the
+app needed to change. Verified with a real browser test: created "Broker A,"
+made a submission under it, created "Broker B," and confirmed Broker A's
+submission disappeared from the list the moment the switch happened —
+screenshots of each step exist in the development history for this feature.
 **Nothing new was added to run this.** OCR uses Tesseract (a system package,
 installed in the backend's own Docker image) and Poppler for PDF rendering —
 both fully local and offline. Extraction uses the same local Ollama model as
