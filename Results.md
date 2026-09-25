@@ -6,8 +6,8 @@ Run against all 20 companies in the dataset, through the real pipeline
 
 **The numbers below are from a real, complete run** — real `qwen2.5:7b` via
 local Ollama, real Tesseract OCR, real Poppler. `backend/eval_results.json`
-is that exact run's full per-company output; nothing in this repo is a
-stand-in or simulation. (An earlier draft of this evaluation used a
+is that exact run full per-company output; nothing in this repo is a
+stand-in or simulation. (An earlier draft of this evaluation u sed a
 regex-based stand-in for the model before a real Ollama instance was
 available — that run and its output file no longer exist in this repo,
 superseded entirely by the real one described here.)
