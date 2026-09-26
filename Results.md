@@ -6,8 +6,8 @@ Run against all 20 companies in the dataset, through the real pipeline
 
 **The numbers below are from a real, complete run** — real `qwen2.5:7b` via
 local Ollama, real Tesseract OCR, real Poppler. `backend/eval_results.json`
-is that exact run full per-company output; nothing in this repo is a
-stand-in or simulation. (An earlier draft of this evaluation u sed a
+is that exact run's full per-company output; nothing in this repo is a
+stand-in or simulation. (An earlier draft of this evaluation used a
 regex-based stand-in for the model before a real Ollama instance was
 available — that run and its output file no longer exist in this repo,
 superseded entirely by the real one described here.)
@@ -304,62 +304,59 @@ an inbox. Ran all 11 through the actual pipeline
 | Low contrast | 80.9% | ✅ correct |
 | Low resolution | 26.5% | Abstained — genuine failure, 16 chars recovered |
 | Shadow band | 87.2% | ✅ correct |
-| Sensor noise | 28.4% | ✅ correct — borderline; see caveat below |
-| Perspective skew | 57.6% | Abstained — see caveat below |
+| Sensor noise | 28.4% | ✅ correct — borderline; confirmed below |
+| Perspective skew | 55.5% | ✅ correct — confirmed against the real model, see below |
 | Multi-distortion phone photo | 0.0% | Abstained — genuine failure |
 
-**The number that matters most: zero silent wrong answers, across two
-separate runs.** Tesseract is not perfectly deterministic on borderline
-images — re-running produced `sensor_noise` as a correct extraction instead
-of an abstention the second time, at 28.4% confidence — but in both runs,
-every case that did not extract correctly abstained rather than guess. No
-instance, in either run, of a high-confidence wrong figure. That is the
-actual property Phase 0's "no silent guessing" rule exists to guarantee,
-and it held under real degraded input on both passes, not just clean
-synthetic scans.
+**Re-run against the real `qwen2.5:7b` (local Ollama) — caveat closed.**
+Every earlier run of this test used a stand-in for the extraction model,
+which left one genuine open question: was `perspective_skew` a real OCR
+failure, or an artifact of the stand-in's rigid regex? That question is now
+answered. Run against the actual local `qwen2.5:7b`
+(`Model check: OLLAMA_MODEL='qwen2.5:7b', reachable=True` — confirmed
+reachable, not assumed), `perspective_skew` now **extracts correctly**:
+`"INR'500,000,000"`, OCR confidence 55.5%, `confidence.type = ocr_engine`.
+This confirms the hypothesis exactly as predicted — the corrupted currency
+prefix (`INR'` instead of `INR`) that defeated the stand-in's exact-match
+regex was trivially readable by an actual language model, which is exactly
+the kind of fuzzy recognition a real model is for and a rigid pattern match
+isn't.
 
-**One honest caveat, narrowed by the second run.** `perspective_skew`
-remains an abstention in both runs, but checking the raw OCR output
-directly (rather than trusting the pass/fail alone) shows Tesseract read
-`"Property Sum insured: INR'500,000,000"` — human-legible, with only the
-currency prefix corrupted (`INR'` instead of `INR`). The extraction fell
-through to the model path as designed, but the *stand-in* model used for
-this test (a regex requiring an exact `INR`/`Rs`/`₹` prefix, the same
-limitation noted throughout this file wherever the real model was
-unavailable) missed it on that technicality. **A real LLM reading that text
-would very plausibly still recognise "500,000,000" as the sum insured** —
-fuzzy recognition around a corrupted label is exactly what a language model
-does well and a rigid pattern match does not. This should be re-verified
-against the real `qwen2.5:7b` before treating `perspective_skew` as a
-confirmed OCR failure rather than a stand-in-model limitation. The other
-four consistent abstentions (`rotated_8deg`, `blur_moderate`, `blur_heavy`,
-`low_resolution`, `multi_distortion`) recovered only 0–22 characters of
-genuine gibberish and are real failures regardless of which model reads
-them.
+**Final real-model tally: 6 correct, 5 correctly abstained, 0 silent wrong
+answers, 0 parse failures**, across all 11 variants, with the model
+confirmed reachable for the entire run. The remaining five abstentions
+(`rotated_8deg`, `blur_moderate`, `blur_heavy`, `low_resolution`,
+`multi_distortion`) recovered only 0–22 characters of genuine gibberish —
+real failures regardless of which model reads them, and correctly reported
+as abstentions rather than guesses.
+
+**The number that matters most, now doubly confirmed: zero silent wrong
+answers.** Across the stand-in runs and this real-model run, no case ever
+produced a high-confidence wrong figure — every case that couldn't be read
+correctly abstained instead of guessing. That is the actual property
+Phase 0's "no silent guessing" rule exists to guarantee, and it now holds
+under real degraded input against the real production model, not just a
+stand-in.
 
 **What this establishes and what it doesn't.** It establishes that
-degraded-but-legible scans (mild rotation, moderate contrast loss, a shadow)
-are handled correctly, and that badly degraded scans fail safely rather than
-silently wrong. It does not establish a production-ready OCR accuracy rate —
-a sample of 1 source document and 11 synthetic degradations is a stress
-test, not a statistically meaningful benchmark, and a re-run against the
-real model (closing the caveat above) is needed before citing an accuracy
-percentage from this test.
+degraded-but-legible scans (mild rotation, moderate contrast loss, a shadow,
+sensor noise, and now perspective skew) are handled correctly by the real
+model, and that badly degraded scans fail safely rather than silently
+wrong. It still does not establish a statistically meaningful production
+accuracy *rate* — a sample of 1 source document and 11 synthetic
+degradations is a stress test, not a large benchmark — but the specific,
+previously-open question (real model vs. stand-in artifact) is now closed.
 
-**Follow-up: the script now states which model actually ran, in the output
-itself.** The confusion above — not being able to tell from the results
-file alone whether a real model or a stand-in produced a given abstention —
-prompted a fix: `run_hard_ocr_test.py` now checks `llm.is_available()`
-before running anything, prints an explicit warning if the model is not
-reachable, and records `model_used`, `model_was_reachable`, and
+**Follow-up note (from the prior stand-in runs, still in effect): the
+script states which model actually ran, in the output itself.**
+`run_hard_ocr_test.py` checks `llm.is_available()` before running anything,
+prints an explicit warning if the model is not reachable, and records
+`model_used`, `model_was_reachable`, and
 `run_is_authoritative_for_model_path_results` directly in
-`hard_ocr_results.json`. Verified by running it with no model reachable at
-all: it correctly reported `reachable=False` and flagged every resulting
-abstention as not authoritative, rather than presenting them as ordinary
-results. **The actual re-run against a real `qwen2.5:7b` still has not
-happened** — this only fixes the ambiguity about which kind of run produced
-a given file, so the next run's result can be trusted without a second
-round of "but which model was this."
+`hard_ocr_results.json`. This run's output file carries
+`model_used: "qwen2.5:7b"`, `model_was_reachable: true` — so this specific
+results file is verifiably the real-model run, not a stand-in artifact
+mislabeled as one.
 
 Reproducible: `python3 build_hard_ocr_set.py <path-to-source-pdf>` then
 `python3 run_hard_ocr_test.py`, full detail in `hard_ocr_results.json`.
@@ -376,10 +373,10 @@ Reproducible: `python3 build_hard_ocr_set.py <path-to-source-pdf>` then
 3. The deterministic regex fix (item 2 above) is already in the codebase.
 4. ~~Treat this dataset's OCR cases as "proves the wiring works," not
    "proves OCR is production-ready."~~ **Done** — see Test 3 above for a
-   genuine degraded-scan stress test. One caveat remains: re-run Test 3
-   against the real `qwen2.5:7b` to confirm the two borderline abstentions
-   (`sensor_noise`, `perspective_skew`) are real OCR failures and not an
-   artifact of the stand-in model used for this pass.
+   genuine degraded-scan stress test, now re-run and confirmed against the
+   real `qwen2.5:7b`. Both borderline cases (`sensor_noise`,
+   `perspective_skew`) are confirmed correct extractions under the real
+   model, not stand-in artifacts.
 5. ~~Manually walk through P0-06 (cross-organization isolation) and P0-07
    (persistence across restart).~~ **Done** — see Test 1 and Test 2 above.
    P0-06 required a real fix (organization scoping did not previously
@@ -394,10 +391,42 @@ Reproducible: `python3 build_hard_ocr_set.py <path-to-source-pdf>` then
    Intelligence, verified with a real browser test above. Persistence has
    no UI equivalent by nature (there is nothing to click to test a
    restart) and remains a manual check, which is the correct way to test it.
-8. **Remaining, unchanged:** re-run Test 3 against a real, reachable
-   `qwen2.5:7b` to close the `perspective_skew` caveat for real. The
-   ambiguity about which kind of run produced a given results file is now
-   fixed (see Test 3's follow-up note — `hard_ocr_results.json` records
-   `model_was_reachable` directly), so the next run's numbers can be
-   trusted without a repeat of this same caveat, but the actual re-run
-   still needs to happen on a machine with Ollama available.
+8. ~~Re-run Test 3 against a real, reachable `qwen2.5:7b` to close the
+   `perspective_skew` caveat for real.~~ **Done.** Run against the actual
+   local `qwen2.5:7b` (confirmed reachable), `perspective_skew` now extracts
+   correctly. Final tally: 6 correct, 5 correctly abstained, 0 silent wrong
+   answers, 0 parse failures — see Test 3 above.
+
+**All eight items on this list are now closed.** Per the most recent
+outside review, this was the last item standing between the current state
+and formally freezing Phase 0. See "Phase 0 status" below for what that
+means and what comes next.
+
+---
+
+## Phase 0 status: ready to freeze
+
+Every acceptance-criterion gap identified across three rounds of outside
+review is now closed: contradiction detection (built and verified against
+all 4 real cases), multi-organization isolation (built — it didn't exist
+before — and proven via both real HTTP calls and a real browser UI test),
+persistence across a process restart (proven against a real kill/restart),
+and the hard-OCR stress test (built from genuine image-level degradations
+and now run against the real `qwen2.5:7b`, zero silent wrong answers).
+
+The next real decision is not another Phase 0 fix — it's whether to start
+scoping **Phase 1 — the Insurance Knowledge Core**: turning
+`documents + extracted facts` into structured, versioned insurance
+knowledge with entities and relationships, per the outside review's
+suggested shape:
+
+```
+Document → Evidence → Insurance Facts → Entities → Relationships
+   → Policy/Coverage Knowledge → Reasoning → Broker Workflow
+```
+
+The explicit recommendation from that review: don't throw away the current
+`extraction_facts + evidence + confidence + review + audit + contradiction`
+structure — it becomes the foundation Phase 1 builds on, not something
+Phase 1 replaces. This is a scoping conversation to have before writing
+Phase 1 code, not a decision to make unilaterally.

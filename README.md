@@ -297,14 +297,35 @@ scanned/OCR variants, 4 deliberate cross-document contradictions): 100%
 extraction accuracy with a real `qwen2.5:7b`, all 4 contradiction cases now
 correctly flagged, and one open finding worth reading before treating either
 number as the whole picture — the model's self-reported confidence barely
-varies across genuinely different documents, and this dataset's OCR cases
-are easier than a real messy scan.
+varies across genuinely different documents.
 
 Re-run it against any labelled document set with the same folder shape:
 
 ```bash
 cd backend
 python3 eval_harness.py /path/to/dataset
+```
+
+**Hard OCR stress test — closed, against the real model.** This dataset's
+"scanned" cases are clean computer-rendered text turned into an image, which
+only proves OCR *triggers* correctly, not that it's accurate under real
+conditions. `backend/build_hard_ocr_set.py` builds 11 genuinely degraded
+variants from one real source page (rotation, blur, low contrast, low
+resolution, shadow, sensor noise, perspective skew, a combined
+multi-distortion "phone photo," each with random JPEG recompression), and
+`backend/run_hard_ocr_test.py` runs all 11 through the real pipeline and
+records which model actually ran (`model_used`, `model_was_reachable`) so a
+results file can't be mistaken for a stand-in run. Run against the real
+local `qwen2.5:7b` (confirmed reachable): **6 correct, 5 correctly
+abstained, 0 silent wrong answers, 0 parse failures.** The one case that
+had been an open question through earlier stand-in runs — `perspective_skew`
+— now extracts correctly under the real model. Full detail in
+`Results.md`, Test 3, and `hard_ocr_results.json`.
+
+```bash
+cd backend
+python3 build_hard_ocr_set.py /path/to/source.pdf
+python3 run_hard_ocr_test.py
 ```
 
 ---

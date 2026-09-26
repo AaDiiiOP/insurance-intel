@@ -10,6 +10,10 @@ Phase 1 does three things:
 Everything uploaded here is the CARRIER's own paperwork. Real customer data
 does not enter this system until Phase 2, and will arrive through its own
 tables and a tokenisation layer rather than through this upload path.
+
+/health probes every dependency rather than just reporting the API is alive,
+because the most common failure in this stack is Ollama not running on the
+host — which is invisible until a summarise call fails minutes later.
 """
 import logging
 import os
