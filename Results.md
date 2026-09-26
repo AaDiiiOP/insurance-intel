@@ -430,3 +430,103 @@ The explicit recommendation from that review: don't throw away the current
 structure — it becomes the foundation Phase 1 builds on, not something
 Phase 1 replaces. This is a scoping conversation to have before writing
 Phase 1 code, not a decision to make unilaterally.
+
+---
+
+## Foundation refactor — completed before starting Phase 1
+
+A second, independent audit of the repository (after Phase 0 was confirmed
+frozen) flagged that the *code* was solid but the *architecture* had not
+caught up: `main.py` had grown to 2,910+ lines and `db.py` to 1,789 lines,
+holding six generations of features (carrier briefing, client intake, gap
+analysis, drafting, feedback, document intelligence) in two files, and —
+more importantly — organization scoping was inconsistent: only the newer
+Document Intelligence endpoints checked `organization_id`; the older
+carrier/client/match/gap/draft code mostly didn't. Rather than start Phase 1
+on that foundation, this was fixed first.
+
+**What was actually broken, and is now fixed:**
+
+1. **Organization isolation gaps in the older features.** `get_carrier`,
+   `list_carriers`, `list_documents_for_carrier`, `get_document_with_text`,
+   `delete_carrier`, `get_client`, `list_clients`, `get_draft`,
+   `list_drafts`, `get_draft_events`, and the match/gap/correction/
+   house-style functions did not filter by organization at all — any caller
+   knowing an id could read or modify any organization's carrier, client,
+   match, gap report, or draft. Fixed the same way Document Intelligence
+   already did it: every function now takes `organization_id` and checks it
+   *inside* the SQL query, so a record belonging to another organization is
+   indistinguishable from one that doesn't exist — same pattern, same 404,
+   no exceptions. `house_style` had an extra bug of its own: its primary key
+   was just `(kind)`, meaning one organization's learned drafting style
+   could silently overwrite another's; it's now `(kind, organization_id)`.
+   Missing `organization_id` columns (on `documents`, `gap_reports`,
+   `drafts`, `client_documents`, `corrections`, `house_style`) were added
+   via migration, backfilled from the parent record or the default
+   organization so existing single-org installs keep working unchanged.
+
+2. **An unscoped Document Intelligence endpoint.** `GET
+   /doc-intelligence/documents/{document_id}/facts` did not apply the same
+   ownership check that `GET /doc-intelligence/facts/{fact_id}` already
+   had — a caller who knew a `document_id` from another organization could
+   list its facts even though fetching one of those same facts directly by
+   `fact_id` was correctly rejected. Fixed to resolve and check the
+   organization the same way.
+
+3. **The fake "(unfiled) carrier" workaround, removed.** Every Document
+   Intelligence upload previously called `create_carrier("(unfiled) " +
+   filename)` purely to satisfy `documents.carrier_id`'s NOT NULL
+   constraint — meaning every single doc-intelligence upload silently
+   created a junk carrier row with no real purpose. `documents.carrier_id`
+   is now nullable via migration, and doc-intelligence uploads leave it
+   `NULL` instead of manufacturing a carrier. Verified against a live
+   database: `SELECT COUNT(*) FROM carriers WHERE name LIKE '%unfiled%'`
+   returns `0` after uploads that previously would have created one.
+
+4. **Stale schema documentation.** `db.py`'s header comment still said
+   *"Phase 1 has two tables: carriers and documents"* — no longer remotely
+   true given everything the schema now holds. Rewritten to actually
+   describe the current schema and the organization-scoping convention, so
+   a future reader trusts the comment rather than being misled by it.
+
+5. **Structural split — `main.py` and `db.py` broken into feature modules,
+   zero logic change.** `main.py` (was 3,001 lines after the fixes above)
+   is now a 101-line FastAPI app shell — CORS config, startup schema init,
+   and `include_router()` calls — with every endpoint's actual logic moved
+   into `api/<feature>.py` (health, organizations, carriers, clients,
+   matching, gaps, drafting, feedback, ask, submissions, doc_intelligence).
+   `db.py` is now a 19-line compatibility shim (`from repositories import
+   *`) so nothing importing `db.xxx(...)` had to change; the real functions
+   live in `repositories/<feature>.py`, with shared connection/schema setup
+   in `repositories/connection.py`. This was a pure move-and-rewire
+   operation — no SQL, endpoint path, or request/response shape changed.
+
+**How this was verified — real, not assumed, at every stage:**
+- After the isolation fixes: booted the real backend against real local
+  Postgres, created two organizations via real HTTP calls, created a
+  carrier under org A, and confirmed org B's list is empty, org B's direct
+  fetch-by-id is `404`, org B's delete attempt is `404` and does not delete
+  the row, org A still sees and can access its own carrier, and a
+  no-header request still resolves to the default organization exactly as
+  before (backward compatibility for the existing single-org UI).
+- Same test repeated, independently, after the file split, against a fresh
+  boot of the restructured code, on a different port — identical results:
+  `404`/`404`/`200`/`200`. The split did not reintroduce or fix anything —
+  behavior is byte-for-byte the same before and after.
+- The fake-carrier removal was checked directly against Postgres (`SELECT
+  COUNT(*) FROM carriers WHERE name LIKE '%unfiled%'` → `0`) after a real
+  document-intelligence upload, both before and after the file split.
+- `eval_harness.py` was re-run end-to-end against the full 20-company
+  synthetic dataset after the split: 20/20 scored, contradiction detection
+  4/4 correct with zero false positives, deterministic-rule extractions
+  still correct. The model-dependent extractions couldn't be exercised in
+  this environment (no Ollama reachable here) but failed gracefully with a
+  clear "could not reach Ollama" message rather than crashing or guessing —
+  the same behavior the pre-refactor code had in the same environment, so
+  this is an environment limitation, not a regression.
+
+**What this does not change:** the pilot-stage tenant boundary is still
+application-level (the `X-Organization-Id` header is trusted, not
+authenticated) — this refactor made that boundary *consistent* everywhere
+it applies, not stronger in kind. Real user authentication behind that
+header remains future work, same as before.

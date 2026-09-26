@@ -332,10 +332,31 @@ python3 run_hard_ocr_test.py
 
 
 
+**Foundation refactor (see `Results.md` for the full writeup).** `main.py`
+and `db.py` had grown into two files holding six generations of features,
+and organization scoping was inconsistent — only Document Intelligence
+checked it. Both are now fixed and split:
+
 ```
 backend/
-  main.py         FastAPI app — every endpoint
-  db.py           Postgres schema + queries (raw SQL, no ORM)
+  main.py         FastAPI app shell only — CORS, startup schema init,
+                   include_router() calls. ~100 lines.
+  db.py           A thin compatibility shim (`from repositories import *`)
+                   so nothing importing db.xxx() had to change.
+
+  api/            Every endpoint's actual logic, one file per feature —
+                   health, organizations, carriers, clients, matching,
+                   gaps, drafting, feedback, ask, submissions,
+                   doc_intelligence. Every carrier/client/match/gap/draft
+                   endpoint now resolves and enforces organization_id the
+                   same way doc-intelligence always did.
+
+  repositories/   The real database functions, one file per feature, plus
+                   connection.py (shared connection/schema setup). Every
+                   function scopes its SQL by organization_id in the query
+                   itself — a record from another organization returns
+                   404, indistinguishable from one that doesn't exist.
+
   parsers.py      pdf / docx / xlsx / pptx -> text
   chunking.py     structure-aware splitting, page/section provenance kept
   summarise.py    map-reduce briefing generation (Phase 1)

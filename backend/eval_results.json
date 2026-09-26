@@ -3,15 +3,15 @@
     "companies_total": 20,
     "companies_scored": 20,
     "companies_skipped": [],
-    "value_accuracy_pct": 100.0,
-    "evidence_page_accuracy_pct": 100.0,
-    "found_a_fact_pct": 100.0,
+    "value_accuracy_pct": 30.0,
+    "evidence_page_accuracy_pct": 30.0,
+    "found_a_fact_pct": 30.0,
     "ocr_trigger_accuracy_pct": 100.0,
     "confidence_type_distribution": {
       "deterministic": 6,
       "ocr_engine": 0,
-      "model_self_reported": 14,
-      "null": 0
+      "model_self_reported": 0,
+      "null": 14
     },
     "contradiction_cases_total": 4,
     "contradiction_detection_implemented": true,
@@ -36,36 +36,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9600,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n600,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9600,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 600000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -85,36 +68,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9300,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n300,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9300,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 300000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -183,36 +149,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9350,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n350,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9350,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 350000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "fixed_not_covered_by_this_harness",
       "contradiction_note": "Ground truth has a deliberate mismatch (policy: 350000000, schedule: 370000000). Contradiction detection now exists (doc_intelligence.find_contradiction, wired into the /doc-intelligence/upload endpoint) and was verified manually against this exact case \u2014 see Results.md. This harness calls extraction directly and does not go through the endpoint, so it does not itself exercise the check.",
       "silent_guess_suspected": false
@@ -233,36 +182,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9250,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n250,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9250,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 250000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -331,36 +263,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9200,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n200,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9200,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 200000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -380,36 +295,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9180,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n180,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9180,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 180000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -479,36 +377,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9300,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n300,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9300,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 300000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -528,36 +409,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9120,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n120,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9120,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 120000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -626,36 +490,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9150,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n150,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9150,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 150000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -675,36 +522,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9250,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n250,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9250,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 250000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -774,36 +604,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9120,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n120,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9120,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 120000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -823,36 +636,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9350,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n350,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9350,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 350000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -921,36 +717,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9250,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n250,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9250,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 250000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "fixed_not_covered_by_this_harness",
       "contradiction_note": "Ground truth has a deliberate mismatch (policy: 250000000, schedule: 270000000). Contradiction detection now exists (doc_intelligence.find_contradiction, wired into the /doc-intelligence/upload endpoint) and was verified manually against this exact case \u2014 see Results.md. This harness calls extraction directly and does not go through the endpoint, so it does not itself exercise the check.",
       "silent_guess_suspected": false
@@ -971,36 +750,19 @@
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": {
-            "fact_type": "coverage_limit",
-            "label": "Coverage limit (sum insured)",
-            "value": "\u20b9600,000,000",
-            "evidence": {
-              "page": 1,
-              "section": null,
-              "snippet": "2027\nCoverage\nProperty Damage Sum Insured: n600,000",
-              "source": "text_layer"
-            },
-            "confidence": {
-              "value": 0.85,
-              "type": "model_self_reported",
-              "method": "qwen2.5:7b_extraction_v1",
-              "note": "stub match"
-            },
-            "produced_by": "model:qwen2.5:7b_extraction_v1"
-          }
+          "fact": null
         }
       },
-      "value_correct": true,
-      "extracted_value_raw": "\u20b9600,000,000",
+      "value_correct": false,
+      "extracted_value_raw": null,
       "expected_value": 600000000,
-      "evidence_page_correct": true,
-      "confidence_type": "model_self_reported",
-      "confidence_value": 0.85,
+      "evidence_page_correct": null,
+      "confidence_type": null,
+      "confidence_value": null,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": true,
+      "found_a_fact": false,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     }

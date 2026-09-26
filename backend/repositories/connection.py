@@ -1,0 +1,666 @@
+"""
+Database connection, schema and shared constants for Aurevia BrokerOS.
+
+This module holds what used to live at the top of the monolithic db.py:
+the connection helper, the full SCHEMA/MIGRATIONS SQL, init_schema(), and
+DEFAULT_ORGANIZATION_ID. Every repositories/*.py module imports from here
+rather than opening its own connection or redefining these constants.
+
+Organization scoping: every table above that can hold more than one
+organization's data carries an `organization_id` column, and every read/write
+function below that touches such a table takes an `organization_id` argument
+and includes it in the SQL WHERE clause itself (not "fetch, then check in
+Python"), so a request scoped to org B genuinely cannot see or modify org
+A's rows — the query returns nothing rather than something to filter out.
+This is still pilot-stage, application-level tenant separation: the caller
+supplying the organization id is trusted, there is no Postgres row-level
+security and no real user authentication behind the header yet. See
+Results.md for how this boundary has been tested.
+"""
+import os
+from contextlib import contextmanager
+
+import psycopg
+from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://insurance_user:insurance_pass@postgres:5432/insurance_db"
+)
+
+# The pilot-stage default organization id. Defined here, near the top, so
+# it is available as a default argument value on functions defined much
+# earlier in this file (create_carrier, create_client) than the
+# Document Intelligence section below where this constant historically
+# lived — a default argument is evaluated at function-definition time, so
+# the constant has to exist before that point, not merely before the
+# function is first called.
+DEFAULT_ORGANIZATION_ID = "00000000-0000-0000-0000-000000000001"
+
+
+@contextmanager
+def get_connection():
+    """
+    Yield a connection with dict rows, committing on success.
+
+    dict_row means queries return {"id": ..., "name": ...} instead of tuples,
+    so callers index by column name and aren't broken by column reordering.
+    """
+    with psycopg.connect(DATABASE_URL, connect_timeout=5, row_factory=dict_row) as conn:
+        yield conn
+
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS carriers (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS documents (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- Nullable: a Document Intelligence upload is not filed against any
+    -- carrier-briefing carrier at all (see the organization_id migration
+    -- below for the historical note on why this predates that change).
+    carrier_id      UUID REFERENCES carriers(id) ON DELETE CASCADE,
+    filename        TEXT NOT NULL,
+    file_type       TEXT NOT NULL,
+    size_bytes      BIGINT NOT NULL,
+    pages           INTEGER NOT NULL DEFAULT 0,
+    chars           INTEGER NOT NULL DEFAULT 0,
+    status          TEXT NOT NULL CHECK (status IN ('parsed', 'failed')),
+    error_message   TEXT,
+    extracted_text  TEXT,
+    uploaded_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS documents_carrier_id_idx ON documents(carrier_id);
+
+-- Phase 1, summarisation ------------------------------------------------
+-- One summary per carrier: the AI's read of everything uploaded for that
+-- carrier — company overview, requirements, plans on offer, everything the
+-- brief asked for ("everything means everything"). Structured (not just
+-- prose) so the UI can render distinct sections rather than one wall of
+-- text, and so later phases (matching, gap analysis) can read specific
+-- fields — e.g. `plans` — without re-parsing prose.
+
+CREATE TABLE IF NOT EXISTS summaries (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    carrier_id        UUID NOT NULL UNIQUE REFERENCES carriers(id) ON DELETE CASCADE,
+    -- summary is what the user sees and may edit; summary_original is what
+    -- the model produced, kept so an edit can be told apart from a rerun.
+    summary           TEXT NOT NULL,
+    summary_original  TEXT NOT NULL,
+    company_overview  JSONB NOT NULL DEFAULT '{}'::jsonb,
+    requirements      JSONB NOT NULL DEFAULT '[]'::jsonb,
+    plans             JSONB NOT NULL DEFAULT '[]'::jsonb,
+    exclusions        JSONB NOT NULL DEFAULT '[]'::jsonb,
+    key_points        JSONB NOT NULL DEFAULT '[]'::jsonb,
+    stats             JSONB NOT NULL DEFAULT '{}'::jsonb,
+    model             TEXT,
+    generated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    edited_at         TIMESTAMPTZ
+);
+
+-- Chunks are stored rather than recomputed: a later phase (RAG-based plan
+-- matching) embeds these exact pieces into a vector store and cites them,
+-- so the text and its provenance have to survive past the summarise call
+-- that created them. Same reasoning as the reference project this is
+-- adapted from.
+CREATE TABLE IF NOT EXISTS chunks (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id   UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    chunk_index   INTEGER NOT NULL,
+    section_title TEXT,
+    page_start    INTEGER,
+    text          TEXT NOT NULL,
+    summary       TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (document_id, chunk_index)
+);
+
+CREATE INDEX IF NOT EXISTS chunks_document_id_idx ON chunks(document_id);
+
+-- Phase 2, clients --------------------------------------------------------
+-- The first point where a real business's details enter the system. Kept in
+-- their own tables, deliberately not bolted onto `carriers`: the two have
+-- different sensitivity and different lifecycles, and mixing them would make
+-- "delete everything about this client" a query nobody could write with
+-- confidence.
+--
+-- Exact values live HERE and only here. Everything downstream — the
+-- embedding call, every prompt — sees the redacted copy instead. See
+-- tokenise.py for where that boundary is drawn.
+
+CREATE TABLE IF NOT EXISTS clients (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_name   TEXT NOT NULL,
+    entity_type     TEXT,
+    industry        TEXT,
+    city            TEXT,
+    state           TEXT,
+    turnover        TEXT,
+    years_trading   TEXT,
+    employee_count  TEXT,
+    -- Identifiers. Stored exactly, redacted before any model sees them.
+    pan             TEXT,
+    gstin           TEXT,
+    contact_name    TEXT,
+    contact_phone   TEXT,
+    contact_email   TEXT,
+    -- What they are asking for.
+    categories      JSONB NOT NULL DEFAULT '[]'::jsonb,
+    sum_insured     TEXT,
+    -- Free text: what the broker learned on the call.
+    risk_notes      TEXT,
+    -- Paperwork the client has, and what they have said they do not have.
+    -- Most carrier requirements are about documents rather than facts, so
+    -- gap analysis cannot work from the structured fields alone.
+    documents_held    JSONB NOT NULL DEFAULT '[]'::jsonb,
+    documents_missing JSONB NOT NULL DEFAULT '[]'::jsonb,
+    -- The redacted copy of everything above, assembled once at write time so
+    -- every downstream reader uses the same text and cannot accidentally
+    -- build its own from the raw columns.
+    redacted_profile TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- placeholder -> real value, per client. Never sent anywhere; applied only
+-- on the way out, after a model has finished writing.
+CREATE TABLE IF NOT EXISTS client_tokens (
+    client_id   UUID PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
+    mapping     JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- One match run. Kept as history rather than overwritten: a broker needs to
+-- be able to say which recommendation was made when, and re-running after
+-- adding a carrier should not erase what was advised last week.
+CREATE TABLE IF NOT EXISTS matches (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id    UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    results      JSONB NOT NULL DEFAULT '[]'::jsonb,
+    sources      JSONB NOT NULL DEFAULT '[]'::jsonb,
+    model        TEXT,
+    stats        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS matches_client_id_idx ON matches(client_id, created_at DESC);
+
+-- Phase 3, gap analysis --------------------------------------------------
+-- One run per client per carrier: what that carrier requires, checked
+-- against what is held. History rather than current state, for the same
+-- reason matches are: a broker needs to be able to say what was outstanding
+-- when they advised, and re-running after chasing a document should not
+-- erase the earlier picture.
+
+CREATE TABLE IF NOT EXISTS gap_reports (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id   UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    carrier_id  UUID NOT NULL REFERENCES carriers(id) ON DELETE CASCADE,
+    items       JSONB NOT NULL DEFAULT '[]'::jsonb,
+    summary     TEXT,
+    stats       JSONB NOT NULL DEFAULT '{}'::jsonb,
+    model       TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS gap_reports_client_idx
+    ON gap_reports(client_id, carrier_id, created_at DESC);
+
+-- Phase 3.5, documents the client actually sent ---------------------------
+-- Attached against the requirement they are meant to satisfy, so a checklist
+-- row can move from "client says they have it" to "we have read it and it is
+-- the right thing".
+--
+-- Keyed by requirement TEXT rather than an id: requirement lists are
+-- regenerated whenever a briefing is re-run, and an id would not survive
+-- that. The text is stable enough to re-match against, and a requirement
+-- whose wording changes materially deserves a fresh look anyway.
+
+CREATE TABLE IF NOT EXISTS client_documents (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id        UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    requirement      TEXT NOT NULL,
+    filename         TEXT NOT NULL,
+    file_type        TEXT,
+    size_bytes       BIGINT NOT NULL DEFAULT 0,
+    chars            INTEGER NOT NULL DEFAULT 0,
+    extracted_text   TEXT,
+    verdict          TEXT NOT NULL DEFAULT 'unchecked',
+    doc_type         TEXT,
+    reason           TEXT,
+    score            INTEGER,
+    score_parts      JSONB NOT NULL DEFAULT '{}'::jsonb,
+    improvements     JSONB NOT NULL DEFAULT '[]'::jsonb,
+    identifiers      JSONB NOT NULL DEFAULT '{}'::jsonb,
+    notes            JSONB NOT NULL DEFAULT '[]'::jsonb,
+    key_facts        JSONB NOT NULL DEFAULT '[]'::jsonb,
+    uploaded_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS client_documents_client_idx
+    ON client_documents(client_id, uploaded_at DESC);
+
+-- Phase 4, drafted paperwork ----------------------------------------------
+-- Documents the tool writes for the broker, rather than reads from someone
+-- else. Every draft starts and stays a DRAFT: a licensed human is
+-- accountable for what reaches an insurer, so nothing here sends anything,
+-- and `status` exists so that "written" and "signed off" can never be
+-- confused in the UI.
+--
+-- body is stored with real values restored. body_redacted keeps what the
+-- model actually produced, so an edit can be told from a generation and the
+-- restoration step is auditable rather than invisible.
+
+CREATE TABLE IF NOT EXISTS drafts (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id      UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    carrier_id     UUID REFERENCES carriers(id) ON DELETE SET NULL,
+    kind           TEXT NOT NULL DEFAULT 'submission',
+    title          TEXT NOT NULL,
+    body           TEXT NOT NULL,
+    body_redacted  TEXT,
+    status         TEXT NOT NULL DEFAULT 'draft'
+                   CHECK (status IN ('draft', 'edited', 'approved')),
+    warnings       JSONB NOT NULL DEFAULT '[]'::jsonb,
+    stats          JSONB NOT NULL DEFAULT '{}'::jsonb,
+    model          TEXT,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS drafts_client_idx
+    ON drafts(client_id, created_at DESC);
+
+-- Phase 4 part 2, the audit trail -----------------------------------------
+-- Append-only. Every state change on a draft is recorded here and nothing
+-- ever updates or deletes a row, because the point of an audit trail is that
+-- it cannot be tidied up afterwards.
+--
+-- `actor` is a name typed by whoever is signing off. There is no user system
+-- in this tool, and inventing one would be worse than being honest that the
+-- name is self-declared — it records who SAID they approved it, which is
+-- still the thing a broker needs months later.
+
+CREATE TABLE IF NOT EXISTS draft_events (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    draft_id    UUID NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
+    event       TEXT NOT NULL
+                CHECK (event IN ('created', 'edited', 'approved', 'revoked',
+                                 'exported')),
+    actor       TEXT,
+    detail      TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS draft_events_draft_idx
+    ON draft_events(draft_id, created_at ASC);
+
+-- Phase 5, the feedback loop ----------------------------------------------
+-- Every time a person corrects the tool, the correction is kept. Not to
+-- train anything — nothing here fine-tunes a model — but because the
+-- corrections ARE the signal: which requirements keep getting overridden,
+-- how heavily drafts get rewritten, which carriers produce thin briefings.
+--
+-- A tool that is wrong in the same way every week and never notices is the
+-- failure this table exists to prevent.
+
+CREATE TABLE IF NOT EXISTS corrections (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kind        TEXT NOT NULL CHECK (kind IN ('draft_edit', 'gap_override')),
+    client_id   UUID REFERENCES clients(id) ON DELETE CASCADE,
+    carrier_id  UUID REFERENCES carriers(id) ON DELETE SET NULL,
+    subject     TEXT,
+    before_text TEXT,
+    after_text  TEXT,
+    meta        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS corrections_kind_idx
+    ON corrections(kind, created_at DESC);
+
+-- Guidance distilled from those corrections, per document kind. Regenerated
+-- on request rather than continuously, and editable by hand — a broker who
+-- disagrees with what the tool concluded should be able to just fix it,
+-- which is faster and more honest than waiting for enough data to outvote it.
+
+-- organization_id (and the (kind, organization_id) primary key it becomes
+-- part of) is added by MIGRATIONS below, not here: organizations does not
+-- exist yet at this point in SCHEMA, so a direct foreign-key reference
+-- here would fail on a brand-new database. Same reasoning as
+-- carriers/clients, which get organization_id only via MIGRATIONS too.
+CREATE TABLE IF NOT EXISTS house_style (
+    kind          TEXT PRIMARY KEY,
+    guidance      TEXT NOT NULL DEFAULT '',
+    derived_from  INTEGER NOT NULL DEFAULT 0,
+    edited_by_hand BOOLEAN NOT NULL DEFAULT false,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ==========================================================================
+-- Document Intelligence vertical slice
+--
+-- One end-to-end path, deliberately narrow: upload -> quality check ->
+-- text/OCR -> one extracted fact -> evidence + typed confidence -> human
+-- review/correction -> append-only audit event. Nothing below is meant to
+-- generalise yet — the point of a vertical slice is to find out whether
+-- these four shapes (organization, fact, evidence+confidence, event) are
+-- right BEFORE building the other extraction paths on top of them.
+-- ==========================================================================
+
+-- Pilot-stage tenant boundary: application-level filtering on
+-- organization_id, not database-enforced row-level security. Every relevant
+-- table gets the column below; every query in this vertical slice is scoped
+-- by it. This is NOT production-grade tenant isolation — a bug in
+-- application code could still cross the boundary, which real RLS would
+-- prevent. Explicitly acceptable for a 2-3 broker pilot; revisit before
+-- real customer data at scale, per the pilot-stage decision on file.
+CREATE TABLE IF NOT EXISTS organizations (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- One structured, evidence-backed fact extracted from one document.
+--
+-- This is the object the whole slice exists to validate: whether "a fact"
+-- can be represented once, uniformly, whether it came from a deterministic
+-- check, an OCR read, or a model's own judgement. If this shape is wrong,
+-- it is wrong here in one place — not repeated wrong across ten extraction
+-- paths built on a bad assumption.
+--
+-- Confidence is deliberately NOT a single number. 92% from a checksum and
+-- 92% from a model's self-report are different claims, and collapsing them
+-- into one field would let a UI display them as though they meant the same
+-- thing. confidence_type says which kind of claim value actually is:
+--   'deterministic'      — a rule either passed or it did not (value is 1.0 or 0.0)
+--   'ocr_engine'          — the OCR engine's own per-token/region confidence
+--   'model_self_reported' — an LLM's stated plausibility, never a calibrated probability
+CREATE TABLE IF NOT EXISTS extraction_facts (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    document_id       UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+
+    -- What was extracted, kept generic on purpose: this slice extracts one
+    -- fact type (coverage/sum insured limit) to prove the shape works, not
+    -- to build a taxonomy. A fixed enum here would be exactly the kind of
+    -- premature structure the pilot-gate decision says to avoid.
+    fact_type         TEXT NOT NULL,
+    label             TEXT NOT NULL,
+    value             TEXT NOT NULL,
+
+    -- Evidence: where this value came from, so a reviewer can check the
+    -- source page rather than take the extraction on faith.
+    evidence_page      INTEGER,
+    evidence_section    TEXT,
+    evidence_snippet    TEXT,
+    evidence_source     TEXT NOT NULL DEFAULT 'text_layer'
+                         CHECK (evidence_source IN ('text_layer', 'ocr')),
+
+    -- Typed confidence — see the note above. method names the specific
+    -- engine/rule/model version, so accuracy can be tracked per-method over
+    -- time once there is enough data to compare.
+    confidence_value    REAL NOT NULL,
+    confidence_type     TEXT NOT NULL
+                         CHECK (confidence_type IN
+                                ('deterministic', 'ocr_engine', 'model_self_reported')),
+    confidence_method   TEXT NOT NULL,
+    confidence_note     TEXT,
+
+    -- The crucial rule from the pilot-stage plan: if the system doesn't
+    -- know, it says so, rather than guessing. needs_review is set
+    -- automatically when confidence falls below a threshold (see
+    -- doc_intelligence.py) or extraction could not settle on a value at all.
+    status              TEXT NOT NULL DEFAULT 'needs_review'
+                         CHECK (status IN ('needs_review', 'verified', 'corrected')),
+
+    -- The value as first extracted, kept even after a correction — a
+    -- reviewer's correction should be comparable against what the model
+    -- actually said, not overwrite the evidence that it said it.
+    original_value      TEXT,
+
+    -- Which model/rule produced this, and its version, so accuracy is
+    -- trackable per version once an evaluation set exists (Phase 3).
+    produced_by         TEXT NOT NULL,
+
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS extraction_facts_document_idx
+    ON extraction_facts(document_id);
+CREATE INDEX IF NOT EXISTS extraction_facts_org_idx
+    ON extraction_facts(organization_id, status);
+
+-- Append-only. Every verify/correct action on a fact is recorded here and
+-- nothing is ever updated or deleted — matches the same append-only
+-- principle as draft_events, for the same reason: an audit trail that can
+-- be edited is not an audit trail.
+CREATE TABLE IF NOT EXISTS extraction_events (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fact_id     UUID NOT NULL REFERENCES extraction_facts(id) ON DELETE CASCADE,
+    event       TEXT NOT NULL CHECK (event IN ('verified', 'corrected', 'flagged')),
+    -- Self-declared, same honesty as draft_events.actor: there is no auth
+    -- system yet, so this records who SAID they reviewed it.
+    reviewer    TEXT NOT NULL,
+    before_value TEXT,
+    after_value  TEXT,
+    reason       TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS extraction_events_fact_idx
+    ON extraction_events(fact_id, created_at ASC);
+
+-- Document-level OCR/quality outcome. One row per document, showing whether
+-- OCR ran at all and what the page-level picture looked like — separate
+-- from extraction_facts because "was this document readable" is a property
+-- of the document, not of any one fact pulled from it.
+CREATE TABLE IF NOT EXISTS document_quality (
+    document_id     UUID PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+    used_ocr        BOOLEAN NOT NULL DEFAULT false,
+    pages_total     INTEGER NOT NULL DEFAULT 0,
+    pages_ocr_low_confidence INTEGER NOT NULL DEFAULT 0,
+    avg_ocr_confidence REAL,
+    notes           JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- A submission: the grouping the vertical slice was missing before
+-- contradiction detection could exist at all. Every document uploaded for
+-- doc-intelligence belongs to exactly one submission; comparing facts
+-- ACROSS documents (a policy vs. its own coverage schedule) requires
+-- knowing they belong together in the first place, which nothing before
+-- this table could express — each upload was previously its own unrelated
+-- "carrier" with no link to any other document.
+CREATE TABLE IF NOT EXISTS submissions (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    -- Free text the uploader supplies (a company name, a reference) — not a
+    -- foreign key to `clients`, since a doc-intelligence submission is not
+    -- necessarily tied to a client record in the main app yet. Deliberately
+    -- loose for the same reason the rest of this vertical slice is loose:
+    -- this proves the shape works before it is wired into the main flow.
+    label             TEXT NOT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS submissions_org_idx ON submissions(organization_id);
+"""
+
+
+# Columns added to tables that already existed in an earlier version.
+#
+# CREATE TABLE IF NOT EXISTS does nothing at all when the table is already
+# there, so a column added to SCHEMA later never reaches a database created
+# before it — a new table appears, a new column silently does not. These run
+# on every startup and are no-ops once applied.
+#
+# Anything added to an existing table from now on needs a line here as well
+# as in SCHEMA above.
+MIGRATIONS = """
+ALTER TABLE clients
+    ADD COLUMN IF NOT EXISTS documents_held JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE clients
+    ADD COLUMN IF NOT EXISTS documents_missing JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE summaries
+    ADD COLUMN IF NOT EXISTS exclusions JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- 'exported' was added to the allowed events after draft_events shipped, so
+-- the original CHECK has to be replaced rather than extended in place.
+-- Dropped by name first, which makes this safe to run on every startup.
+ALTER TABLE draft_events DROP CONSTRAINT IF EXISTS draft_events_event_check;
+ALTER TABLE draft_events ADD CONSTRAINT draft_events_event_check
+    CHECK (event IN ('created', 'edited', 'approved', 'revoked', 'exported'));
+
+-- Pilot-stage tenant boundary, added to tables that predate it. A single
+-- default organization is created and backfilled onto every existing row,
+-- so this migration never breaks data from before the boundary existed.
+INSERT INTO organizations (id, name)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Default organization')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE carriers
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE carriers SET organization_id = '00000000-0000-0000-0000-000000000001'
+    WHERE organization_id IS NULL;
+ALTER TABLE carriers ALTER COLUMN organization_id SET NOT NULL;
+
+ALTER TABLE clients
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE clients SET organization_id = '00000000-0000-0000-0000-000000000001'
+    WHERE organization_id IS NULL;
+ALTER TABLE clients ALTER COLUMN organization_id SET NOT NULL;
+
+-- Contradiction detection needs two things existing rows predate:
+-- (1) a link from a document to the submission it belongs to, so documents
+--     can be grouped by company/case at all;
+-- (2) fields on a fact recording that it was found to disagree with another
+--     fact of the same type in the same submission, and what that other
+--     fact said.
+--
+-- Nullable throughout: existing documents/facts from before this migration
+-- have no submission and are simply never compared — they are not backfilled
+-- into a submission, because there is no reliable way to know which
+-- historical uploads belonged together after the fact. New uploads through
+-- the updated endpoint always get a submission_id.
+ALTER TABLE documents
+    ADD COLUMN IF NOT EXISTS submission_id UUID
+    REFERENCES submissions(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS documents_submission_idx ON documents(submission_id);
+
+ALTER TABLE extraction_facts
+    ADD COLUMN IF NOT EXISTS contradicts_fact_id UUID
+    REFERENCES extraction_facts(id) ON DELETE SET NULL;
+ALTER TABLE extraction_facts
+    ADD COLUMN IF NOT EXISTS contradiction_note TEXT;
+
+-- 'contradiction_flagged' distinguishes "nobody has reviewed this yet" from
+-- "two documents disagree and a human must decide which is right" — the
+-- original CHECK predates this status and has to be replaced rather than
+-- extended in place, same pattern as draft_events_event_check above.
+ALTER TABLE extraction_facts DROP CONSTRAINT IF EXISTS extraction_facts_status_check;
+ALTER TABLE extraction_facts ADD CONSTRAINT extraction_facts_status_check
+    CHECK (status IN ('needs_review', 'verified', 'corrected', 'contradiction_flagged'));
+
+-- Bringing the carrier-briefing / client-intake / gap-analysis / drafting
+-- tables up to the same organization_id standard doc-intelligence already
+-- has. Same backfill pattern as carriers/clients above: every existing row
+-- is assigned to the default organization so nothing pre-existing loses
+-- access to its own data.
+--
+-- documents gets organization_id directly, rather than only inheriting it
+-- via carrier_id, because carrier_id is being made nullable below (a
+-- doc-intelligence upload has no carrier) — a document with no carrier
+-- still needs to be scopable to an organization on its own.
+ALTER TABLE documents
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE documents d SET organization_id = COALESCE(
+    (SELECT c.organization_id FROM carriers c WHERE c.id = d.carrier_id),
+    '00000000-0000-0000-0000-000000000001'
+) WHERE d.organization_id IS NULL;
+ALTER TABLE documents ALTER COLUMN organization_id SET NOT NULL;
+
+-- carrier_id becomes optional: a doc-intelligence upload is not filed
+-- against any carrier-briefing carrier at all, and previously had to
+-- manufacture a fake one just to satisfy this NOT NULL constraint.
+ALTER TABLE documents ALTER COLUMN carrier_id DROP NOT NULL;
+
+ALTER TABLE gap_reports
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE gap_reports g SET organization_id = COALESCE(
+    (SELECT c.organization_id FROM clients c WHERE c.id = g.client_id),
+    '00000000-0000-0000-0000-000000000001'
+) WHERE g.organization_id IS NULL;
+ALTER TABLE gap_reports ALTER COLUMN organization_id SET NOT NULL;
+
+ALTER TABLE drafts
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE drafts d SET organization_id = COALESCE(
+    (SELECT c.organization_id FROM clients c WHERE c.id = d.client_id),
+    '00000000-0000-0000-0000-000000000001'
+) WHERE d.organization_id IS NULL;
+ALTER TABLE drafts ALTER COLUMN organization_id SET NOT NULL;
+
+ALTER TABLE client_documents
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE client_documents cd SET organization_id = COALESCE(
+    (SELECT c.organization_id FROM clients c WHERE c.id = cd.client_id),
+    '00000000-0000-0000-0000-000000000001'
+) WHERE cd.organization_id IS NULL;
+ALTER TABLE client_documents ALTER COLUMN organization_id SET NOT NULL;
+
+-- corrections: client_id/carrier_id are nullable on the base table, so
+-- organization_id cannot always be backfilled from either — fall back to
+-- the default organization for a correction that (unusually) names
+-- neither, same principle as every other backfill above.
+ALTER TABLE corrections
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE corrections co SET organization_id = COALESCE(
+    (SELECT cl.organization_id FROM clients cl WHERE cl.id = co.client_id),
+    (SELECT ca.organization_id FROM carriers ca WHERE ca.id = co.carrier_id),
+    '00000000-0000-0000-0000-000000000001'
+) WHERE co.organization_id IS NULL;
+ALTER TABLE corrections ALTER COLUMN organization_id SET NOT NULL;
+
+-- house_style: was one global row per document kind, shared across every
+-- organization — which is exactly the leak this migration closes: two
+-- organizations' draft edits fed a single shared "learned" guidance. The
+-- primary key widens from (kind) to (kind, organization_id) so each
+-- organization gets its own guidance row per kind, seeded from whatever
+-- existed before (attributed to the default organization, since a
+-- pre-existing row cannot be retroactively split between organizations
+-- that did not exist as separate tenants when it was written).
+ALTER TABLE house_style
+    ADD COLUMN IF NOT EXISTS organization_id UUID
+    REFERENCES organizations(id) ON DELETE CASCADE;
+UPDATE house_style SET organization_id = '00000000-0000-0000-0000-000000000001'
+    WHERE organization_id IS NULL;
+ALTER TABLE house_style ALTER COLUMN organization_id SET NOT NULL;
+ALTER TABLE house_style DROP CONSTRAINT IF EXISTS house_style_pkey;
+ALTER TABLE house_style ADD PRIMARY KEY (kind, organization_id);
+"""
+
+
+def init_schema() -> None:
+    """
+    Create tables and apply column migrations. Safe on every startup.
+
+    Migrations run after SCHEMA so that a fresh database gets its tables
+    first and the ALTERs are simply no-ops against them.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(SCHEMA)
+            cur.execute(MIGRATIONS)
