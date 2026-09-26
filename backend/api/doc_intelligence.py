@@ -145,6 +145,7 @@ async def doc_intelligence_upload(
             pages_total=quality["pages"],
             pages_ocr_low_confidence=len(quality.get("low_confidence_pages", [])),
             avg_ocr_confidence=quality.get("avg_ocr_confidence"),
+            page_confidences=quality.get("page_confidences"),
             notes=quality.get("notes", []),
         )
 

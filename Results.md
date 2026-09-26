@@ -634,7 +634,7 @@ Policy + Coverage Schedule + Endorsement + Risk Survey believed to be the
 same case) and extracts a small, fixed set of property and policy facts
 (`property.location`, `property.occupancy`, `property.construction`,
 `property.sum_insured`, `property.risk_factors`, `policy.coverage`,
-`policy.limit`, `policy.deductible`, `policy.exclusion`,
+`policy.coverage_limit`, `policy.deductible`, `policy.exclusion`,
 `policy.endorsement`) — deliberately not a 300-field ontology, per the
 explicit instruction not to repeat Phase 0's "keep it narrow" discipline
 in Phase 1.
@@ -723,3 +723,128 @@ patched in afterward.
   before generalising" discipline Phase 0 was built under. Expanding fact
   types, entity types, or relationship types should follow real broker
   workflow needs, not get built ahead of them.
+
+---
+
+## Phase 1A hardening — three design bugs fixed, plus four robustness items
+
+A follow-up audit of the Knowledge Core above found real, confirmed
+correctness problems — not style preferences — before this was safe to
+build further features on. All were fixed in one pass.
+
+**1. Contradiction detection didn't actually prevent a wrong "current
+value" from being read.** Before this fix, a contradiction correctly
+flagged both disagreeing facts `contradiction_flagged`, but
+`get_current_fact()` still answered "what's the current value?" with
+`ORDER BY created_at DESC LIMIT 1` — silently treating whichever fact
+happened to be newer as authoritative, exactly the outcome the
+contradiction flag was supposed to prevent. Fixed with a new `kc_conflicts`
+table: when facts disagree, a conflict row opens (or extends) alongside
+the existing per-fact flagging, and a new
+`get_current_value_or_conflict()` checks for an unresolved conflict
+*first* — if one exists for that entity+fact_type, it returns
+`{"current_value": null, "unresolved_conflict": true, "conflicting_facts":
+[...]}` rather than picking a side. Verified with a real conflict: both
+facts flagged, a `kc_conflicts` row opened `unresolved`, and the
+current-value query correctly refused to name either as authoritative.
+
+**2. Human corrections overwrote history instead of versioning it.**
+`PUT /knowledge/facts/{id}` was updating the fact row in place — the
+original value was gone the moment someone corrected it, even though a
+`supersede_fact()` function already existed and did this the right way
+(close the old row's `valid_to`, open a new row with the corrected value).
+The correction endpoint just wasn't calling it. Fixed to route every
+correction through `supersede_fact()`, and — since a correction is exactly
+the moment a human resolves a disagreement — a correction that touches a
+fact involved in an unresolved conflict now also marks that `kc_conflicts`
+row `resolved`, pointing at the new corrected fact as the resolution.
+Verified over real HTTP: correcting a fact produces a *new* row with a
+different id, the original row's value is untouched with `valid_to` now
+set, and the history endpoint shows the full chain — original →
+superseded → corrected, plus confirmed the correction actually flips a
+real open conflict to `resolved`.
+
+**3. Evidence and relationships didn't verify cross-organization
+ownership at the database layer.** `create_evidence()` and
+`create_relationship()` accepted an `organization_id` argument but never
+checked that the fact/document (for evidence) or both entities (for a
+relationship) actually belonged to that organization — they just
+inserted. The API layer happened to make this safe in the normal request
+flow, but the repository functions themselves didn't enforce it, meaning
+any future caller that skipped the API layer could create evidence or
+relationships that silently crossed the tenant boundary. Fixed by
+checking ownership inside the repository functions directly, raising a
+clear error when it fails. Verified directly (bypassing the API, calling
+the repository functions themselves) with two real organizations: linking
+evidence to another organization's fact, another organization's document,
+and a relationship between two entities in different organizations were
+all rejected; same-organization calls still worked normally.
+
+**4. Singleton vs. multi-valued facts were being treated identically.**
+`policy.exclusion`, `policy.endorsement`, and `property.risk_factors` can
+legitimately have several true values at once ("Flood excluded", "War
+excluded", "Nuclear contamination excluded" are not contradictions, they
+are three facts) — but reconciliation was comparing every same-type fact
+as if it were one value, which would have flagged them against each other.
+Fixed with a small registry marking which fact types are singleton
+(`property.sum_insured`, `property.occupancy`, `property.construction`,
+`property.location`, `policy.coverage_limit`, `policy.deductible` — one
+true current value) versus multi-valued (the exclusion/endorsement/
+risk-factor types above — several simultaneously true values, never
+reconciled against each other). Verified with a real test: three
+different `policy.exclusion` values on the same policy correctly persisted
+as three separate current facts with zero contradictions flagged, while a
+repeated negative control confirmed `property.sum_insured` still correctly
+triggers a contradiction when it disagrees — proving the fix narrowed
+contradiction detection rather than disabling it.
+
+**5. Evidence snippets weren't checked against the real document text.**
+Only the claimed page number was verified (checking for a `[Page N]`
+marker); the model's claimed quote itself was trusted without checking it
+actually appeared in the source document, which is exactly the kind of
+gap the evidence requirement exists to close. Fixed with a snippet
+verification step: an exact substring match first, falling back to an
+anchored fuzzy match for whitespace/OCR noise, and a fact whose snippet
+can't be verified either way is marked `needs_review` with a clear note
+rather than silently accepted. Verified directly against the verification
+function itself: a fabricated snippet correctly reported not-found, a
+real verbatim quote correctly verified, and a real quote with whitespace
+noise correctly verified through the fuzzy path (a bug in the first
+attempt at the fuzzy matcher was found and fixed during this same testing
+pass, before it shipped).
+
+**6. Long documents silently lost facts past the first 12,000
+characters.** Extraction was truncating each document's text to
+`text[:12000]` before sending it to the model — a fact stated on page 30
+of a long policy simply never reached the model. Fixed by chunking the
+document (using the existing `[Page N]` markers already present in
+parsed text) and running extraction per chunk, aggregating the results
+rather than truncating. Verified with a real test document built
+specifically to place its target fact past character 22,000 — the fact
+was correctly extracted after this fix, which is the one test that
+actually proves the truncation bug is gone, not just that the code
+changed.
+
+**7. OCR confidence was document-average, not page-specific.** A fact
+extracted from a specific OCR'd page was getting the whole document's
+average OCR confidence rather than that page's own confidence — a fact
+found on a clean page 1 and a fact found on a barely-legible page 7 could
+carry the same reported confidence despite being nothing alike in
+reliability. Fixed by threading per-page OCR confidence through instead
+of the document average. Verified with a real test case built with
+deliberately different per-page confidences (95% vs. 40%, average 67.5%)
+— a fact from each page correctly carried its own page's confidence, not
+the shared average.
+
+**How all of this was verified:** real Postgres, real HTTP calls, two
+real organizations where cross-tenant behavior mattered, and — since
+Ollama isn't reachable in this sandbox — a stub Ollama server exercised
+over real HTTP (the same approach used earlier in this project, never a
+Python-level mock of the code under test) so the extraction code path
+itself ran for real. Every item above has its own specific real test
+described next to it, not a shared claim of "it works." The same
+limitation as the rest of Phase 1 applies: this proves the entity/fact/
+evidence/relationship/conflict/versioning *plumbing* is correct; it does
+not yet prove the real `qwen2.5:7b` model's actual extraction judgment on
+these new fact types, which — like the Phase 0 hard-OCR caveat before it
+— needs a real run before being trusted for extraction quality.

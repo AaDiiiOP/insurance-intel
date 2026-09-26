@@ -123,7 +123,13 @@ def get_entity_facts(entity_id: str, x_organization_id: str | None = Header(None
     organization. Ownership is checked by first fetching the entity itself,
     exactly the pattern api/doc_intelligence.py's earlier fix (the
     documents/{id}/facts gap) established: never list a child collection by
-    a bare id without confirming the parent belongs to the caller first."""
+    a bare id without confirming the parent belongs to the caller first.
+
+    "Current" here still means the plain valid_to IS NULL rows — a
+    fact_type with an unresolved conflict lists BOTH contradicting rows
+    (each still individually valid_to IS NULL), rather than hiding either
+    one; see GET /knowledge/entities/{id}/facts/{fact_type}/current for the
+    conflict-aware single-value read."""
     entity_id = _validate_uuid(entity_id, "entity id")
     with db.get_connection() as conn:
         organization_id = _resolve_organization(conn, x_organization_id)
@@ -136,6 +142,38 @@ def get_entity_facts(entity_id: str, x_organization_id: str | None = Header(None
             evidence = kc.get_evidence_for_fact(conn, str(r["id"]), organization_id)
             facts.append(_fact_response(r, evidence=evidence))
     return {"entity": _entity_response(entity), "facts": facts}
+
+
+@router.get("/knowledge/entities/{entity_id}/facts/{fact_type}/current")
+def get_entity_current_fact(entity_id: str, fact_type: str,
+                             x_organization_id: str | None = Header(None)):
+    """
+    The conflict-aware "what is the current value" read for one
+    entity+fact_type (item 1's fix). Unlike get_entity_facts above, this
+    picks a single answer when there is one — or explicitly says there
+    isn't, rather than an ORDER BY ... LIMIT 1 silently picking a side of an
+    unresolved disagreement.
+
+    Response shape: {"current_value": <fact or null>, "unresolved_conflict":
+    bool, "conflict_id": str|null, "conflicting_facts": [<fact>, ...]}.
+    """
+    entity_id = _validate_uuid(entity_id, "entity id")
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        entity = kc.get_entity(conn, entity_id, organization_id)
+        if not entity:
+            raise HTTPException(status_code=404, detail="Entity not found.")
+        result = kc.get_current_value_or_conflict(conn, entity_id, organization_id, fact_type)
+        current_value = (
+            _fact_response(result["current_value"]) if result["current_value"] else None
+        )
+        conflicting_facts = [_fact_response(f) for f in result["conflicting_facts"]]
+    return {
+        "current_value": current_value,
+        "unresolved_conflict": result["unresolved_conflict"],
+        "conflict_id": result["conflict_id"],
+        "conflicting_facts": conflicting_facts,
+    }
 
 
 @router.get("/knowledge/facts/{fact_id}")
@@ -152,11 +190,20 @@ def get_fact(fact_id: str, x_organization_id: str | None = Header(None)):
 
 @router.put("/knowledge/facts/{fact_id}")
 def correct_fact(fact_id: str, body: UpdateFactBody, x_organization_id: str | None = Header(None)):
-    """Human review correction — updates the CURRENT fact's value in place
-    (status becomes 'corrected', reviewed_by/reviewed_at recorded), as
-    opposed to reconcile_fact()'s automatic write path, which is what
-    actually creates new valid_from/valid_to versions when new evidence
-    arrives. See knowledge/facts.py's correct_fact vs. supersede_fact."""
+    """
+    Human review correction — VERSIONS the fact: the original row's
+    valid_to is closed and a NEW row is created carrying the corrected
+    value, status='corrected', reviewed_by/reviewed_at recorded on the new
+    row. The original value is never overwritten — GET
+    /knowledge/facts/{id}/history (using either the old or new fact's id)
+    shows the full chain. See knowledge/service.py's correct_fact, which
+    goes through facts.supersede_fact() rather than any in-place UPDATE.
+
+    If this correction resolves an unresolved contradiction for the fact's
+    entity+fact_type, the matching kc_conflicts row is marked resolved with
+    resolution_fact_id pointing at the new fact — reflected in this
+    response's `resolved_conflict_id`.
+    """
     fact_id = _validate_uuid(fact_id, "fact id")
     reviewed_by = " ".join((body.reviewed_by or "").split())
     if not reviewed_by:
@@ -167,14 +214,38 @@ def correct_fact(fact_id: str, body: UpdateFactBody, x_organization_id: str | No
 
     with db.get_connection() as conn:
         organization_id = _resolve_organization(conn, x_organization_id)
-        row = kc.update_fact(
+        old_fact = kc.get_fact(conn, fact_id, organization_id)
+        if not old_fact:
+            raise HTTPException(status_code=404, detail="Fact not found.")
+
+        # Recorded BEFORE the correction: whether this entity+fact_type has
+        # an open conflict right now, so we can tell afterward whether this
+        # specific call is the one that resolved it (see below).
+        conflict_before = db.get_unresolved_conflict(
+            conn, str(old_fact["entity_id"]), organization_id, old_fact["fact_type"]
+        )
+
+        # update_fact() versions the fact — the row it returns is a NEW
+        # fact row (new id), not fact_id itself, so its evidence must be
+        # looked up under ITS id, not the original fact_id.
+        new_fact = kc.update_fact(
             conn, fact_id, organization_id, new_value=new_value,
             normalized_value=body.normalized_value, reviewed_by=reviewed_by,
         )
-        if not row:
+        if not new_fact:
             raise HTTPException(status_code=404, detail="Fact not found.")
-        evidence = kc.get_evidence_for_fact(conn, fact_id, organization_id)
-    return _fact_response(row, evidence=evidence)
+        evidence = kc.get_evidence_for_fact(conn, str(new_fact["id"]), organization_id)
+
+        resolved_conflict_id = None
+        if conflict_before is not None:
+            after = db.get_conflict(conn, str(conflict_before["id"]), organization_id)
+            if after and after["status"] == "resolved":
+                resolved_conflict_id = str(after["id"])
+
+    payload = _fact_response(new_fact, evidence=evidence)
+    payload["superseded_fact_id"] = fact_id
+    payload["resolved_conflict_id"] = resolved_conflict_id
+    return payload
 
 
 @router.get("/knowledge/facts/{fact_id}/history")

@@ -77,11 +77,22 @@ def find_facts(conn, entity_id: str, organization_id: str, *,
 
 def update_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
                  normalized_value: float | None = None, reviewed_by: str) -> dict | None:
-    """Human review correction on the current fact — see facts.correct_fact."""
-    return _facts.correct_fact(
-        conn, fact_id, organization_id, new_value=new_value,
-        normalized_value=normalized_value, reviewed_by=reviewed_by,
-    )
+    """
+    Human review correction — VERSIONS the fact via correct_fact() below
+    (facts.supersede_fact under the hood) rather than overwriting the
+    existing row's value in place. The old row's original value survives
+    with valid_to now set; a new row carries the correction. If this
+    correction resolves an open contradiction, the matching kc_conflicts
+    row is marked resolved automatically. See knowledge/service.correct_fact
+    for the full contract.
+    """
+    try:
+        return correct_fact(
+            conn, fact_id, organization_id, new_value=new_value,
+            normalized_value=normalized_value, reviewed_by=reviewed_by,
+        )
+    except ValueError:
+        return None
 
 
 def get_current_value(conn, entity_id: str, organization_id: str, fact_type: str) -> dict | None:
@@ -161,30 +172,48 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
                     evidence_section: str | None = None, evidence_snippet: str | None = None,
                     evidence_source: str | None = None) -> dict:
     """
-    Write a newly-extracted fact for entity_id+fact_type, checking it against
-    whatever is already the CURRENT fact for that same entity+fact_type
-    first — mirroring doc_intelligence.find_contradiction()'s rule exactly,
-    just at the entity level instead of the submission level:
+    Write a newly-extracted fact for entity_id+fact_type.
 
-    - No current fact yet: the new fact becomes current (valid_from=now(),
-      valid_to=NULL), status stays whatever was passed in (normally
-      'needs_review' — nothing here is ever auto-verified, same "no silent
-      guessing" rule as Document Intelligence).
-    - A current fact exists and the two values agree (within
-      CONTRADICTION_TOLERANCE, comparing normalized_value when both facts
-      have one, or the free-text value otherwise): the new evidence is
-      attached to the EXISTING current fact instead of creating a duplicate
-      row — a second document corroborating the same figure should add
-      supporting evidence, not a second copy of the same fact.
-    - A current fact exists and the two values DISAGREE beyond tolerance:
-      the existing fact is superseded is NOT what happens here — unlike a
-      real correction, this is two documents disagreeing about the same
-      real-world figure, so BOTH are kept and BOTH are flagged
-      'contradiction_flagged', exactly like extraction_facts. The new fact
-      is inserted as its own current-eligible row (see note below) rather
-      than merged; a reviewer resolves this by correcting one via
-      update_fact(), which is a genuine version transition (facts.py's
-      correct_fact/supersede_fact), not this automatic path.
+    First checks whether fact_type is singleton or multi-valued
+    (knowledge/facts.py's SINGLETON_FACT_TYPES/MULTI_VALUED_FACT_TYPES):
+
+    - Multi-valued (e.g. policy.exclusion, policy.endorsement,
+      property.risk_factors, policy.coverage): a document can state several
+      DIFFERENT true instances of this fact type at once ("Flood excluded"
+      and "War excluded" are both true about the same policy, not competing
+      answers). No reconciliation/contradiction check runs at all — the new
+      fact is simply inserted as its own current-eligible row, status
+      'needs_review', with its own evidence. Nothing here ever treats a new
+      distinct value for a multi-valued fact type as disagreeing with an
+      existing one.
+
+    - Singleton (e.g. property.sum_insured, property.occupancy,
+      policy.coverage_limit, policy.deductible): checked against whatever is
+      already the CURRENT fact for that same entity+fact_type, mirroring
+      doc_intelligence.find_contradiction()'s rule exactly, just at the
+      entity level instead of the submission level:
+
+        - No current fact yet: the new fact becomes current
+          (valid_from=now(), valid_to=NULL), status stays whatever was
+          passed in (normally 'needs_review' — nothing here is ever
+          auto-verified, same "no silent guessing" rule as Document
+          Intelligence).
+        - A current fact exists and the two values agree (within
+          CONTRADICTION_TOLERANCE, comparing normalized_value when both
+          facts have one, or the free-text value otherwise): the new
+          evidence is attached to the EXISTING current fact instead of
+          creating a duplicate row.
+        - A current fact exists and the two values DISAGREE beyond
+          tolerance: BOTH are kept and BOTH are flagged
+          'contradiction_flagged', exactly like extraction_facts — AND a
+          kc_conflicts row is opened (or, if one is already open for this
+          entity+fact_type, the new fact is linked onto it) so a reader
+          asking "what is the current value" is told about the unresolved
+          disagreement instead of get_current_fact()'s
+          "ORDER BY created_at DESC LIMIT 1" silently picking the newer
+          side as if it had won. A reviewer resolves this by correcting one
+          via update_fact() -> facts.supersede_fact(), which also resolves
+          the conflict row (see resolve_conflict_with_correction below).
 
     Returns the fact row that resulted for the NEW value (either the
     newly-created fact, or the existing current fact if evidence was merged
@@ -195,10 +224,12 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
     every value this creates is traceable Fact -> Evidence -> Document,
     same evidence rigor as Phase 0, never optional.
     """
-    current = _versions.get_current_value(conn, entity_id, organization_id, fact_type)
     contradiction_info = None
 
-    if current is None:
+    if not _facts.is_singleton_fact_type(fact_type):
+        # Multi-valued: every extraction is its own new, independently-true
+        # fact. Never compared against, or flagged as contradicting, any
+        # other fact of the same type for this entity.
         fact = _facts.create_fact(
             conn, organization_id=organization_id, entity_id=entity_id,
             fact_type=fact_type, value=value, confidence=confidence,
@@ -206,24 +237,48 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
             status="needs_review",
         )
     else:
-        agree = _values_agree(current, value, normalized_value)
-        if agree:
-            fact = current
-        else:
-            # Disagreement: keep BOTH, flag BOTH. Neither is silently
-            # overwritten or picked as "the" answer.
+        current = _versions.get_current_value(conn, entity_id, organization_id, fact_type)
+
+        if current is None:
             fact = _facts.create_fact(
                 conn, organization_id=organization_id, entity_id=entity_id,
                 fact_type=fact_type, value=value, confidence=confidence,
                 produced_by=produced_by, normalized_value=normalized_value, unit=unit,
-                status="contradiction_flagged",
+                status="needs_review",
             )
-            db.set_fact_status(conn, str(current["id"]), organization_id, "contradiction_flagged")
-            current = db.get_fact(conn, str(current["id"]), organization_id)
-            contradiction_info = {
-                "other_fact_id": str(current["id"]),
-                "other_value": current["value"],
-            }
+        else:
+            agree = _values_agree(current, value, normalized_value)
+            if agree:
+                fact = current
+            else:
+                # Disagreement: keep BOTH, flag BOTH. Neither is silently
+                # overwritten or picked as "the" answer.
+                fact = _facts.create_fact(
+                    conn, organization_id=organization_id, entity_id=entity_id,
+                    fact_type=fact_type, value=value, confidence=confidence,
+                    produced_by=produced_by, normalized_value=normalized_value, unit=unit,
+                    status="contradiction_flagged",
+                )
+                db.set_fact_status(conn, str(current["id"]), organization_id, "contradiction_flagged")
+                current = db.get_fact(conn, str(current["id"]), organization_id)
+                contradiction_info = {
+                    "other_fact_id": str(current["id"]),
+                    "other_value": current["value"],
+                }
+
+                # Open (or extend) the kc_conflicts row for this
+                # entity+fact_type — this is what makes the contradiction
+                # visible to a reader asking "what's the current value"
+                # instead of only living in each fact's own status column.
+                conflict = db.get_unresolved_conflict(conn, entity_id, organization_id, fact_type)
+                if conflict is None:
+                    db.create_conflict(
+                        conn, organization_id=organization_id, entity_id=entity_id,
+                        fact_type=fact_type,
+                        fact_ids=[str(current["id"]), str(fact["id"])],
+                    )
+                else:
+                    db.add_fact_to_conflict(conn, str(conflict["id"]), str(fact["id"]))
 
     if document_id:
         _evidence.create_evidence(
@@ -235,6 +290,67 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
     fact = dict(fact)
     fact["_contradiction"] = contradiction_info
     return fact
+
+
+def get_current_value_or_conflict(conn, entity_id: str, organization_id: str,
+                                   fact_type: str) -> dict:
+    """
+    The conflict-aware read of "what is the current value" for an
+    entity+fact_type — see knowledge/versions.py's function of the same
+    name for the full contract. Callers that want to SHOW a user a current
+    value (as opposed to reconcile_fact()'s internal write-path check)
+    should call this, not get_current_value().
+    """
+    return _versions.get_current_value_or_conflict(conn, entity_id, organization_id, fact_type)
+
+
+def correct_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
+                  normalized_value: float | None = None, unit: str | None = None,
+                  confidence: dict | None = None, reviewed_by: str) -> dict:
+    """
+    A human review correction — VERSIONS the fact rather than overwriting it
+    in place: closes the old row's valid_to and inserts a new current row
+    carrying the corrected value, status='corrected' (facts.supersede_fact).
+
+    If the fact being corrected was part of an unresolved kc_conflicts row
+    (i.e. it or its current counterpart was 'contradiction_flagged'), that
+    conflict is marked resolved with resolution_fact_id pointing at the
+    NEW, corrected fact — a human just settled which value is right, so the
+    "no single current value" state this conflict represented no longer
+    holds.
+
+    Raises ValueError if the fact does not exist for this organization
+    (facts.supersede_fact's existing behaviour, unchanged).
+    """
+    old = db.get_fact(conn, fact_id, organization_id)
+    if not old:
+        raise ValueError("Fact not found.")
+
+    correction_confidence = confidence or {
+        "value": 1.0, "type": "model_self_reported",
+        "method": "human_review_correction", "note": None,
+    }
+
+    new_fact = _facts.supersede_fact(
+        conn, fact_id, organization_id, new_value=new_value,
+        confidence=correction_confidence, produced_by=f"human:{reviewed_by}",
+        normalized_value=normalized_value, unit=unit, status="corrected",
+    )
+    db.set_fact_status(
+        conn, str(new_fact["id"]), organization_id, "corrected", reviewed_by=reviewed_by,
+    )
+    new_fact = db.get_fact(conn, str(new_fact["id"]), organization_id)
+
+    conflict = db.get_unresolved_conflict(
+        conn, str(old["entity_id"]), organization_id, old["fact_type"]
+    )
+    if conflict is not None:
+        db.resolve_conflict(
+            conn, str(conflict["id"]), organization_id,
+            resolution_fact_id=str(new_fact["id"]),
+        )
+
+    return new_fact
 
 
 def _values_agree(current_fact: dict, new_value: str, new_normalized: float | None) -> bool:

@@ -395,7 +395,19 @@ backend/
                    Endorsement + Risk Survey) into Business/Asset/Policy
                    entities, with every value's evidence traceable back to
                    a real document and page. Reuses Phase 0's contradiction
-                   logic rather than reimplementing it.
+                   logic rather than reimplementing it. Chunks long
+                   documents instead of truncating at 12,000 characters,
+                   verifies evidence snippets actually appear in the source
+                   text, and carries a fact's own evidence page's OCR
+                   confidence rather than the document average.
+
+  kc_conflicts     a fact disagreement (contradiction) creates a
+                   conflict row here, and the "current value" query for
+                   that entity+fact_type refuses to pick a side while the
+                   conflict is unresolved — no arbitrary "newest wins".
+                   A human correction resolves it. See Results.md's
+                   "Phase 1A hardening" section for the full writeup and
+                   how each fix was verified.
 
 frontend/
   src/views/  Upload . Carriers . Briefing . Clients . ClientDetail .

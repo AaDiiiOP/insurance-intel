@@ -163,6 +163,7 @@ def quality_check_and_ocr(data: bytes, native_result) -> dict:
             "text": native_result.text,
             "pages": native_result.pages,
             "avg_ocr_confidence": None,
+            "page_confidences": None,
             "low_confidence_pages": [],
             "notes": [],
         }
@@ -194,11 +195,22 @@ def quality_check_and_ocr(data: bytes, native_result) -> dict:
             "too poor to read."
         )
 
+    # page_confidences maps 1-indexed page number -> that page's own OCR
+    # confidence, so a fact's evidence page can be scored by its own page
+    # rather than the document-wide average (item 7's fix) — ocr_pdf() has
+    # always computed this list, it just was not threaded past this point
+    # before.
+    page_confidences = {
+        str(index): confidence
+        for index, confidence in enumerate(ocr_result["page_confidences"], start=1)
+    }
+
     return {
         "used_ocr": True,
         "text": ocr_result["text"],
         "pages": ocr_result["pages"],
         "avg_ocr_confidence": ocr_result["avg_confidence"],
+        "page_confidences": page_confidences,
         "low_confidence_pages": ocr_result["low_confidence_pages"],
         "notes": notes,
     }

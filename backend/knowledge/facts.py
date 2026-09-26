@@ -17,6 +17,49 @@ import db
 VALID_STATUSES = {"needs_review", "verified", "corrected", "contradiction_flagged"}
 VALID_CONFIDENCE_TYPES = {"deterministic", "ocr_engine", "model_self_reported"}
 
+# Which fact types describe exactly ONE true current value for an
+# entity+fact_type at a time ("singleton") versus which describe a SET of
+# independent, simultaneously-true instances ("multi-valued").
+#
+# reconcile_fact()'s contradiction-detection/tolerance-comparison logic only
+# makes sense for singleton fact types: a property genuinely has one sum
+# insured, one occupancy, one construction type at a time, so two documents
+# naming different figures for the same entity really is a disagreement
+# worth flagging. A multi-valued fact type like policy.exclusion is the
+# opposite — "Flood excluded" and "War excluded" are two DIFFERENT true
+# facts about the same policy, not two competing answers to the same
+# question, so running the same disagreement check against them was a bug:
+# every additional distinct exclusion/endorsement/risk-factor a document
+# named looked like it was contradicting the ones already on record.
+#
+# Registry kept here (not entities.py or property_policy_intelligence.py)
+# because "does this fact type have one current value or many" is a
+# property of the fact type itself, independent of which vertical slice or
+# entity type happens to use it.
+SINGLETON_FACT_TYPES = {
+    "property.sum_insured", "property.occupancy", "property.construction",
+    "property.location", "policy.coverage_limit", "policy.deductible",
+}
+
+MULTI_VALUED_FACT_TYPES = {
+    "policy.exclusion", "policy.endorsement", "property.risk_factors",
+    "policy.coverage",
+}
+
+
+def is_singleton_fact_type(fact_type: str) -> bool:
+    """
+    Whether fact_type has one true current value at a time.
+
+    Defaults to True (singleton) for an unregistered fact type — the safer
+    default is to still run contradiction detection on something new rather
+    than silently skip it, matching the existing "never silently agree
+    without checking" rule this module already follows elsewhere.
+    """
+    if fact_type in MULTI_VALUED_FACT_TYPES:
+        return False
+    return True
+
 
 def _now():
     return datetime.now(timezone.utc)
@@ -108,17 +151,14 @@ def set_fact_status(conn, fact_id: str, organization_id: str, status: str,
     return db.set_fact_status(conn, fact_id, organization_id, status, reviewed_by=reviewed_by)
 
 
-def correct_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
-                  normalized_value: float | None, reviewed_by: str) -> dict | None:
-    """
-    A human review correction on the CURRENT row's value in place (as
-    opposed to supersede_fact, which is used by the extraction/reconciliation
-    path to version a fact as new evidence arrives). Kept distinct because a
-    review correction and a new extraction run are different events worth
-    telling apart in produced_by/reviewed_by, even though both end up
-    changing what a fact says.
-    """
-    return db.update_fact_value(
-        conn, fact_id, organization_id, value=new_value,
-        normalized_value=normalized_value, status="corrected", reviewed_by=reviewed_by,
-    )
+# NOTE: there used to be a correct_fact() here that called
+# db.update_fact_value() to overwrite the CURRENT row's value in place. That
+# destroyed history — the original value was gone the moment a correction
+# was applied, with only status/reviewed_by hinting anything had changed.
+# It has been removed: knowledge/service.py's correct_fact() is now the only
+# correction path, and it goes through supersede_fact() above, which closes
+# the old row's valid_to and inserts a new one — the original value always
+# remains readable via get_historical_values()/GET /knowledge/facts/{id}/history.
+# db.update_fact_value() itself is left in repositories/knowledge.py (unused
+# by this package now) rather than deleted, since it is generic SQL, not the
+# bug — the bug was calling it as if it were versioning.

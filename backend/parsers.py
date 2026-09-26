@@ -268,7 +268,8 @@ def parse_file_with_quality(filename: str, data: bytes) -> tuple[ParsedDocument,
 
     no_quality_check = {
         "used_ocr": False, "text": result.text, "pages": result.pages,
-        "avg_ocr_confidence": None, "low_confidence_pages": [], "notes": [],
+        "avg_ocr_confidence": None, "page_confidences": None,
+        "low_confidence_pages": [], "notes": [],
     }
 
     if extension != ".pdf":

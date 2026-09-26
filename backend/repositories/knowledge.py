@@ -273,10 +273,49 @@ def update_fact_value(conn, fact_id: str, organization_id: str, *, value: str,
 # Evidence
 # ---------------------------------------------------------------------------
 
+class NotYoursError(ValueError):
+    """
+    Raised when a caller-supplied id (a fact, document, or entity) exists
+    but does not belong to the organization_id the caller is acting as.
+
+    A ValueError subclass so existing call sites that already catch
+    ValueError around a repositories/knowledge.py call (see
+    api/knowledge.py's analyze_property_policy) keep working without
+    change; callers that want to tell "not yours" apart from "genuinely
+    missing" for a different HTTP status can catch this subclass
+    specifically.
+    """
+
+
 def create_evidence(conn, *, organization_id: str, fact_id: str, document_id: str,
                      page: int | None, section: str | None, snippet: str | None,
                      source: str | None) -> dict:
+    """
+    Insert one evidence row, but only after confirming BOTH the fact and the
+    document it cites actually belong to organization_id — checked inside
+    this function, not just trusted from the API layer above it, so a bug or
+    a future caller anywhere else in the codebase cannot create evidence
+    that quietly links a fact in one organization to a document in another.
+    """
     with conn.cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM kc_facts WHERE id = %s AND organization_id = %s",
+            (fact_id, organization_id),
+        )
+        if cur.fetchone() is None:
+            raise NotYoursError(
+                f"Fact {fact_id} does not belong to organization {organization_id}."
+            )
+
+        cur.execute(
+            "SELECT 1 FROM documents WHERE id = %s AND organization_id = %s",
+            (document_id, organization_id),
+        )
+        if cur.fetchone() is None:
+            raise NotYoursError(
+                f"Document {document_id} does not belong to organization {organization_id}."
+            )
+
         cur.execute(
             """
             INSERT INTO kc_evidence (organization_id, fact_id, document_id, page, section, snippet, source)
@@ -310,7 +349,33 @@ def get_evidence_for_fact(conn, fact_id: str, organization_id: str) -> list[dict
 def create_relationship(conn, *, organization_id: str, from_entity_id: str,
                          to_entity_id: str, relationship_type: str,
                          attributes: dict | None = None) -> dict:
+    """
+    Insert one relationship row, but only after confirming BOTH endpoint
+    entities actually belong to organization_id — checked inside this
+    function for the same reason create_evidence checks its fact/document:
+    trusting the API layer alone means the very next caller added anywhere
+    else in the codebase could skip the check and wire together entities
+    from two different organizations into one edge.
+    """
     with conn.cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM kc_entities WHERE id = %s AND organization_id = %s",
+            (from_entity_id, organization_id),
+        )
+        if cur.fetchone() is None:
+            raise NotYoursError(
+                f"Entity {from_entity_id} does not belong to organization {organization_id}."
+            )
+
+        cur.execute(
+            "SELECT 1 FROM kc_entities WHERE id = %s AND organization_id = %s",
+            (to_entity_id, organization_id),
+        )
+        if cur.fetchone() is None:
+            raise NotYoursError(
+                f"Entity {to_entity_id} does not belong to organization {organization_id}."
+            )
+
         cur.execute(
             """
             INSERT INTO kc_relationships (organization_id, from_entity_id, to_entity_id,
@@ -373,3 +438,98 @@ def find_relationships(conn, organization_id: str, entity_id: str,
             params,
         )
         return cur.fetchall()
+
+
+# ---------------------------------------------------------------------------
+# Conflicts — see kc_conflicts' schema comment in connection.py for why this
+# exists: get_current_fact() alone cannot express "there is no single
+# current value because two facts disagree and nobody has resolved it yet".
+# ---------------------------------------------------------------------------
+
+def get_unresolved_conflict(conn, entity_id: str, organization_id: str,
+                             fact_type: str) -> dict | None:
+    """The open (status='unresolved') conflict for this entity+fact_type, if
+    any — at most one can exist at a time (kc_conflicts_one_unresolved_idx)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT * FROM kc_conflicts
+            WHERE entity_id = %s AND organization_id = %s AND fact_type = %s
+            AND status = 'unresolved'
+            LIMIT 1
+            """,
+            (entity_id, organization_id, fact_type),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def get_conflict(conn, conflict_id: str, organization_id: str) -> dict | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT * FROM kc_conflicts WHERE id = %s AND organization_id = %s",
+            (conflict_id, organization_id),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def create_conflict(conn, *, organization_id: str, entity_id: str,
+                     fact_type: str, fact_ids: list[str]) -> dict:
+    """Open a new unresolved conflict linking every fact_id given (normally
+    both sides of the disagreement) via kc_conflict_facts."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO kc_conflicts (organization_id, entity_id, fact_type, status)
+            VALUES (%s, %s, %s, 'unresolved')
+            RETURNING *
+            """,
+            (organization_id, entity_id, fact_type),
+        )
+        conflict = dict(cur.fetchone())
+        for fact_id in fact_ids:
+            cur.execute(
+                "INSERT INTO kc_conflict_facts (conflict_id, fact_id) VALUES (%s, %s) "
+                "ON CONFLICT DO NOTHING",
+                (str(conflict["id"]), fact_id),
+            )
+        return conflict
+
+
+def add_fact_to_conflict(conn, conflict_id: str, fact_id: str) -> None:
+    """Link one more disagreeing fact onto an already-open conflict, rather
+    than opening a second conflict row for the same entity+fact_type."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO kc_conflict_facts (conflict_id, fact_id) VALUES (%s, %s) "
+            "ON CONFLICT DO NOTHING",
+            (conflict_id, fact_id),
+        )
+
+
+def get_conflict_fact_ids(conn, conflict_id: str) -> list[str]:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT fact_id FROM kc_conflict_facts WHERE conflict_id = %s",
+            (conflict_id,),
+        )
+        return [str(row["fact_id"]) for row in cur.fetchall()]
+
+
+def resolve_conflict(conn, conflict_id: str, organization_id: str, *,
+                      resolution_fact_id: str) -> dict | None:
+    """Marks a conflict resolved once a human correction (supersede_fact)
+    settles which value is authoritative."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE kc_conflicts
+            SET status = 'resolved', resolution_fact_id = %s, resolved_at = now()
+            WHERE id = %s AND organization_id = %s
+            RETURNING *
+            """,
+            (resolution_fact_id, conflict_id, organization_id),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None

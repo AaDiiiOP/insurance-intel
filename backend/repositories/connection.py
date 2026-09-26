@@ -466,6 +466,12 @@ CREATE TABLE IF NOT EXISTS document_quality (
     pages_total     INTEGER NOT NULL DEFAULT 0,
     pages_ocr_low_confidence INTEGER NOT NULL DEFAULT 0,
     avg_ocr_confidence REAL,
+    -- Per-page OCR confidence, 1-indexed as a JSON object {"1": 92.3, "2":
+    -- 41.0, ...} (page N -> that page's own OCR confidence). NULL when OCR
+    -- never ran on this document. Added so a fact's evidence page can be
+    -- scored by its OWN page's confidence rather than the document-wide
+    -- average — see ocr.quality_check_and_ocr / property_policy_intelligence.
+    page_confidences JSONB,
     notes           JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -653,6 +659,48 @@ CREATE INDEX IF NOT EXISTS kc_relationships_from_idx
     ON kc_relationships(organization_id, from_entity_id, relationship_type);
 CREATE INDEX IF NOT EXISTS kc_relationships_to_idx
     ON kc_relationships(organization_id, to_entity_id, relationship_type);
+
+-- An unresolved disagreement between two (or more) kc_facts rows for the
+-- SAME entity+fact_type. Without this, get_current_fact()'s
+-- "ORDER BY created_at DESC LIMIT 1" silently treated the newer of two
+-- contradicting facts as authoritative even though BOTH were flagged
+-- 'contradiction_flagged' — a conflict row is what lets a reader tell
+-- "no current value because nobody has reconciled this yet" apart from
+-- "one clear current value", instead of the read path guessing.
+--
+-- One row per entity+fact_type conflict; kc_conflict_facts is the join
+-- table linking every fact_id that is part of that disagreement (there can
+-- be more than two if a third document adds a third disagreeing value
+-- before anyone reviews the first two). resolution_fact_id is filled in
+-- when a human correction (facts.supersede_fact) settles which value is
+-- right — see knowledge/service.py's resolve path.
+CREATE TABLE IF NOT EXISTS kc_conflicts (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id     UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    entity_id           UUID NOT NULL REFERENCES kc_entities(id) ON DELETE CASCADE,
+    fact_type           TEXT NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'unresolved'
+                         CHECK (status IN ('unresolved', 'resolved')),
+    resolution_fact_id  UUID REFERENCES kc_facts(id) ON DELETE SET NULL,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at         TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS kc_conflicts_org_entity_idx
+    ON kc_conflicts(organization_id, entity_id, fact_type);
+-- One unresolved conflict per entity+fact_type at a time — reconcile_fact()
+-- adds new facts to the existing unresolved conflict row rather than
+-- opening a second one for the same disagreement.
+CREATE UNIQUE INDEX IF NOT EXISTS kc_conflicts_one_unresolved_idx
+    ON kc_conflicts(entity_id, fact_type) WHERE status = 'unresolved';
+
+CREATE TABLE IF NOT EXISTS kc_conflict_facts (
+    conflict_id         UUID NOT NULL REFERENCES kc_conflicts(id) ON DELETE CASCADE,
+    fact_id             UUID NOT NULL REFERENCES kc_facts(id) ON DELETE CASCADE,
+    PRIMARY KEY (conflict_id, fact_id)
+);
+
+CREATE INDEX IF NOT EXISTS kc_conflict_facts_fact_idx ON kc_conflict_facts(fact_id);
 """
 
 
@@ -813,6 +861,16 @@ UPDATE house_style SET organization_id = '00000000-0000-0000-0000-000000000001'
 ALTER TABLE house_style ALTER COLUMN organization_id SET NOT NULL;
 ALTER TABLE house_style DROP CONSTRAINT IF EXISTS house_style_pkey;
 ALTER TABLE house_style ADD PRIMARY KEY (kind, organization_id);
+
+-- Per-page OCR confidence, added to an existing document_quality table so a
+-- fact's evidence page can be scored by its own page rather than the
+-- document-wide average (see the column's comment in SCHEMA above).
+-- Nullable and never backfilled: a document quality-checked before this
+-- migration has no way to recover which page had which confidence after
+-- the fact, so it simply has no per-page data — avg_ocr_confidence (already
+-- stored) remains the only figure available for it.
+ALTER TABLE document_quality
+    ADD COLUMN IF NOT EXISTS page_confidences JSONB;
 """
 
 

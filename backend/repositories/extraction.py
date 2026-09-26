@@ -132,24 +132,28 @@ def get_extraction_events(conn, fact_id: str) -> list[dict]:
 
 def save_document_quality(conn, *, document_id: str, used_ocr: bool,
                           pages_total: int, pages_ocr_low_confidence: int,
-                          avg_ocr_confidence: float | None, notes: list[str]) -> None:
+                          avg_ocr_confidence: float | None, notes: list[str],
+                          page_confidences: dict | None = None) -> None:
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO document_quality (
                 document_id, used_ocr, pages_total, pages_ocr_low_confidence,
-                avg_ocr_confidence, notes
+                avg_ocr_confidence, page_confidences, notes
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (document_id) DO UPDATE SET
                 used_ocr = EXCLUDED.used_ocr,
                 pages_total = EXCLUDED.pages_total,
                 pages_ocr_low_confidence = EXCLUDED.pages_ocr_low_confidence,
                 avg_ocr_confidence = EXCLUDED.avg_ocr_confidence,
+                page_confidences = EXCLUDED.page_confidences,
                 notes = EXCLUDED.notes
             """,
             (document_id, used_ocr, pages_total, pages_ocr_low_confidence,
-             avg_ocr_confidence, Jsonb(notes)),
+             avg_ocr_confidence,
+             Jsonb(page_confidences) if page_confidences is not None else None,
+             Jsonb(notes)),
         )
 
 
