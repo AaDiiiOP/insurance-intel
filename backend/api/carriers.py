@@ -171,7 +171,7 @@ def get_carrier(carrier_id: str, x_organization_id: str | None = Header(None)):
     # failure is otherwise silent, and surfaces much later as a match that
     # inexplicably ignores this carrier.
     indexed_chunks = (
-        vectorstore.count_for_carrier(carrier_id)
+        vectorstore.count_for_carrier(carrier_id, organization_id)
         if summary and vectorstore.is_available()
         else 0
     )
@@ -407,6 +407,7 @@ def create_summary(carrier_id: str, x_organization_id: str | None = Header(None)
                 filename=next(
                     (c["filename"] for c in chunks if c.get("filename")), "document"
                 ),
+                organization_id=organization_id,
                 chunks=chunks,
             )
     except (VectorStoreError, LLMError) as exc:
@@ -621,6 +622,7 @@ def reindex():
                 carrier_id=str(document["carrier_id"]),
                 carrier_name=document["carrier_name"],
                 filename=document["filename"],
+                organization_id=str(document["organization_id"]),
                 chunks=chunks,
             )
         except (VectorStoreError, LLMError) as exc:

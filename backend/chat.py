@@ -78,21 +78,27 @@ NOT_FOUND = (
 )
 
 
-def ask(question: str, *, carrier_id: str | None = None) -> dict:
+def ask(question: str, *, organization_id: str, carrier_id: str | None = None) -> dict:
     """
     Answer one question from the indexed carrier documents.
 
     `carrier_id` narrows to a single carrier; by default every carrier is
     searched at once, which is the useful case — "which of our carriers
     covers X" is a question a broker cannot answer from memory across a
-    dozen wordings.
+    dozen wordings. `organization_id` is the tenant boundary and is always
+    applied.
     """
     question = (question or "").strip()
     if not question:
         raise LLMError("Ask a question first.")
 
     try:
-        hits = search(question=question, limit=TOP_K, carrier_id=carrier_id)
+        hits = search(
+            question=question,
+            limit=TOP_K,
+            carrier_id=carrier_id,
+            organization_id=organization_id,
+        )
     except VectorStoreError as exc:
         raise LLMError(str(exc)) from exc
 

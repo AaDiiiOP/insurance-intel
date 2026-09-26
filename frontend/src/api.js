@@ -272,7 +272,11 @@ export function revokeDraft(draftId, reason) {
  * chose, rather than being rebuilt (and drifting) here.
  */
 export async function downloadDraft(draftId) {
-  const response = await fetch(`${BASE}/drafts/${draftId}/export`)
+  const headers = new Headers()
+  if (activeOrganizationId) {
+    headers.set('X-Organization-Id', activeOrganizationId)
+  }
+  const response = await fetch(`${BASE}/drafts/${draftId}/export`, { headers })
   if (!response.ok) {
     let detail = `Export failed (${response.status})`
     try {

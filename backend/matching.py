@@ -77,7 +77,7 @@ def _queries_for(profile: str, categories: list[str], risk_notes: str) -> list[s
 
 
 def gather_extracts(
-    profile: str, categories: list[str], risk_notes: str
+    profile: str, categories: list[str], risk_notes: str, organization_id: str
 ) -> list[dict]:
     """
     Run every search and pool the results, best first, without duplicates.
@@ -90,7 +90,7 @@ def gather_extracts(
 
     for query in _queries_for(profile, categories, risk_notes):
         try:
-            hits = search(question=query, limit=PER_QUERY)
+            hits = search(question=query, limit=PER_QUERY, organization_id=organization_id)
         except VectorStoreError as exc:
             # One failed query should not lose the others.
             logger.warning("Retrieval failed for a query: %s", exc)
@@ -214,14 +214,16 @@ def _normalise_matches(raw, extracts: list[dict]) -> list[dict]:
     return matches
 
 
-def match_client(*, profile: str, categories: list[str], risk_notes: str) -> dict:
+def match_client(
+    *, profile: str, categories: list[str], risk_notes: str, organization_id: str
+) -> dict:
     """
     Retrieve, then rank. Raises LLMError with a readable reason on failure.
 
     `profile` must already be redacted — this function does not redact, so
     that the one place redaction happens is the one place to audit.
     """
-    extracts = gather_extracts(profile, categories, risk_notes)
+    extracts = gather_extracts(profile, categories, risk_notes, organization_id)
 
     if not extracts:
         raise LLMError(

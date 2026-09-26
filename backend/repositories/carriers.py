@@ -393,12 +393,17 @@ def all_indexable_documents(conn) -> list[dict]:
 
     Used to rebuild the vector index from Postgres. This is what makes the
     Chroma volume disposable: nothing here needs a model call to regenerate,
-    only re-embedding.
+    only re-embedding. Includes each document's `organization_id` (`d.` is
+    the source of truth here, not the carrier's — the two normally match,
+    but the document's own column is what /reindex must tag each chunk with
+    so the rebuilt index carries a correct tenant boundary) so the caller can
+    pass it straight through to `vectorstore.index_document(...)`.
     """
     with conn.cursor() as cur:
         cur.execute(
             """
             SELECT DISTINCT d.id AS document_id, d.filename,
+                   d.organization_id AS organization_id,
                    c.id AS carrier_id, c.name AS carrier_name
             FROM documents d
             JOIN carriers c ON c.id = d.carrier_id

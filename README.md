@@ -361,9 +361,14 @@ backend/
   chunking.py     structure-aware splitting, page/section provenance kept
   summarise.py    map-reduce briefing generation (Phase 1)
   tokenise.py     client redaction -- the boundary the whole design leans on
-  vectorstore.py  ChromaDB indexing and retrieval (Phase 2)
-  matching.py     multi-query retrieval + carrier ranking (Phase 2)
-  chat.py         question answering with a similarity floor + strict prompt
+  vectorstore.py  ChromaDB indexing and retrieval (Phase 2) — every chunk
+                   carries organization_id, every search() enforces it as
+                   a hard filter (fixed; see Results.md — this was a real
+                   gap the file-split refactor above did not cover)
+  matching.py     multi-query retrieval + carrier ranking (Phase 2) —
+                   organization-scoped end to end
+  chat.py         question answering with a similarity floor + strict
+                   prompt — organization-scoped end to end
   extraction.py   reading a client's own submission into intake fields
   gaps.py         requirement checklist with a deterministic backstop (Phase 3)
   verify.py       document verification + checksums + scoring (Phase 3.5)

@@ -530,3 +530,81 @@ application-level (the `X-Organization-Id` header is trusted, not
 authenticated) — this refactor made that boundary *consistent* everywhere
 it applies, not stronger in kind. Real user authentication behind that
 header remains future work, same as before.
+
+---
+
+## Second security gap found and fixed: ChromaDB retrieval had no tenant boundary at all
+
+A follow-up audit of the just-refactored code found something the previous
+pass genuinely missed: **the Postgres-side organization scoping above never
+touched ChromaDB.** `vectorstore.py` had zero references to
+`organization_id` anywhere in it. Carrier matching (`matching.py`) and the
+`/chat` endpoint (`chat.py`, `api/ask.py`) both search Chroma directly, and
+`/chat` specifically was not even resolving an organization at all — so
+organization B could ask a question and get back chunks from organization
+A's carrier documents. This is a real gap the file-split refactor did not
+close, because it only touched `main.py`/`db.py`; the retrieval path lives
+in separate modules that were never in scope for that pass.
+
+**What was fixed:**
+
+- `vectorstore.index_document()` now stores `organization_id` on every
+  chunk's Chroma metadata alongside `carrier_id`/`document_id`/etc.
+- `vectorstore.search()` and `vectorstore.count_for_carrier()` now both
+  *require* `organization_id` and apply it as a hard Chroma `where` filter
+  (combined with the existing `carrier_id` filter via `$and` when both
+  apply, never silently dropping one for the other).
+- `matching.py` (`match_client`, `gather_extracts`) and `chat.py` (`ask`)
+  now require `organization_id` and pass it into every `search()` call they
+  make — there is no code path left that calls Chroma without it.
+- `api/ask.py`'s `/chat` endpoint — which previously did not resolve an
+  organization at all — now calls the same `_resolve_organization()` every
+  other endpoint uses, and passes the result through.
+- `api/matching.py`'s match endpoint now threads its already-resolved
+  organization into `matching.match_client()`.
+- `/reindex` (which rebuilds the whole Chroma index from Postgres) now
+  reads each document's real `organization_id` from Postgres and tags each
+  rebuilt chunk with it correctly, instead of rebuilding an index with no
+  tenant information at all.
+
+**How this was verified — including proving the vulnerability was real,
+not just theoretical:**
+
+- Chroma isn't reachable in this sandbox by default (no Docker), so a real
+  local Chroma server was started (`chroma run`) rather than skipping the
+  test. A standalone script first proved the **old, unscoped** query
+  genuinely leaked organization A's chunk to a query made in organization
+  B's context — confirming this was a real, exploitable gap and not a
+  theoretical one. The same script then proved the **new, filtered** query
+  returns only the calling organization's own chunk in both directions,
+  and that the combined `carrier_id` + `organization_id` filter and
+  `count_for_carrier` are isolated too.
+- A full real-HTTP test followed: real FastAPI app, real local Postgres,
+  real local Chroma server, two real organizations, a real `.docx`
+  uploaded and briefed (indexed) under each. `/chat` as organization B
+  returned sources citing only organization B's own carrier — asserted
+  directly, no organization A carrier id present in the response — and the
+  same check the other direction for organization A. The carrier-matching
+  endpoint under organization B returned results sourced only from
+  organization B's own carrier, with organization A's much larger indexed
+  carrier correctly invisible. A no-header request still resolved to the
+  default organization and worked normally, preserving backward
+  compatibility. `/reindex` was run for real afterward, rebuilding every
+  chunk from Postgres, and the same isolation checks were re-run and still
+  held.
+
+**A smaller bug fixed alongside it:** the frontend's `downloadDraft()`
+bypassed the central `request()` helper that attaches
+`X-Organization-Id` to every other API call, meaning a draft download
+never sent the active organization. Fixed to send the header while still
+handling the binary file response correctly; verified by running the real
+function directly and confirming the header is present when an
+organization is active and absent (falling back to default) when it
+isn't, matching every other endpoint's behavior.
+
+**What this means for the earlier refactor's claims.** The previous
+"foundation refactor" section above is still accurate for what it covered
+— the Postgres-backed carrier/client/match/gap/draft functions really were
+fixed and really were verified. It just didn't cover the vector-search
+path, because that code lives outside `main.py`/`db.py`. Both gaps are now
+closed, independently verified, in the same repository.

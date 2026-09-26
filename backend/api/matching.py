@@ -55,6 +55,7 @@ def run_match(client_id: str, x_organization_id: str | None = Header(None)):
             profile=row.get("redacted_profile") or "",
             categories=row.get("categories") or [],
             risk_notes=redacted_notes,
+            organization_id=organization_id,
         )
     except LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc))

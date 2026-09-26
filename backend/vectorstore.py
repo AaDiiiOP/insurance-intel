@@ -104,6 +104,7 @@ def index_document(
     carrier_id: str,
     carrier_name: str,
     filename: str,
+    organization_id: str,
     chunks: list[dict],
 ) -> int:
     """
@@ -111,6 +112,8 @@ def index_document(
 
     Each entry carries what a citation needs — carrier, filename, section,
     page — so an answer can point at its source without a second lookup.
+    `organization_id` is stored on every chunk too, so `search()` can enforce
+    the tenant boundary that Chroma has no other way to know about.
     """
     if not chunks:
         return 0
@@ -135,6 +138,7 @@ def index_document(
             "carrier_id": carrier_id,
             "carrier_name": carrier_name,
             "filename": filename,
+            "organization_id": organization_id,
             "chunk_index": c["index"],
             # Chroma metadata values must be primitives, so None becomes "".
             "section_title": c.get("section_title") or "",
@@ -173,16 +177,22 @@ def remove_carrier(carrier_id: str) -> None:
 def search(
     *,
     question: str,
+    organization_id: str,
     limit: int = 6,
     carrier_id: str | None = None,
 ) -> list[dict]:
     """
     Find the chunks most relevant to a question.
 
-    Unscoped by default: the point of Phase 2 is to compare a client's
-    situation against EVERY carrier at once, which is the thing a human
-    broker with a few carrier relationships cannot do. Pass carrier_id to
-    narrow to one.
+    Unscoped across carriers by default: the point of Phase 2 is to compare
+    a client's situation against EVERY carrier at once, which is the thing a
+    human broker with a few carrier relationships cannot do. Pass carrier_id
+    to narrow to one.
+
+    `organization_id` is always applied as a hard filter — this is the
+    tenant boundary. Without it, one organization's search could return
+    another organization's carrier document chunks, since Chroma has no
+    concept of tenancy on its own.
 
     Returns dicts with the chunk text and enough metadata to cite it.
     """
@@ -193,7 +203,10 @@ def search(
     except LLMError as exc:
         raise VectorStoreError(f"Could not embed the question: {exc}") from exc
 
-    where = {"carrier_id": carrier_id} if carrier_id else None
+    if carrier_id:
+        where = {"$and": [{"organization_id": organization_id}, {"carrier_id": carrier_id}]}
+    else:
+        where = {"organization_id": organization_id}
 
     try:
         result = collection.query(
@@ -228,7 +241,7 @@ def search(
     return hits
 
 
-def count_for_carrier(carrier_id: str) -> int:
+def count_for_carrier(carrier_id: str, organization_id: str) -> int:
     """
     How many of one carrier's chunks are indexed.
 
@@ -237,7 +250,10 @@ def count_for_carrier(carrier_id: str) -> int:
     otherwise, and only shows up later as an unexplained empty match.
     """
     try:
-        result = _connect().get(where={"carrier_id": carrier_id}, include=[])
+        result = _connect().get(
+            where={"$and": [{"organization_id": organization_id}, {"carrier_id": carrier_id}]},
+            include=[],
+        )
         return len(result.get("ids") or [])
     except Exception:
         return 0
