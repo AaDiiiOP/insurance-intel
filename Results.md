@@ -608,3 +608,118 @@ isn't, matching every other endpoint's behavior.
 fixed and really were verified. It just didn't cover the vector-search
 path, because that code lives outside `main.py`/`db.py`. Both gaps are now
 closed, independently verified, in the same repository.
+
+---
+
+# Phase 1 — Insurance Knowledge Core (first vertical slice)
+
+With Phase 0 frozen and both isolation gaps above closed, this is the start
+of the next stage every outside review pointed toward: turning
+`extraction_facts` into a real, general Knowledge Core rather than one
+fact type hardcoded to one table. Per explicit prior instruction, nothing
+from Phase 0 was deleted or altered to build this — `extraction_facts`,
+`doc_intelligence.py`, and everything downstream of them are untouched.
+This is additive.
+
+## What was built
+
+Four new tables (`kc_entities`, `kc_facts`, `kc_evidence`,
+`kc_relationships`), a `backend/knowledge/` package (`entities.py`,
+`facts.py`, `evidence.py`, `relationships.py`, `versions.py`, `service.py`
+as the single interface everything else calls), and the first concrete
+feature built on top of it: **Property Policy Intelligence**
+(`backend/property_policy_intelligence.py`) — takes a `submission` (the
+same grouping concept Phase 0 built for contradiction detection: a Property
+Policy + Coverage Schedule + Endorsement + Risk Survey believed to be the
+same case) and extracts a small, fixed set of property and policy facts
+(`property.location`, `property.occupancy`, `property.construction`,
+`property.sum_insured`, `property.risk_factors`, `policy.coverage`,
+`policy.limit`, `policy.deductible`, `policy.exclusion`,
+`policy.endorsement`) — deliberately not a 300-field ontology, per the
+explicit instruction not to repeat Phase 0's "keep it narrow" discipline
+in Phase 1.
+
+Every extracted value becomes a `kc_facts` row pointing at a `kc_entities`
+row (`Business`, `Asset`, `Policy` entity types used here; `Location`,
+`Carrier`, `Coverage`, `Claim`, `Risk`, `Person`, `Document` exist in the
+schema for later use, not invented ahead of need) with a `kc_evidence` row
+carrying the real document, page, and snippet — the same
+fact-must-point-at-real-evidence discipline Phase 0 established, now
+generalised past one hardcoded fact type. Relationships (`Business
+-owns-> Asset`, `Business -has_policy-> Policy`) make the entities into an
+actual small graph, not just a flat fact table. Versioning is
+`valid_from`/`valid_to` on `kc_facts` — a corrected or superseded fact
+closes the old row's `valid_to` and opens a new one, rather than
+overwriting history, so `get_historical_values()` can show what the
+system believed at any earlier point.
+
+**Contradiction detection carries over unchanged, not reimplemented.**
+When two documents in the same submission disagree on a fact for the same
+entity beyond tolerance, `service.reconcile_fact()` flags both as
+`contradiction_flagged` — this calls the exact same tolerance/comparison
+logic `doc_intelligence.find_contradiction()` already used in Phase 0,
+rather than writing a second, possibly-inconsistent copy of that rule.
+
+**Every table and endpoint is organization-scoped from the first line of
+schema, not fixed after the fact.** Phase 0 spent two full rounds of
+outside audits finding organization-scoping gaps added after code already
+shipped (first in the older carrier/client/match/gap/draft code, then in
+Chroma retrieval). This time the constraint was explicit and non-negotiable
+from the start: every `kc_*` query filters by `organization_id` inside the
+SQL itself, and every new `/knowledge/*` endpoint resolves the organization
+before doing anything else — the same pattern, applied up front instead of
+patched in afterward.
+
+## How this was verified
+
+- Schema migrations tested against the **existing** database with real
+  Phase 0 data already in it (documents, extraction_facts, submissions
+  from prior testing) — the new tables were added with no error and no
+  existing data touched, confirmed by comparing row counts before and
+  after. Also tested against a **freshly created** database to confirm the
+  base schema alone (not just the migration path) produces a working end
+  state, same standard as the earlier refactor.
+- Real HTTP, two organizations: created a submission under organization A
+  with four real documents that together describe one property/policy
+  case, ran the new `/knowledge/submissions/{id}/analyze-property-policy`
+  endpoint, and confirmed the resulting Business/Asset/Policy entities and
+  their facts/evidence were created correctly with real evidence pointing
+  at real document pages.
+- **Cross-tenant isolation, checked independently after the subagent that
+  built this reported it fixed:** created an entity under organization A,
+  confirmed organization B's `GET /knowledge/entities/{id}` for that
+  entity returns `404` and organization A's own fetch returns `200` — the
+  same test run personally, not just trusted from the build report, given
+  this project's history of exactly this kind of bug slipping through
+  once before.
+- **Contradiction detection re-verified on the two known Phase 0
+  contradiction cases** (`AUR-SYN-004`, `AUR-SYN-009`) run through the new
+  Knowledge Core path instead of the old one: both correctly produced a
+  `property.sum_insured` contradiction with both sides flagged
+  `contradiction_flagged`, and a negative-control case with agreeing values
+  correctly produced zero contradictions and merged evidence onto one
+  current fact rather than duplicating it.
+- Persistence: killed the backend process mid-test and restarted it
+  against the same Postgres database — a previously corrected fact's
+  value, status, and reviewer were unchanged after restart.
+
+## What this doesn't yet establish
+
+- **The LLM extraction path ran against a stub, not the real local
+  model**, because Ollama isn't reachable in the sandbox this was built
+  and tested in — the same environment limitation Phase 0 repeatedly hit,
+  and the same fix applies: this needs a re-run against the real
+  `qwen2.5:7b`, the same way the Phase 0 hard-OCR caveat was closed, before
+  trusting the actual extraction *quality* (as opposed to the entity/fact/
+  evidence/relationship/contradiction *plumbing*, which was verified with
+  real code paths and real data, just not a real model's actual judgment
+  calls).
+- The frontend `Knowledge.jsx` view was verified by exercising the same
+  HTTP calls the UI makes, not by an actual browser click-through — same
+  caveat the organization-switcher UI carried before it was manually
+  confirmed working.
+- This is one vertical slice (Property Policy Intelligence), not a general
+  extraction framework — deliberately, per the same "prove one thing
+  before generalising" discipline Phase 0 was built under. Expanding fact
+  types, entity types, or relationship types should follow real broker
+  workflow needs, not get built ahead of them.

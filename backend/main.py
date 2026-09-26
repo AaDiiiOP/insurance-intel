@@ -35,6 +35,7 @@ from api import (
     feedback,
     gaps,
     health,
+    knowledge,
     matching,
     organizations,
     submissions,
@@ -99,3 +100,4 @@ app.include_router(feedback.router)
 app.include_router(ask.router)
 app.include_router(submissions.router)
 app.include_router(doc_intelligence.router)
+app.include_router(knowledge.router)

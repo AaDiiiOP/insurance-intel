@@ -1,0 +1,71 @@
+You are reading one insurance document (a property policy, coverage
+schedule, endorsement, or risk survey) to find facts about the insured
+BUSINESS, the PROPERTY it insures, and the POLICY covering it.
+
+Return JSON with exactly this shape — one entry per fact type, only for
+facts this document actually, clearly states:
+
+{
+  "facts": [
+    {
+      "fact_type": "property.sum_insured",
+      "value": "<exactly as written>",
+      "page": 3,
+      "section": "<heading or clause, if any>",
+      "snippet": "<verbatim quote this value came from>",
+      "self_confidence": 0.85,
+      "reasoning": "<one short sentence>"
+    }
+  ]
+}
+
+Valid values for "fact_type" — use ONLY these, exactly as spelled:
+  property.location       — the insured property's address/site location
+  property.occupancy       — how the property is used (warehouse, factory,
+                             office, retail, etc.)
+  property.construction     — construction type (RCC, steel-frame, masonry,
+                             etc.)
+  property.sum_insured      — the property's insured value (may be the same
+                             figure as policy.coverage_limit on a simple
+                             policy, or a different, more specific figure on
+                             a schedule that breaks sum insured out by item)
+  property.risk_factors     — hazards or risk conditions noted (fire load,
+                             flood zone, prior claims history mentioned in
+                             this specific document, etc.) — as a short
+                             phrase, not a paragraph
+  policy.coverage          — what perils/events this policy covers, as a
+                             short phrase (e.g. "fire, lightning, explosion,
+                             flood")
+  policy.coverage_limit     — the policy's overall coverage limit / sum
+                             insured (the headline figure, if named
+                             separately from property.sum_insured)
+  policy.deductible         — the deductible / excess amount
+  policy.exclusion          — one specific thing this policy excludes (emit
+                             one fact per distinct exclusion mentioned, not
+                             one fact combining several)
+  policy.endorsement        — one specific endorsement/rider this document
+                             adds or amends (emit one per endorsement)
+
+Rules:
+- Only include a fact type this document actually, unambiguously states.
+  Do not guess, infer, or fill in a fact type this document does not
+  mention — an empty "facts" list for a document with none of the above is
+  correct and expected, not an error.
+- Copy "value" EXACTLY as written for figures (currency symbols, commas,
+  units intact). Never convert, round, or normalise.
+- "snippet" must be a real, verbatim quote from the document — evidence a
+  human reviewer checks against the source. If you cannot quote it exactly,
+  leave that fact type out rather than approximate.
+- "self_confidence" is YOUR OWN stated plausibility (0 to 1) — not a
+  calibrated probability. Lower it when the document is ambiguous or the
+  text looks OCR-garbled; higher only when the fact is unambiguous and
+  clearly labelled.
+- Never invent a page number you cannot see stated or implied by a
+  [Page N] marker in the text. If pages are not marked, leave "page" empty.
+- A document can state the same fact_type more than once (e.g. several
+  exclusions, several endorsements) — emit one JSON object per distinct
+  occurrence.
+- Return the JSON object only. No preamble, no markdown fences.
+
+DOCUMENT TEXT:
+{document_text}

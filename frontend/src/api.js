@@ -403,3 +403,46 @@ export function createOrganization(name) {
   form.append('name', name)
   return request('/organizations', { method: 'POST', body: form })
 }
+
+// ---- Knowledge Core (Phase 1) ----------------------------------------------
+//
+// Entities/facts/evidence/relationships built on top of the Document
+// Intelligence slice's evidence+confidence+review shapes — see
+// backend/knowledge/ and backend/property_policy_intelligence.py. Every call
+// below goes through request(), so it automatically carries whichever
+// organization the Doc Intelligence screen's switcher has selected — the
+// same tenant boundary, not a second one.
+
+export function getEntityFacts(entityId) {
+  return request(`/knowledge/entities/${entityId}/facts`)
+}
+
+export function getKnowledgeFact(factId) {
+  return request(`/knowledge/facts/${factId}`)
+}
+
+export function getKnowledgeFactHistory(factId) {
+  return request(`/knowledge/facts/${factId}/history`)
+}
+
+export function correctKnowledgeFact(factId, newValue, reviewedBy, normalizedValue) {
+  return request(`/knowledge/facts/${factId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      new_value: newValue,
+      normalized_value: normalizedValue ?? null,
+      reviewed_by: reviewedBy,
+    }),
+  })
+}
+
+/** Trigger Property Policy Intelligence over one submission's documents —
+ * extracts property/policy facts, builds Business + Asset(property) +
+ * Policy entities and their relationships, and reconciles facts across
+ * documents (flagging contradictions rather than picking a winner). */
+export function analyzePropertyPolicy(submissionId) {
+  return request(`/knowledge/submissions/${submissionId}/analyze-property-policy`, {
+    method: 'POST',
+  })
+}

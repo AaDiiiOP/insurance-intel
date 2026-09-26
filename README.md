@@ -380,9 +380,26 @@ backend/
   llm.py          the one place that talks to Ollama
   prompts/*.txt   every prompt, kept out of the code
 
+  knowledge/      Phase 1 — Insurance Knowledge Core. entities.py, facts.py,
+                   evidence.py, relationships.py, versions.py, and
+                   service.py (the single interface everything else calls:
+                   create_fact, reconcile_fact, get_current_value,
+                   get_historical_values, etc). Every kc_* table and every
+                   function here is organization-scoped from the schema up
+                   — this package didn't repeat Phase 0's mistake of adding
+                   isolation after the fact. See Results.md's Phase 1
+                   section for the full writeup.
+  property_policy_intelligence.py  the first Knowledge Core vertical slice:
+                   extracts property/policy facts from a submission's
+                   documents (Property Policy + Coverage Schedule +
+                   Endorsement + Risk Survey) into Business/Asset/Policy
+                   entities, with every value's evidence traceable back to
+                   a real document and page. Reuses Phase 0's contradiction
+                   logic rather than reimplementing it.
+
 frontend/
   src/views/  Upload . Carriers . Briefing . Clients . ClientDetail .
-              Ask . Review . Health
+              Ask . Review . Health . Knowledge
 ```
 
 **Data flow:** Postgres is the source of truth for everything -- carriers,

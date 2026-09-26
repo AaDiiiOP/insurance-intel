@@ -490,6 +490,169 @@ CREATE TABLE IF NOT EXISTS submissions (
 );
 
 CREATE INDEX IF NOT EXISTS submissions_org_idx ON submissions(organization_id);
+
+-- ==========================================================================
+-- Knowledge Core (Phase 1)
+--
+-- Per two outside audits' shared recommendation, the shape below:
+--
+--   Document -> Evidence -> Insurance Facts -> Entities -> Relationships
+--     -> Policy/Coverage Knowledge -> Reasoning -> Broker Workflow
+--
+-- This does NOT replace extraction_facts/extraction_events above — those
+-- stay exactly as they are, still serving the Document Intelligence
+-- vertical slice unchanged. The Knowledge Core is a separate, additive set
+-- of tables that generalises the same evidence+confidence+review shape
+-- extraction_facts proved out, so it can hold more than one fact type,
+-- attach facts to a real entity (a business, a policy, an asset) rather
+-- than just a document, and express relationships between entities. The
+-- "migration" from one to the other is conceptual, not a data migration in
+-- this pass: nothing in extraction_facts is read, copied, or deleted here.
+--
+-- Organization scoping follows the same non-negotiable rule as every table
+-- above: organization_id on every table, filtered INSIDE the SQL query on
+-- every read and write, from the first line of DDL — not added after the
+-- fact the way the pre-refactor carrier/client/match/gap/draft code
+-- originally was (see the "Foundation refactor" section of Results.md for
+-- exactly what that cost to fix later).
+-- ==========================================================================
+
+-- A domain entity within an organization: a business, a carrier, a policy,
+-- a document, a location, an asset, a coverage, a claim, a risk, or a
+-- person. Deliberately NOT the same concept as `organizations` above —
+-- organizations is the tenant boundary itself; kc_entities holds the things
+-- an organization's brokers reason about (their clients' businesses,
+-- properties, policies), scoped to that organization, not tenants of it.
+-- Kept as a small, fixed CHECK list on purpose, per the explicit instruction
+-- not to expand it casually — a genuinely new kind of thing to reason about
+-- is a deliberate schema change, not a value nobody agreed to add.
+CREATE TABLE IF NOT EXISTS kc_entities (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    entity_type       TEXT NOT NULL CHECK (entity_type IN (
+                          'business', 'carrier', 'policy', 'document',
+                          'location', 'asset', 'coverage', 'claim', 'risk',
+                          'person'
+                      )),
+    name              TEXT NOT NULL,
+    -- Type-specific fields (a business's industry, an asset's address) live
+    -- here rather than as columns — the entity list is fixed, but what each
+    -- type needs to record is not, and a jsonb bag avoids a schema change
+    -- every time a new attribute turns out to matter for one entity type.
+    attributes        JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS kc_entities_org_type_idx
+    ON kc_entities(organization_id, entity_type);
+
+-- One structured, versioned, evidence-backed fact about an entity.
+--
+-- fact_type is a namespaced free-text string ("property.sum_insured",
+-- "policy.coverage_limit"), not a fixed enum like entity_type above —
+-- new fact types are expected to be added often as the Knowledge Core
+-- grows, and a CHECK constraint here would need a migration for every one.
+--
+-- Versioning is valid_from/valid_to, not a separate version table: the
+-- "current" value for an entity+fact_type is the row with valid_to IS
+-- NULL; superseding a fact closes the old row's valid_to and opens a new
+-- row, so the full history is just every row for that entity+fact_type
+-- ordered by valid_from. See knowledge/versions.py.
+--
+-- confidence_* mirrors extraction_facts exactly on purpose (same
+-- confidence_type values, same meaning) — this is the same typed-confidence
+-- decision, generalised to more fact types, not a new one.
+CREATE TABLE IF NOT EXISTS kc_facts (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id     UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    entity_id           UUID NOT NULL REFERENCES kc_entities(id) ON DELETE CASCADE,
+
+    fact_type           TEXT NOT NULL,
+    value                TEXT NOT NULL,
+    -- Populated only when the fact is a comparable numeric quantity (a sum
+    -- insured, a deductible) — lets reconciliation compare numbers without
+    -- re-parsing `value` every time. NULL for a fact that is inherently
+    -- text (an occupancy description, an exclusion clause).
+    normalized_value     NUMERIC,
+    unit                 TEXT,
+
+    confidence_value     NUMERIC NOT NULL,
+    confidence_type      TEXT NOT NULL
+                          CHECK (confidence_type IN
+                                 ('deterministic', 'ocr_engine', 'model_self_reported')),
+    confidence_method    TEXT,
+    confidence_note      TEXT,
+
+    -- Same lifecycle as extraction_facts.status, plus the same
+    -- 'contradiction_flagged' state for the same reason: a disagreement
+    -- between two documents about the same entity+fact_type is a more
+    -- specific and more urgent reason for review than the generic
+    -- 'needs_review' state.
+    status               TEXT NOT NULL DEFAULT 'needs_review'
+                          CHECK (status IN
+                                 ('needs_review', 'verified', 'corrected', 'contradiction_flagged')),
+
+    -- Versioning: this IS the current value for entity_id+fact_type when
+    -- valid_to IS NULL. supersede_fact() closes valid_to on the old row and
+    -- inserts a new one with valid_from = now().
+    valid_from           TIMESTAMPTZ,
+    valid_to             TIMESTAMPTZ,
+
+    produced_by          TEXT NOT NULL,
+
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    reviewed_at          TIMESTAMPTZ,
+    reviewed_by          TEXT
+);
+
+CREATE INDEX IF NOT EXISTS kc_facts_org_entity_idx
+    ON kc_facts(organization_id, entity_id, fact_type);
+-- Finds "the current fact" (valid_to IS NULL) for an entity+fact_type
+-- without a full table scan — the lookup versions.get_current_value() and
+-- service.reconcile_fact() both run on every single fact write.
+CREATE INDEX IF NOT EXISTS kc_facts_current_idx
+    ON kc_facts(entity_id, fact_type) WHERE valid_to IS NULL;
+
+-- Evidence: where one fact's value came from — same reasoning as
+-- extraction_facts.evidence_* columns, pulled into its own table here
+-- because a fact can (once contradictions are resolved, or once a fact is
+-- corroborated by more than one document) end up with more than one piece
+-- of evidence, where extraction_facts only ever needed exactly one.
+CREATE TABLE IF NOT EXISTS kc_evidence (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    fact_id           UUID NOT NULL REFERENCES kc_facts(id) ON DELETE CASCADE,
+    document_id       UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    page              INTEGER,
+    section           TEXT,
+    snippet           TEXT,
+    source            TEXT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS kc_evidence_fact_idx ON kc_evidence(fact_id);
+CREATE INDEX IF NOT EXISTS kc_evidence_org_idx ON kc_evidence(organization_id);
+
+-- A directed relationship between two entities in the same organization
+-- (Business -[owns]-> Asset, Business -[has_policy]-> Policy, Policy
+-- -[provides]-> Coverage, ...). relationship_type is free text for the same
+-- reason kc_facts.fact_type is: new relationship kinds are expected as the
+-- Knowledge Core grows.
+CREATE TABLE IF NOT EXISTS kc_relationships (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id     UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    from_entity_id       UUID NOT NULL REFERENCES kc_entities(id) ON DELETE CASCADE,
+    to_entity_id         UUID NOT NULL REFERENCES kc_entities(id) ON DELETE CASCADE,
+    relationship_type    TEXT NOT NULL,
+    attributes           JSONB,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS kc_relationships_from_idx
+    ON kc_relationships(organization_id, from_entity_id, relationship_type);
+CREATE INDEX IF NOT EXISTS kc_relationships_to_idx
+    ON kc_relationships(organization_id, to_entity_id, relationship_type);
 """
 
 

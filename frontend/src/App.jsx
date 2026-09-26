@@ -8,6 +8,7 @@ import ClientDetail from './views/ClientDetail'
 import Clients from './views/Clients'
 import Health from './views/Health'
 import DocIntelligence from './views/DocIntelligence'
+import Knowledge from './views/Knowledge'
 import Home from './views/Home'
 import Review from './views/Review'
 import Upload from './views/Upload'
@@ -21,6 +22,7 @@ const NAV = [
   { id: 'ask', label: 'Ask' },
   { id: 'review', label: 'Review' },
   { id: 'doc-intel', label: 'Doc Intelligence' },
+  { id: 'knowledge', label: 'Knowledge Core' },
   { id: 'health', label: 'Settings' },
 ]
 
@@ -172,6 +174,7 @@ export default function App() {
         {view === 'ask' && <Ask />}
         {view === 'review' && <Review />}
         {view === 'doc-intel' && <DocIntelligence />}
+        {view === 'knowledge' && <Knowledge />}
         {view === 'health' && <Health />}
       </main>
     </div>
