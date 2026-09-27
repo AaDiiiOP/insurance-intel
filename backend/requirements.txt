@@ -18,3 +18,8 @@ chromadb-client==1.5.9
 pytesseract==0.3.13
 pdf2image==1.17.0
 Pillow>=10.4.0
+
+# Test suite (backend/tests/) — real Postgres/HTTP integration tests, not
+# mocked-internals unit tests, so no extra test dependency is needed beyond
+# the runner itself.
+pytest==8.3.3

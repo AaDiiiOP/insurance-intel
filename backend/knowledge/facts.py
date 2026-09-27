@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 import db
 
-VALID_STATUSES = {"needs_review", "verified", "corrected", "contradiction_flagged"}
+VALID_STATUSES = {"needs_review", "verified", "corrected", "contradiction_flagged", "superseded"}
 VALID_CONFIDENCE_TYPES = {"deterministic", "ocr_engine", "model_self_reported"}
 
 # Which fact types describe exactly ONE true current value for an

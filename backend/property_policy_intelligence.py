@@ -208,7 +208,8 @@ def verify_snippet(claimed_snippet: str, source_text: str,
 
 
 def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = None,
-                                   page_confidences: dict | None = None) -> list[dict]:
+                                   page_confidences: dict | None = None,
+                                   full_text: str | None = None) -> list[dict]:
     """
     Extract every property/policy fact ONE chunk of a document's text
     states, using the same LLM-calling convention as
@@ -218,6 +219,15 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
     `text` should already be sized for one extraction call — callers
     processing a full document use split_into_chunks() and call this once
     per chunk (item 6's fix; this function itself no longer truncates).
+
+    `full_text`, when given, is the WHOLE document's text (pre-chunking) —
+    used only for snippet verification, not for extraction itself. A
+    legitimate snippet can span a chunk boundary (e.g. a sentence split
+    across two "[Page N]" sections), which a chunk-only check wrongly
+    reports as "not found" even though it genuinely appears in the
+    document. Verifying against `full_text` instead closes that gap. Falls
+    back to `text` (the chunk) when `full_text` is not given, preserving
+    the old per-chunk-only behaviour for any caller that does not pass it.
 
     `page_confidences`, when given, is a {"<page number>": confidence} map
     (ocr.quality_check_and_ocr's shape) — used to score each fact by the
@@ -234,6 +244,7 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
     'needs_review' with a note when the claimed snippet could not be
     verified against the real source text — item 5's fix).
     """
+    verification_text = full_text if full_text is not None else text
     try:
         data = generate_json(
             load_prompt("extract_property_facts", document_text=text)
@@ -279,7 +290,9 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
         # an explanatory note rather than silently accepting an unverified
         # quote as if it were confirmed evidence.
         claimed_snippet = str(item.get("snippet") or "").strip()[:500] or None
-        snippet_verified = verify_snippet(claimed_snippet, text) if claimed_snippet else False
+        snippet_verified = (
+            verify_snippet(claimed_snippet, verification_text) if claimed_snippet else False
+        )
         status = "needs_review"
         status_note = None
         if claimed_snippet and not snippet_verified:
@@ -417,6 +430,12 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
             extracted.extend(extract_property_policy_facts(
                 text=chunk, ocr_confidence=ocr_confidence,
                 page_confidences=page_confidences,
+                # Full document text (item 2's fix), not just this chunk —
+                # a snippet that legitimately spans a chunk boundary must
+                # not be reported "not found" for having been checked
+                # against only the smaller chunk it happened to be
+                # extracted from.
+                full_text=text,
             ))
 
         documents_processed.append({

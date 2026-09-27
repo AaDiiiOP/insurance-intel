@@ -848,3 +848,88 @@ evidence/relationship/conflict/versioning *plumbing* is correct; it does
 not yet prove the real `qwen2.5:7b` model's actual extraction judgment on
 these new fact types, which — like the Phase 0 hard-OCR caveat before it
 — needs a real run before being trusted for extraction quality.
+
+---
+
+## Phase 1A, second pass — closing the last two real gaps, plus permanent tests
+
+A second outside audit of the hardening above called it "~90-95%
+complete" and found exactly two remaining real issues, not style
+preferences, plus recommended making the manual verification permanent as
+an automated test suite before calling Phase 1A closed. All three are
+done.
+
+**1. Resolving a conflict didn't actually close out the losing fact.**
+The fix in the previous pass correctly created a new corrected fact and
+marked the `kc_conflicts` row resolved — but the *other* fact that had
+been part of the disagreement was left exactly as it was:
+`valid_to = NULL`, `status = 'contradiction_flagged'`. That meant two
+rows could both look "current" (`valid_to IS NULL`) for the same
+entity+fact_type at once — the conflict object said "resolved," but the
+underlying fact rows didn't reflect that. A reader relying on `valid_to
+IS NULL` to mean "this is the current value" (which is the entire
+definition the versioning scheme depends on) could still be misled.
+Fixed: `correct_fact()` now closes every other fact that was part of the
+resolved conflict — sets its `valid_to` to the correction time and moves
+its status from `contradiction_flagged` to a new `superseded` status
+(added to the schema's allowed values via a safe, idempotent migration).
+**Verified by counting, not by trusting a query's answer:** after
+resolving a real two-way conflict, `SELECT count(*) FROM kc_facts WHERE
+entity_id = ... AND fact_type = ... AND valid_to IS NULL` returned exactly
+`1`. A second test built a three-way conflict (three disagreeing facts,
+not just two) and confirmed correcting one closes out *both* of the
+others, not just the first one found.
+
+**2. Evidence snippets were checked against the extraction chunk, not
+the whole document.** Long documents are chunked (by page markers) before
+being sent to the model, and snippet verification was checking a fact's
+claimed quote against only the chunk it came from. A real, genuine quote
+that happens to span the boundary between two chunks — a sentence ending
+right where one page-chunk stops and the next begins — could be wrongly
+reported as "not found" even though it's actually in the document,
+because verification never saw the whole quote in one piece. Fixed by
+verifying against the full source document text instead of the chunk
+(chosen over a narrower "chunk + neighbours" compromise because the
+verification itself is a cheap deterministic check with no LLM cost, and
+broker submission documents aren't large enough for full-document
+verification to be a real cost — the audit's own stated preference).
+**Verified with a deliberately constructed before/after:** a real
+sentence built to start in one chunk and continue into the next was
+checked against just the first chunk (fails — reproducing the exact bug)
+and then against the full document (passes) — proving the fix closes the
+specific gap the audit found, not just that new code runs without error.
+
+**3. A permanent, automated regression suite now exists.** Everything
+above — and everything from the first Phase 1A hardening pass — was
+previously proven with one-off manual verification scripts that don't
+persist as a safety net for future changes. `backend/tests/` (pytest, run
+with `cd backend && python3 -m pytest tests/`) now covers, as 17 real
+tests against real Postgres: singleton contradiction detection (and that
+agreeing values correctly don't conflict), multi-valued fact types never
+being flagged against each other, the two-way and three-way conflict
+closeout fix above, version history correctness after a correction,
+snippet anchoring in all four cases (fabricated, verbatim, whitespace-
+fuzzy, and the chunk-boundary case this pass fixed), cross-tenant evidence
+and relationship rejection, cross-tenant entity reads returning nothing,
+page-specific OCR confidence, and long-document extraction past the old
+12,000-character truncation point. Deterministic checks (snippet
+anchoring, chunking) call the real functions directly; the extraction-
+pipeline tests run a stub Ollama server over real HTTP so the actual
+`extract → llm.generate_json → HTTP` path executes for real rather than
+being mocked at the Python level. **Real run, right before this was
+written:** `17 passed in 1.00s`, re-confirmed independently rather than
+only trusting the number from the pass that built the suite.
+
+**What this means for "freeze Phase 1A."** Every specific item the two
+outside audits raised against the Knowledge Core — contradiction/current-
+value semantics, non-versioned corrections, cross-org ownership
+enforcement, singleton vs. multi-valued facts, unverified snippets,
+document truncation, document-average OCR confidence, the conflict-
+resolution closeout gap, and chunk-boundary snippet verification — is now
+fixed and has its own specific real test, several of which now run
+automatically rather than needing to be re-verified by hand. The one
+caveat that has applied since Phase 1 began still applies: extraction
+*quality* against a real `qwen2.5:7b` (as opposed to the entity/fact/
+evidence/conflict/versioning *plumbing*, proven throughout) has not been
+run in this sandbox and needs a real-model pass, the same way Phase 0's
+hard-OCR caveat needed one before it could be trusted.

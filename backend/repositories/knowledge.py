@@ -21,7 +21,7 @@ VALID_ENTITY_TYPES = {
 
 VALID_CONFIDENCE_TYPES = {"deterministic", "ocr_engine", "model_self_reported"}
 
-VALID_FACT_STATUSES = {"needs_review", "verified", "corrected", "contradiction_flagged"}
+VALID_FACT_STATUSES = {"needs_review", "verified", "corrected", "contradiction_flagged", "superseded"}
 
 
 # ---------------------------------------------------------------------------

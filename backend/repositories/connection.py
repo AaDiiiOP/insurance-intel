@@ -594,10 +594,16 @@ CREATE TABLE IF NOT EXISTS kc_facts (
     -- 'contradiction_flagged' state for the same reason: a disagreement
     -- between two documents about the same entity+fact_type is a more
     -- specific and more urgent reason for review than the generic
-    -- 'needs_review' state.
+    -- 'needs_review' state. 'superseded' is distinct from 'corrected':
+    -- 'corrected' is the NEW row a human correction produced (the winning
+    -- side); 'superseded' is what a LOSING side of a resolved conflict
+    -- becomes once correct_fact() closes it out (see kc_conflicts below) —
+    -- it is no longer 'contradiction_flagged' because the conflict is
+    -- resolved, but it was never itself corrected either.
     status               TEXT NOT NULL DEFAULT 'needs_review'
                           CHECK (status IN
-                                 ('needs_review', 'verified', 'corrected', 'contradiction_flagged')),
+                                 ('needs_review', 'verified', 'corrected',
+                                  'contradiction_flagged', 'superseded')),
 
     -- Versioning: this IS the current value for entity_id+fact_type when
     -- valid_to IS NULL. supersede_fact() closes valid_to on the old row and
@@ -871,6 +877,20 @@ ALTER TABLE house_style ADD PRIMARY KEY (kind, organization_id);
 -- stored) remains the only figure available for it.
 ALTER TABLE document_quality
     ADD COLUMN IF NOT EXISTS page_confidences JSONB;
+
+-- 'superseded' added to kc_facts.status: when correct_fact() resolves a
+-- kc_conflicts row, every OTHER fact that was part of that conflict (the
+-- losing side(s), not the one just corrected) must be closed out too —
+-- valid_to set and status moved off 'contradiction_flagged' — so exactly
+-- one fact row is left with valid_to IS NULL per entity+fact_type once a
+-- conflict is resolved, rather than that holding only "by coincidence" of
+-- which row is newest. Same replace-the-CHECK-by-name pattern as
+-- extraction_facts_status_check/draft_events_event_check above, since the
+-- original CHECK predates this status.
+ALTER TABLE kc_facts DROP CONSTRAINT IF EXISTS kc_facts_status_check;
+ALTER TABLE kc_facts ADD CONSTRAINT kc_facts_status_check
+    CHECK (status IN ('needs_review', 'verified', 'corrected',
+                       'contradiction_flagged', 'superseded'));
 """
 
 

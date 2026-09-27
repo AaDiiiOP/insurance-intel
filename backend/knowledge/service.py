@@ -317,7 +317,18 @@ def correct_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
     conflict is marked resolved with resolution_fact_id pointing at the
     NEW, corrected fact — a human just settled which value is right, so the
     "no single current value" state this conflict represented no longer
-    holds.
+    holds. Resolving the conflict also CLOSES OUT every other fact that was
+    part of it (every fact_id linked via kc_conflict_facts, other than the
+    one just corrected and the new row superseding it): each loses its
+    'contradiction_flagged' status in favour of 'superseded', and gets the
+    same valid_to timestamp as the correction. Without this, the losing
+    side of the conflict would be left with valid_to IS NULL and status
+    'contradiction_flagged' forever — a second row satisfying "current"
+    for the same entity+fact_type even though the conflict is resolved,
+    which only "happens to" read correctly because get_current_value_or_
+    conflict() picks the newest row; the invariant (at most one row with
+    valid_to IS NULL per entity+fact_type once resolved) was never actually
+    enforced at the data level. This closes it at the data level instead.
 
     Raises ValueError if the fact does not exist for this organization
     (facts.supersede_fact's existing behaviour, unchanged).
@@ -349,6 +360,19 @@ def correct_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
             conn, str(conflict["id"]), organization_id,
             resolution_fact_id=str(new_fact["id"]),
         )
+
+        # Close out every OTHER fact that was part of this conflict — the
+        # losing side(s). `fact_id` (the one just corrected) is now itself
+        # closed by supersede_fact() above; `new_fact["id"]` is the new
+        # current row and must stay open. Everything else linked to this
+        # conflict was flagged 'contradiction_flagged' and is still sitting
+        # with valid_to IS NULL — that ends here.
+        resolved_at = new_fact["valid_from"]
+        for other_fact_id in db.get_conflict_fact_ids(conn, str(conflict["id"])):
+            if other_fact_id in (str(fact_id), str(new_fact["id"])):
+                continue
+            db.close_fact_validity(conn, other_fact_id, organization_id, resolved_at)
+            db.set_fact_status(conn, other_fact_id, organization_id, "superseded")
 
     return new_fact
 

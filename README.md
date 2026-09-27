@@ -306,6 +306,33 @@ cd backend
 python3 eval_harness.py /path/to/dataset
 ```
 
+### Knowledge Core regression tests
+
+`backend/tests/` is a permanent, re-runnable pytest suite covering the
+Knowledge Core (entities/facts/evidence/relationships/conflicts/versioning):
+singleton contradiction detection, multi-valued fact types never
+conflicting, conflict resolution closing out the losing fact, version
+history after a correction, evidence snippet anchoring (including a snippet
+that spans a chunk boundary), cross-tenant evidence/relationship rejection,
+page-specific OCR confidence, and chunked extraction past the old
+12,000-character truncation point. It runs against a real local Postgres
+database (throwaway `organizations` rows, not a mocked connection) and real
+application code; where a real model call would otherwise be needed, it
+runs against the same kind of Ollama-compatible stub server used earlier in
+this project (`backend/tests/stub_ollama.py`) rather than mocking the code
+under test.
+
+```bash
+cd backend
+python3 -m pytest tests/
+```
+
+(`python3 -m pytest`, not a bare `pytest` — this project's dependencies,
+including `pytest` itself per `requirements.txt`, are installed against the
+same Python `python3`/`uvicorn` resolve to; a separately-installed `pytest`
+executable on `PATH` can point at a different Python with none of this
+project's packages installed.)
+
 **Hard OCR stress test — closed, against the real model.** This dataset's
 "scanned" cases are clean computer-rendered text turned into an image, which
 only proves OCR *triggers* correctly, not that it's accurate under real
