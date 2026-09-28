@@ -1,5 +1,8 @@
 # Aurevia BrokerOS
 
+**Version: 0.4.0** (see `frontend/package.json` — the one version number
+for the whole project; bump it there on every release)
+
 *(Previously "Insurance Intelligence" — renamed, same codebase, same
 principles: everything below still applies.)*
 
@@ -455,6 +458,31 @@ changed this renewal." Verified end-to-end against a real local Postgres
 database (not just unit-level checks) and covered by the same regression
 principle as the rest of Knowledge Core — see `Results.md`.
 
+**Phase 1B acceptance benchmark — `eval_policy_comparison.py`.** Unlike
+Phase 1A's benchmark, this never calls a model: `policy_comparison.py`'s
+job starts after extraction, diffing facts that are already Knowledge Core
+rows. So the benchmark writes those rows directly through the real
+`reconcile_fact()` write path (the same one `property_policy_
+intelligence.py` itself uses) and checks that `compare_submissions()`
+reports exactly the expected change for each of 13 deterministic cases:
+increased/decreased sum insured, increased/decreased deductible,
+unchanged (including a within-tolerance rounding case), added/removed
+singleton values, added/removed/kept multi-valued values (exclusions,
+endorsements), a fully-unchanged policy, a fact stated on neither side,
+and cross-organization isolation (confirms one organization can never
+compare or read another organization's entities). This is deterministic
+and 100% reproducible — every case either passes or fails, no statistical
+threshold, no model variance to account for.
+
+```bash
+cd backend
+python3 eval_policy_comparison.py
+```
+
+Currently: **13/13 passing.** Results are written the same way as Phase
+1A's — every run timestamped and kept under `backend/evaluations/phase1b/`,
+`latest.json` reflecting the most recent run.
+
 ---
 
 
@@ -533,6 +561,12 @@ backend/
                    increased/decreased/added/removed, fact type by fact
                    type. Pure read-side — never writes a fact, never
                    re-extracts, safe to call repeatedly. See "Policy
+                   Intelligence" below.
+  eval_policy_comparison.py  Phase 1B's acceptance benchmark — 13
+                   deterministic test cases, no model involved (writes
+                   facts directly through reconcile_fact() and checks
+                   policy_comparison.py's output against exact expected
+                   results). Currently 13/13 passing. See "Policy
                    Intelligence" below.
 
   kc_conflicts     a fact disagreement (contradiction) creates a

@@ -29,6 +29,17 @@ evaluations/
                               (see each file's own name and the note
                               below) but superseded by whatever is
                               currently in phase1a/latest.json
+  phase1b/
+    result-<timestamp>.json  every eval_policy_comparison.py run, kept —
+                              never overwritten in place
+    latest.json              the most recent run. Unlike phase1a/latest.json
+                              this has no model_reachable gate: eval_policy_
+                              comparison.py never calls a model (it writes
+                              facts directly via reconcile_fact() and diffs
+                              them with policy_comparison.py), so every run
+                              is equally "real" — there is no unreachable-
+                              model case to guard against here, only
+                              pass/fail on 13 deterministic test cases.
 ```
 
 ## Why this exists
