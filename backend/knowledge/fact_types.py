@@ -88,14 +88,21 @@ def is_singleton_fact_type(fact_type: str) -> bool:
     """
     Whether fact_type has one true current value at a time.
 
-    Defaults to True (singleton) for an unregistered fact type — the safer
-    default is to still run contradiction detection on something new rather
-    than silently skip it, matching the existing "never silently agree
-    without checking" rule the Knowledge Core follows elsewhere.
+    Raises ValueError for an unregistered fact type — same fail-closed
+    convention as target_entity_kind() below, and for the same reason:
+    this answer controls whether reconcile_fact() runs contradiction
+    detection at all (knowledge/service.py's reconcile_fact docstring), so
+    silently guessing "singleton" (or "multi") for a fact type nobody has
+    actually classified risks either skipping a real contradiction check or
+    wrongly flagging independently-true values as conflicting. An
+    unregistered fact_type must be added to FACT_DEFINITIONS before it can
+    be written through reconcile_fact() at all — previously this defaulted
+    to True (singleton) instead, which was a permissive guess rather than a
+    considered classification.
     """
     definition = FACT_DEFINITIONS.get(fact_type)
     if definition is None:
-        return True
+        raise ValueError(f"Unrecognised fact_type: {fact_type!r}. Add it to FACT_DEFINITIONS in knowledge/fact_types.py.")
     return definition.is_singleton
 
 

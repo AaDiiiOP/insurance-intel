@@ -357,6 +357,79 @@ python3 run_hard_ocr_test.py
 
 ---
 
+## Knowledge Core / Policy Intelligence
+
+Reachable from the "Knowledge" screen. Builds on Document Intelligence's
+evidence/confidence/review shapes but extracts a full fact model — ten
+property/policy fact types instead of one — into a small, versioned entity
+graph (Business/Asset/Policy), rather than one bare fact per document.
+
+**Phase 1A — extraction, accepted.** `property_policy_intelligence.py`
+extracts `property.sum_insured`, `property.location`, `property.occupancy`,
+`property.construction`, `property.risk_factors`, `policy.coverage`,
+`policy.coverage_limit`, `policy.deductible`, `policy.exclusion`, and
+`policy.endorsement` from every document in a submission, chunked (not
+truncated) and snippet-verified against the real source text. Each fact
+type's shape — singleton (one true current value, contradiction-checked) or
+multi-valued (independently true, never contradiction-checked) — lives in
+one place, `knowledge/fact_types.py`'s `FACT_DEFINITIONS` registry, so it
+is never re-derived or duplicated across the extraction, reconciliation,
+and evaluation code.
+
+Run against the real local `qwen2.5:7b` across all 20 synthetic companies,
+via `backend/eval_property_policy.py`: **zero silently-wrong facts** (the
+hard acceptance gate — anything the model gets wrong is either caught by
+contradiction detection or simply not extracted, never written as a
+confident-looking wrong answer) across all 20 companies, with real
+extraction accuracy for every fact type the dataset actually states in its
+documents. See `Results.md`'s Phase 1A section for the full run and how the
+benchmark's own scoring bugs (not the pipeline) were found and fixed along
+the way — worth reading before treating any one accuracy percentage as the
+whole picture.
+
+```bash
+cd backend
+python3 eval_property_policy.py /path/to/dataset
+```
+
+**Phase 1B — coverage comparison.** `policy_comparison.py` diffs two
+submissions' CURRENT facts — typically this year's renewal against last
+year's expiring policy, or a new submission against an incumbent policy —
+fact type by fact type, and reports what changed:
+
+- **Singleton types** (`policy.deductible`, `policy.coverage_limit`,
+  `property.sum_insured`, …): the one current value on each side is
+  compared directly. A numeric fact type reports `increased` / `decreased`
+  / `unchanged` (same 1% tolerance `reconcile_fact()` already uses to call
+  two figures "the same" — this module never invents a second,
+  independently-tuned notion of "close enough"); a text fact type reports
+  `changed` / `unchanged`. Either side missing reports `added` / `removed`.
+- **Multi-valued types** (`policy.exclusion`, `policy.endorsement`,
+  `policy.coverage`, `property.risk_factors`): compared as sets — which
+  values are `kept`, `added`, or `removed` between the two sides, since
+  there is no single "the" exclusion to diff, only which ones are present.
+- A side with an **unresolved contradiction** (more than one "current" fact
+  for that entity+fact_type) is reported as such rather than silently
+  picking one — the same "don't guess which side of a disagreement is
+  right" principle as `get_current_value_or_conflict()`.
+
+Pure read-side: running a comparison never creates, corrects, or
+supersedes a fact. Two new endpoints, both requiring each submission to
+have already been run through `analyze-property-policy`:
+
+```
+GET /knowledge/compare-submissions?left_submission_id=…&right_submission_id=…
+GET /knowledge/compare-entities?left_entity_id=…&right_entity_id=…      (lower-level: any two entities of the same kind)
+```
+
+`left_` is the baseline; `right_` is what changed relative to it, so
+`increased` / `added` / `removed` all read the way a broker reads "what
+changed this renewal." Verified end-to-end against a real local Postgres
+database (not just unit-level checks) and covered by the same regression
+principle as the rest of Knowledge Core — see `Results.md`.
+
+---
+
 
 
 **Foundation refactor (see `Results.md` for the full writeup).** `main.py`
@@ -427,6 +500,13 @@ backend/
                    verifies evidence snippets actually appear in the source
                    text, and carries a fact's own evidence page's OCR
                    confidence rather than the document average.
+  policy_comparison.py  Phase 1B — coverage comparison. Diffs two
+                   submissions' CURRENT Knowledge Core facts (e.g. this
+                   year's renewal against last year's expiring policy):
+                   increased/decreased/added/removed, fact type by fact
+                   type. Pure read-side — never writes a fact, never
+                   re-extracts, safe to call repeatedly. See "Policy
+                   Intelligence" below.
 
   kc_conflicts     a fact disagreement (contradiction) creates a
                    conflict row here, and the "current value" query for
