@@ -1,0 +1,70 @@
+{
+  "company_id": "AUR-SYN-008",
+  "company_name": "Pioneer Buildworks Pvt. Ltd.",
+  "synthetic": true,
+  "dataset_version": "1.1-phase1-supplement",
+  "phase1_facts": [
+    {
+      "fact_type": "property.location",
+      "value": "89 Logistics Hub, Hyderabad, Telangana",
+      "source_document": "AUR-SYN-008_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "property.occupancy",
+      "value": "Contractor's yard, plant storage and pre-fabrication facility",
+      "source_document": "AUR-SYN-008_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "property.construction",
+      "value": "Open yard with steel-clad workshop sheds, class C construction",
+      "source_document": "AUR-SYN-008_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "property.risk_factors",
+      "value": "Open storage of construction plant and combustible formwork materials",
+      "source_document": "AUR-SYN-008_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.coverage",
+      "value": "Property Damage",
+      "value_inr": 180000000,
+      "source_document": "AUR-SYN-008_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.coverage",
+      "value": "Business Interruption",
+      "value_inr": 36000000,
+      "source_document": "AUR-SYN-008_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.exclusion",
+      "value": "War, terrorism and nuclear risks",
+      "source_document": "AUR-SYN-008_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.exclusion",
+      "value": "Faulty workmanship or design not resulting in physical loss",
+      "source_document": "AUR-SYN-008_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.endorsement",
+      "value": "Plant and machinery values reviewed",
+      "source_document": "AUR-SYN-008_03_endorsement.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.endorsement",
+      "value": "Additional named insured endorsement: Pioneer Buildworks Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy. No change to sum insured or coverage terms.",
+      "source_document": "AUR-SYN-008_03_endorsement.pdf",
+      "page": 1
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "company_id": "AUR-SYN-003",
+  "company_name": "BluePeak Logistics Pvt. Ltd.",
+  "synthetic": true,
+  "dataset_version": "1.1-phase1-supplement",
+  "phase1_facts": [
+    {
+      "fact_type": "property.location",
+      "value": "267 Technology Park, Gurugram, Haryana",
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "property.occupancy",
+      "value": "Third-party logistics warehousing and cross-docking facility",
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "property.construction",
+      "value": "Pre-engineered steel building, class B construction, high-bay racking",
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.coverage",
+      "value": "Property Damage",
+      "value_inr": 500000000,
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.coverage",
+      "value": "Business Interruption",
+      "value_inr": 100000000,
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.exclusion",
+      "value": "War, terrorism and nuclear risks",
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.exclusion",
+      "value": "Goods in transit beyond the insured premises",
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.endorsement",
+      "value": "Plant and machinery values reviewed",
+      "source_document": "AUR-SYN-003_03_endorsement.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.endorsement",
+      "value": "Additional named insured endorsement: BluePeak Logistics Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy. No change to sum insured or coverage terms.",
+      "source_document": "AUR-SYN-003_03_endorsement.pdf",
+      "page": 1
+    }
+  ]
+}

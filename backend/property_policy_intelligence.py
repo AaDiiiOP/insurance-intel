@@ -32,6 +32,7 @@ from llm import LLMError, generate_json, load_prompt
 
 import db
 import knowledge.service as kc
+from knowledge.fact_types import ALL_FACT_TYPES, NUMERIC_FACT_TYPES, target_entity_kind
 
 logger = logging.getLogger(__name__)
 
@@ -49,23 +50,11 @@ MAX_CHUNK_CHARS = 12000
 # OCR noise but tight enough that an unrelated sentence does not pass.
 SNIPPET_SIMILARITY_THRESHOLD = 0.85
 
-# Which fact types are comparable numeric quantities — normalized_value is
-# populated for these so reconciliation compares numbers, not strings. Every
-# other fact type in FACT_TYPES is free text, compared as text (see
-# knowledge.service._values_agree).
-NUMERIC_FACT_TYPES = {"property.sum_insured", "policy.coverage_limit", "policy.deductible"}
-
-# Which entity a fact_type's namespace belongs to. Anything under "policy."
-# attaches to the Policy entity; anything under "property." attaches to the
-# Asset entity (the physical property itself — see the module docstring in
-# knowledge/entities.py for why "Asset" rather than a dedicated "Property"
-# entity type: Property is not in the fixed, deliberately-small entity list).
-def _target_entity_kind(fact_type: str) -> str:
-    if fact_type.startswith("policy."):
-        return "policy"
-    if fact_type.startswith("property."):
-        return "asset"
-    raise ValueError(f"Unrecognised fact_type namespace: {fact_type}")
+# NUMERIC_FACT_TYPES and target_entity_kind() now live in
+# knowledge/fact_types.py's FACT_DEFINITIONS registry (imported above) —
+# this used to be its own copy here (and a third copy of the allowed-types
+# set below), which is exactly the kind of duplication that silently drifts
+# when a new fact type is added. See that module's docstring.
 
 
 def _numeric(value: str) -> float | None:
@@ -263,7 +252,7 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
             continue
         fact_type = str(item.get("fact_type") or "").strip()
         value = str(item.get("value") or "").strip()
-        if fact_type not in _ALL_FACT_TYPES or not value:
+        if fact_type not in ALL_FACT_TYPES or not value:
             continue
 
         self_confidence = item.get("self_confidence")
@@ -344,14 +333,6 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
             "status": status,
         })
     return results
-
-
-_ALL_FACT_TYPES = {
-    "property.location", "property.occupancy", "property.construction",
-    "property.sum_insured", "property.risk_factors",
-    "policy.coverage", "policy.coverage_limit", "policy.deductible",
-    "policy.exclusion", "policy.endorsement",
-}
 
 
 def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
@@ -445,7 +426,7 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
         })
 
         for item in extracted:
-            entity = entity_by_kind[_target_entity_kind(item["fact_type"])]
+            entity = entity_by_kind[target_entity_kind(item["fact_type"])]
             fact = kc.reconcile_fact(
                 conn,
                 organization_id=organization_id,

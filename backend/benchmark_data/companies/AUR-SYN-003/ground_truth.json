@@ -1,0 +1,42 @@
+{
+  "company_id": "AUR-SYN-003",
+  "company_name": "BluePeak Logistics Pvt. Ltd.",
+  "synthetic": true,
+  "facts": [
+    {
+      "field": "property_sum_insured",
+      "value_inr": 500000000,
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "schedule_property_sum_insured",
+      "value_inr": 500000000,
+      "source_document": "AUR-SYN-003_02_coverage_schedule.pdf",
+      "page": 1
+    },
+    {
+      "field": "policy_deductible",
+      "value_inr": 1000000,
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "risk_rating",
+      "value": "Low",
+      "source_document": "AUR-SYN-003_04_risk_survey.pdf",
+      "page": 1
+    },
+    {
+      "field": "loss_amount",
+      "value_inr": 450000,
+      "source_document": "AUR-SYN-003_05_claim_loss_run.pdf",
+      "page": 1
+    }
+  ],
+  "tests": {
+    "intentional_contradiction": false,
+    "ocr_variant": true,
+    "silent_guessing_must_be_false": true
+  }
+}

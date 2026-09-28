@@ -1,0 +1,8 @@
+Test ID,Scenario,Expected behavior
+P0-01,Digital property policy,Extract correct sum insured + page evidence
+P0-02,Scanned property policy,OCR automatically triggered; confidence recorded
+P0-03,Cross-document contradiction,Do not silently merge conflicting values; flag for review
+P0-04,Human correction,Correction saved with audit event
+P0-05,Missing/illegible evidence,Return unknown/review; never invent
+P0-06,Second organization,No cross-organization visibility
+P0-07,Persistence,Facts and review state survive restart

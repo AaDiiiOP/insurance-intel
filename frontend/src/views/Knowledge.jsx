@@ -12,7 +12,7 @@ import {
  * The first vertical slice built on top of the Knowledge Core
  * (backend/knowledge/): pick a submission (the same submissions the
  * Document Intelligence screen groups documents into), trigger analysis,
- * and see the Business/Asset/Policy entities and property.*/policy.* facts
+ * and see the Business/Asset/Policy entities and the property/policy facts
  * it produced, each traceable to its evidence, with any cross-document
  * contradiction called out rather than silently resolved.
  *

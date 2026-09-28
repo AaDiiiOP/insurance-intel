@@ -1,0 +1,42 @@
+{
+  "company_id": "AUR-SYN-004",
+  "company_name": "Crestline Foods Pvt. Ltd.",
+  "synthetic": true,
+  "facts": [
+    {
+      "field": "property_sum_insured",
+      "value_inr": 350000000,
+      "source_document": "AUR-SYN-004_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "schedule_property_sum_insured",
+      "value_inr": 370000000,
+      "source_document": "AUR-SYN-004_02_coverage_schedule.pdf",
+      "page": 1
+    },
+    {
+      "field": "policy_deductible",
+      "value_inr": 1500000,
+      "source_document": "AUR-SYN-004_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "risk_rating",
+      "value": "Moderate",
+      "source_document": "AUR-SYN-004_04_risk_survey.pdf",
+      "page": 1
+    },
+    {
+      "field": "loss_amount",
+      "value_inr": 850000,
+      "source_document": "AUR-SYN-004_05_claim_loss_run.pdf",
+      "page": 1
+    }
+  ],
+  "tests": {
+    "intentional_contradiction": true,
+    "ocr_variant": false,
+    "silent_guessing_must_be_false": true
+  }
+}

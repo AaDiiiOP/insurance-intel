@@ -175,7 +175,7 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
     Write a newly-extracted fact for entity_id+fact_type.
 
     First checks whether fact_type is singleton or multi-valued
-    (knowledge/facts.py's SINGLETON_FACT_TYPES/MULTI_VALUED_FACT_TYPES):
+    (knowledge/fact_types.py's FACT_DEFINITIONS registry):
 
     - Multi-valued (e.g. policy.exclusion, policy.endorsement,
       property.risk_factors, policy.coverage): a document can state several

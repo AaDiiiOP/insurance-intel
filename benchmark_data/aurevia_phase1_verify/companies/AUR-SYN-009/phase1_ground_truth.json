@@ -1,0 +1,70 @@
+{
+  "company_id": "AUR-SYN-009",
+  "company_name": "SilverOak Hospitality Pvt. Ltd.",
+  "synthetic": true,
+  "dataset_version": "1.1-phase1-supplement",
+  "phase1_facts": [
+    {
+      "fact_type": "property.location",
+      "value": "319 Industrial Estate, Jaipur, Rajasthan",
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "property.occupancy",
+      "value": "Hotel and hospitality premises with guest accommodation and kitchen facilities",
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "property.construction",
+      "value": "RCC frame structure, class A construction, commercial kitchen fire suppression fitted",
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "property.risk_factors",
+      "value": "Commercial kitchen deep-fry operations and LPG storage",
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.coverage",
+      "value": "Property Damage",
+      "value_inr": 400000000,
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.coverage",
+      "value": "Business Interruption",
+      "value_inr": 80000000,
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.exclusion",
+      "value": "War, terrorism and nuclear risks",
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.exclusion",
+      "value": "Loss of guest revenue not resulting from physical damage to the premises",
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.endorsement",
+      "value": "Plant and machinery values reviewed",
+      "source_document": "AUR-SYN-009_03_endorsement.pdf",
+      "page": 1
+    },
+    {
+      "fact_type": "policy.endorsement",
+      "value": "Additional named insured endorsement: SilverOak Hospitality Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy. No change to sum insured or coverage terms.",
+      "source_document": "AUR-SYN-009_03_endorsement.pdf",
+      "page": 1
+    }
+  ]
+}

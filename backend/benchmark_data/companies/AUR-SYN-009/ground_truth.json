@@ -1,0 +1,42 @@
+{
+  "company_id": "AUR-SYN-009",
+  "company_name": "SilverOak Hospitality Pvt. Ltd.",
+  "synthetic": true,
+  "facts": [
+    {
+      "field": "property_sum_insured",
+      "value_inr": 400000000,
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "schedule_property_sum_insured",
+      "value_inr": 420000000,
+      "source_document": "AUR-SYN-009_02_coverage_schedule.pdf",
+      "page": 1
+    },
+    {
+      "field": "policy_deductible",
+      "value_inr": 500000,
+      "source_document": "AUR-SYN-009_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "risk_rating",
+      "value": "Moderate",
+      "source_document": "AUR-SYN-009_04_risk_survey.pdf",
+      "page": 1
+    },
+    {
+      "field": "loss_amount",
+      "value_inr": 2100000,
+      "source_document": "AUR-SYN-009_05_claim_loss_run.pdf",
+      "page": 1
+    }
+  ],
+  "tests": {
+    "intentional_contradiction": true,
+    "ocr_variant": true,
+    "silent_guessing_must_be_false": true
+  }
+}

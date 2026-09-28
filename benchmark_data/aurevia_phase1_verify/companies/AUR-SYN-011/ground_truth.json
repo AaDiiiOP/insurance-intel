@@ -1,0 +1,42 @@
+{
+  "company_id": "AUR-SYN-011",
+  "company_name": "TrueNorth Solar Systems Pvt. Ltd.",
+  "synthetic": true,
+  "facts": [
+    {
+      "field": "property_sum_insured",
+      "value_inr": 120000000,
+      "source_document": "AUR-SYN-011_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "schedule_property_sum_insured",
+      "value_inr": 120000000,
+      "source_document": "AUR-SYN-011_02_coverage_schedule.pdf",
+      "page": 1
+    },
+    {
+      "field": "policy_deductible",
+      "value_inr": 1000000,
+      "source_document": "AUR-SYN-011_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "risk_rating",
+      "value": "Moderate",
+      "source_document": "AUR-SYN-011_04_risk_survey.pdf",
+      "page": 1
+    },
+    {
+      "field": "loss_amount",
+      "value_inr": 0,
+      "source_document": "AUR-SYN-011_05_claim_loss_run.pdf",
+      "page": 1
+    }
+  ],
+  "tests": {
+    "intentional_contradiction": false,
+    "ocr_variant": false,
+    "silent_guessing_must_be_false": true
+  }
+}

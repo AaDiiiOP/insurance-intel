@@ -1,0 +1,856 @@
+[
+  {
+    "company_id": "AUR-SYN-001",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-001/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-001",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-001/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-001",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-001/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-001",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-001/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-001",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-001/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-002",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-002/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-002",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-002/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-002",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-002/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-002",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-002/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-002",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-002/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-003",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-003/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 500000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-003",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-003/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 500000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-003",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-003/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 500000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-003",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-003/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 500000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-003",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-003/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 500000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-003",
+    "document_type": "property_policy_scanned",
+    "path": "companies/AUR-SYN-003/01_property_policy_SCANNED.pdf",
+    "synthetic": true,
+    "ocr_target": true,
+    "expected_property_sum_insured_inr": 500000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-004",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-004/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-004",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-004/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-004",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-004/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-004",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-004/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-004",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-004/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-005",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-005/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-005",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-005/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-005",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-005/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-005",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-005/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-005",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-005/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-006",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-006/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-006",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-006/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-006",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-006/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-006",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-006/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-006",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-006/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-006",
+    "document_type": "property_policy_scanned",
+    "path": "companies/AUR-SYN-006/01_property_policy_SCANNED.pdf",
+    "synthetic": true,
+    "ocr_target": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-007",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-007/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 200000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-007",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-007/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 200000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-007",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-007/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 200000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-007",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-007/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 200000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-007",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-007/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 200000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-008",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-008/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 180000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-008",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-008/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 180000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-008",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-008/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 180000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-008",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-008/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 180000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-008",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-008/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 180000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-009",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-009/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-009",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-009/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-009",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-009/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-009",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-009/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-009",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-009/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-009",
+    "document_type": "property_policy_scanned",
+    "path": "companies/AUR-SYN-009/01_property_policy_SCANNED.pdf",
+    "synthetic": true,
+    "ocr_target": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-010",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-010/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-010",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-010/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-010",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-010/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-010",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-010/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-010",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-010/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-011",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-011/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-011",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-011/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-011",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-011/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-011",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-011/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-011",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-011/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-012",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-012/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-012",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-012/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-012",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-012/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-012",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-012/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-012",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-012/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-012",
+    "document_type": "property_policy_scanned",
+    "path": "companies/AUR-SYN-012/01_property_policy_SCANNED.pdf",
+    "synthetic": true,
+    "ocr_target": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-013",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-013/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-013",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-013/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-013",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-013/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-013",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-013/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-013",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-013/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 150000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-014",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-014/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-014",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-014/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-014",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-014/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-014",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-014/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-014",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-014/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-015",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-015/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-015",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-015/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-015",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-015/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-015",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-015/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-015",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-015/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-015",
+    "document_type": "property_policy_scanned",
+    "path": "companies/AUR-SYN-015/01_property_policy_SCANNED.pdf",
+    "synthetic": true,
+    "ocr_target": true,
+    "expected_property_sum_insured_inr": 400000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-016",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-016/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-016",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-016/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-016",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-016/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-016",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-016/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-016",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-016/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 120000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-017",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-017/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-017",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-017/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-017",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-017/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-017",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-017/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-017",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-017/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 350000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-018",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-018/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-018",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-018/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-018",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-018/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-018",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-018/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-018",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-018/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-018",
+    "document_type": "property_policy_scanned",
+    "path": "companies/AUR-SYN-018/01_property_policy_SCANNED.pdf",
+    "synthetic": true,
+    "ocr_target": true,
+    "expected_property_sum_insured_inr": 300000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-019",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-019/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-019",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-019/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-019",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-019/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-019",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-019/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-019",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-019/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 250000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-020",
+    "document_type": "property_policy",
+    "path": "companies/AUR-SYN-020/01_property_policy.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-020",
+    "document_type": "coverage_schedule",
+    "path": "companies/AUR-SYN-020/02_coverage_schedule.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-020",
+    "document_type": "endorsement",
+    "path": "companies/AUR-SYN-020/03_endorsement.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-020",
+    "document_type": "risk_survey",
+    "path": "companies/AUR-SYN-020/04_risk_survey.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  },
+  {
+    "company_id": "AUR-SYN-020",
+    "document_type": "claim_loss_run",
+    "path": "companies/AUR-SYN-020/05_claim_loss_run.pdf",
+    "synthetic": true,
+    "expected_property_sum_insured_inr": 600000000,
+    "evidence_page": 1
+  }
+]

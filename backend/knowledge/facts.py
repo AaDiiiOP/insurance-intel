@@ -13,52 +13,17 @@ for the read side of this.
 from datetime import datetime, timezone
 
 import db
+from knowledge.fact_types import is_singleton_fact_type  # noqa: F401 — re-exported for existing callers
 
 VALID_STATUSES = {"needs_review", "verified", "corrected", "contradiction_flagged", "superseded"}
 VALID_CONFIDENCE_TYPES = {"deterministic", "ocr_engine", "model_self_reported"}
 
-# Which fact types describe exactly ONE true current value for an
-# entity+fact_type at a time ("singleton") versus which describe a SET of
-# independent, simultaneously-true instances ("multi-valued").
-#
-# reconcile_fact()'s contradiction-detection/tolerance-comparison logic only
-# makes sense for singleton fact types: a property genuinely has one sum
-# insured, one occupancy, one construction type at a time, so two documents
-# naming different figures for the same entity really is a disagreement
-# worth flagging. A multi-valued fact type like policy.exclusion is the
-# opposite — "Flood excluded" and "War excluded" are two DIFFERENT true
-# facts about the same policy, not two competing answers to the same
-# question, so running the same disagreement check against them was a bug:
-# every additional distinct exclusion/endorsement/risk-factor a document
-# named looked like it was contradicting the ones already on record.
-#
-# Registry kept here (not entities.py or property_policy_intelligence.py)
-# because "does this fact type have one current value or many" is a
-# property of the fact type itself, independent of which vertical slice or
-# entity type happens to use it.
-SINGLETON_FACT_TYPES = {
-    "property.sum_insured", "property.occupancy", "property.construction",
-    "property.location", "policy.coverage_limit", "policy.deductible",
-}
-
-MULTI_VALUED_FACT_TYPES = {
-    "policy.exclusion", "policy.endorsement", "property.risk_factors",
-    "policy.coverage",
-}
-
-
-def is_singleton_fact_type(fact_type: str) -> bool:
-    """
-    Whether fact_type has one true current value at a time.
-
-    Defaults to True (singleton) for an unregistered fact type — the safer
-    default is to still run contradiction detection on something new rather
-    than silently skip it, matching the existing "never silently agree
-    without checking" rule this module already follows elsewhere.
-    """
-    if fact_type in MULTI_VALUED_FACT_TYPES:
-        return False
-    return True
+# The singleton/multi-valued distinction (and everything else about a fact
+# type's shape) now lives in knowledge/fact_types.py's FACT_DEFINITIONS
+# registry — is_singleton_fact_type is re-exported above so existing
+# `from knowledge.facts import is_singleton_fact_type` call sites keep
+# working unchanged. See that module's docstring for why this moved: it was
+# previously duplicated here AND in property_policy_intelligence.py.
 
 
 def _now():

@@ -1,0 +1,42 @@
+{
+  "company_id": "AUR-SYN-019",
+  "company_name": "Granite Agri Processing Pvt. Ltd.",
+  "synthetic": true,
+  "facts": [
+    {
+      "field": "property_sum_insured",
+      "value_inr": 250000000,
+      "source_document": "AUR-SYN-019_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "schedule_property_sum_insured",
+      "value_inr": 270000000,
+      "source_document": "AUR-SYN-019_02_coverage_schedule.pdf",
+      "page": 1
+    },
+    {
+      "field": "policy_deductible",
+      "value_inr": 500000,
+      "source_document": "AUR-SYN-019_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "risk_rating",
+      "value": "Elevated",
+      "source_document": "AUR-SYN-019_04_risk_survey.pdf",
+      "page": 1
+    },
+    {
+      "field": "loss_amount",
+      "value_inr": 3750000,
+      "source_document": "AUR-SYN-019_05_claim_loss_run.pdf",
+      "page": 1
+    }
+  ],
+  "tests": {
+    "intentional_contradiction": true,
+    "ocr_variant": false,
+    "silent_guessing_must_be_false": true
+  }
+}

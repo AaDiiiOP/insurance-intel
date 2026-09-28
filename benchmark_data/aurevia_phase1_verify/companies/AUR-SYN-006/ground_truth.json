@@ -1,0 +1,42 @@
+{
+  "company_id": "AUR-SYN-006",
+  "company_name": "Evergreen Technical Textiles Pvt. Ltd.",
+  "synthetic": true,
+  "facts": [
+    {
+      "field": "property_sum_insured",
+      "value_inr": 150000000,
+      "source_document": "AUR-SYN-006_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "schedule_property_sum_insured",
+      "value_inr": 150000000,
+      "source_document": "AUR-SYN-006_02_coverage_schedule.pdf",
+      "page": 1
+    },
+    {
+      "field": "policy_deductible",
+      "value_inr": 500000,
+      "source_document": "AUR-SYN-006_01_property_policy.pdf",
+      "page": 1
+    },
+    {
+      "field": "risk_rating",
+      "value": "Moderate",
+      "source_document": "AUR-SYN-006_04_risk_survey.pdf",
+      "page": 1
+    },
+    {
+      "field": "loss_amount",
+      "value_inr": 0,
+      "source_document": "AUR-SYN-006_05_claim_loss_run.pdf",
+      "page": 1
+    }
+  ],
+  "tests": {
+    "intentional_contradiction": false,
+    "ocr_variant": true,
+    "silent_guessing_must_be_false": true
+  }
+}

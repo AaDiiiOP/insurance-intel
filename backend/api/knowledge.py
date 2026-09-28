@@ -11,6 +11,7 @@ an endpoint skips this.
 import logging
 
 import knowledge.service as kc
+import policy_comparison
 import property_policy_intelligence
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
@@ -310,3 +311,66 @@ def analyze_property_policy(submission_id: str, x_organization_id: str | None = 
         "facts": facts_payload,
         "contradictions": result["contradictions"],
     }
+
+
+@router.get("/knowledge/compare-submissions")
+def compare_submissions(left_submission_id: str, right_submission_id: str,
+                         x_organization_id: str | None = Header(None)):
+    """
+    Phase 1B — coverage comparison: diff two submissions' current Policy and
+    Asset facts (e.g. this year's renewal against last year's expiring
+    policy, or a new submission against the client's incumbent policy).
+
+    Both submissions must already have been run through
+    POST /knowledge/submissions/{id}/analyze-property-policy — this endpoint
+    only reads existing Knowledge Core facts, it never extracts or writes
+    anything. left_ is the baseline; right_ is compared against it, so
+    "increased"/"added"/"removed" are stated relative to left (see
+    policy_comparison.compare_entities's docstring).
+
+    404s when either submission does not exist for the caller's
+    organization; 409 (not 404) when a submission exists but has not been
+    analyzed yet — a different, more specific condition than "not found"
+    that the caller should surface differently (run analysis first, not
+    check the submission id).
+    """
+    left_submission_id = _validate_uuid(left_submission_id, "left submission id")
+    right_submission_id = _validate_uuid(right_submission_id, "right submission id")
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        try:
+            result = policy_comparison.compare_submissions(
+                conn, organization_id=organization_id,
+                left_submission_id=left_submission_id,
+                right_submission_id=right_submission_id,
+            )
+        except ValueError as exc:
+            message = str(exc)
+            status_code = 404 if "not found" in message else 409
+            raise HTTPException(status_code=status_code, detail=message)
+    return result
+
+
+@router.get("/knowledge/compare-entities")
+def compare_entities(left_entity_id: str, right_entity_id: str,
+                      x_organization_id: str | None = Header(None)):
+    """
+    Lower-level form of the comparison above: diff two entities directly by
+    id (any two entities of the same kind — typically two Policy entities,
+    or two Asset entities), rather than resolving them from submission
+    labels. Useful when the caller already has the entity_id (e.g. from a
+    prior GET /knowledge/entities/{id}/facts) and does not want a second
+    submission-label lookup.
+    """
+    left_entity_id = _validate_uuid(left_entity_id, "left entity id")
+    right_entity_id = _validate_uuid(right_entity_id, "right entity id")
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        try:
+            result = policy_comparison.compare_entities(
+                conn, organization_id=organization_id,
+                left_entity_id=left_entity_id, right_entity_id=right_entity_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+    return result
