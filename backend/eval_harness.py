@@ -402,7 +402,8 @@ def main():
         "companies": results,
         "contradiction_checks": contradiction_results,
     }
-    out_path = Path(__file__).parent / "eval_results.json"
+    out_path = Path(__file__).parent / "evaluations" / "phase0" / "eval_results.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(output, indent=2))
 
     print(f"\nFull results written to {out_path}")

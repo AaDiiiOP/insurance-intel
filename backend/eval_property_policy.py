@@ -60,8 +60,10 @@ test_org, since these are inert rows scoped to an id nothing else
 references).
 """
 import json
+import subprocess
 import sys
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -431,6 +433,20 @@ def summarise(company_results: list[dict]) -> dict:
     }
 
 
+def _git_commit() -> str | None:
+    """Best-effort short commit hash for the code that produced this run —
+    None (not a fabricated placeholder) when this isn't a git checkout or
+    git itself isn't available, e.g. inside a stripped-down container."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=Path(__file__).parent, capture_output=True, text=True, timeout=5,
+        )
+        return result.stdout.strip() or None if result.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 eval_property_policy.py /path/to/Aurevia_Synthetic_Insurance_World_v1")
@@ -442,12 +458,29 @@ def main():
         print(f"No companies/ directory found under {dataset_root}")
         sys.exit(1)
 
-    if not llm.is_available():
+    # Recorded in the output below (not just printed) — a results file must
+    # be self-describing: whether the model was actually reachable, and
+    # which model, travels WITH the numbers it produced, so a results file
+    # can never be mistaken for a valid real-model run when it was actually
+    # a plumbing smoke test with every extraction call failing closed.
+    model_reachable = llm.is_available()
+    run_metadata = {
+        "model": llm.OLLAMA_MODEL,
+        "model_reachable": model_reachable,
+        "ollama_host": llm.OLLAMA_HOST,
+        "dataset_path": str(dataset_root),
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "git_commit": _git_commit(),
+    }
+
+    if not model_reachable:
         print(
             f"WARNING: Ollama model '{llm.OLLAMA_MODEL}' is not reachable at "
             f"{llm.OLLAMA_HOST}. Every document will fail extraction and be "
             "scored as 0 facts found — this run will not be a valid Phase 1A "
-            "acceptance result, only a plumbing smoke test."
+            "acceptance result, only a plumbing smoke test. (Recorded as "
+            "model_reachable=false in the output file — this run must not "
+            "be mistaken for a real acceptance result later.)"
         )
 
     with db.get_connection() as conn:
@@ -474,12 +507,47 @@ def main():
 
     summary = summarise(company_results)
 
-    output = {"summary": summary, "companies": company_results}
-    out_path = Path(__file__).parent / "eval_property_policy_results.json"
+    output = {"run": run_metadata, "summary": summary, "companies": company_results}
+    # Timestamped, not overwritten in place — each run is kept as its own
+    # historical record (evaluations/phase1a/README.md explains the layout)
+    # rather than every run silently erasing the last one, which is exactly
+    # how results.json / finalresult.json / eval_results.json ended up
+    # scattered and contradicting each other in the first place. The most
+    # recent run's path is also always available as latest.json (a copy,
+    # not a symlink — plain and portable across OSes, including Windows).
+    run_ts = run_metadata["timestamp_utc"].replace(":", "").replace("-", "")
+    evaluations_dir = Path(__file__).parent / "evaluations" / "phase1a"
+    evaluations_dir.mkdir(parents=True, exist_ok=True)
+    out_path = evaluations_dir / f"result-{run_ts}.json"
     out_path.write_text(json.dumps(output, indent=2, default=str))
 
     print(f"\nFull results written to {out_path}")
-    print(json.dumps(summary, indent=2))
+    print(json.dumps({"run": run_metadata, "summary": summary}, indent=2))
+
+    # latest.json only ever reflects a run where the model was genuinely
+    # reachable — a smoke-test run (model unreachable) is still saved above
+    # as its own timestamped record, but must never become "the current
+    # Phase 1A result" just by running last.
+    if model_reachable:
+        latest_path = evaluations_dir / "latest.json"
+        latest_path.write_text(json.dumps(output, indent=2, default=str))
+        print(f"Also updated {latest_path} (this run's model was reachable).")
+
+    # A run where the model was never reachable "passes" zero_silent_wrong_
+    # facts vacuously — nothing was extracted, so nothing could be wrong.
+    # That is a plumbing smoke test, not a Phase 1A acceptance result, and
+    # must never exit 0 as though it were one; checked here, not just
+    # printed as a warning above, so an automated caller (CI, a script)
+    # cannot mistake a silently-skipped model run for a passing benchmark.
+    if not model_reachable:
+        print(
+            "\nNOT A VALID ACCEPTANCE RUN: the model was not reachable "
+            f"(model_reachable=false, model={run_metadata['model']!r}, "
+            f"host={run_metadata['ollama_host']!r}). Re-run with Ollama/Qwen "
+            "actually running and reachable before treating this result as "
+            "Phase 1A evidence."
+        )
+        sys.exit(1)
 
     if not summary["hard_gates"]["zero_silent_wrong_facts"]:
         print(

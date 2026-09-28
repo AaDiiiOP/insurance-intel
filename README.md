@@ -347,7 +347,7 @@ local `qwen2.5:7b` (confirmed reachable): **6 correct, 5 correctly
 abstained, 0 silent wrong answers, 0 parse failures.** The one case that
 had been an open question through earlier stand-in runs — `perspective_skew`
 — now extracts correctly under the real model. Full detail in
-`Results.md`, Test 3, and `hard_ocr_results.json`.
+`Results.md`, Test 3, and `backend/evaluations/phase0/hard_ocr_results.json`.
 
 ```bash
 cd backend
@@ -364,33 +364,60 @@ evidence/confidence/review shapes but extracts a full fact model — ten
 property/policy fact types instead of one — into a small, versioned entity
 graph (Business/Asset/Policy), rather than one bare fact per document.
 
-**Phase 1A — extraction, accepted.** `property_policy_intelligence.py`
-extracts `property.sum_insured`, `property.location`, `property.occupancy`,
-`property.construction`, `property.risk_factors`, `policy.coverage`,
-`policy.coverage_limit`, `policy.deductible`, `policy.exclusion`, and
-`policy.endorsement` from every document in a submission, chunked (not
-truncated) and snippet-verified against the real source text. Each fact
-type's shape — singleton (one true current value, contradiction-checked) or
-multi-valued (independently true, never contradiction-checked) — lives in
-one place, `knowledge/fact_types.py`'s `FACT_DEFINITIONS` registry, so it
-is never re-derived or duplicated across the extraction, reconciliation,
-and evaluation code.
+**Phase 1A — Knowledge Core plumbing hardened and permanently regression-
+tested; real-model extraction quality partially verified, one more
+confirmed run still needed before calling this "accepted."**
+`property_policy_intelligence.py` extracts `property.sum_insured`,
+`property.location`, `property.occupancy`, `property.construction`,
+`property.risk_factors`, `policy.coverage`, `policy.coverage_limit`,
+`policy.deductible`, `policy.exclusion`, and `policy.endorsement` from
+every document in a submission, chunked (not truncated) and
+snippet-verified against the real source text. Each fact type's shape —
+singleton (one true current value, contradiction-checked) or multi-valued
+(independently true, never contradiction-checked) — lives in one place,
+`knowledge/fact_types.py`'s `FACT_DEFINITIONS` registry, so it is never
+re-derived or duplicated across the extraction, reconciliation, and
+evaluation code.
 
-Run against the real local `qwen2.5:7b` across all 20 synthetic companies,
-via `backend/eval_property_policy.py`: **zero silently-wrong facts** (the
-hard acceptance gate — anything the model gets wrong is either caught by
-contradiction detection or simply not extracted, never written as a
-confident-looking wrong answer) across all 20 companies, with real
-extraction accuracy for every fact type the dataset actually states in its
-documents. See `Results.md`'s Phase 1A section for the full run and how the
-benchmark's own scoring bugs (not the pipeline) were found and fixed along
-the way — worth reading before treating any one accuracy percentage as the
-whole picture.
+Two separate things are true here, and it matters not to conflate them:
+
+- **The Knowledge Core plumbing** (contradiction detection, versioning,
+  conflict resolution, evidence anchoring) is solid — covered by the
+  17-test regression suite in `backend/tests/`, which runs against a real
+  Postgres database and real application code. This does not need
+  re-proving; it does not depend on any one model's extraction quality.
+- **Real-model extraction quality** — whether `qwen2.5:7b` actually
+  extracts all ten fact types correctly from real documents — has a real
+  local run on record showing **zero silently-wrong facts, 67.5% fact
+  recall, 1.7% false-extraction rate** across all 20 synthetic companies
+  (`backend/eval_property_policy.py`). The zero-silent-wrong-facts result
+  is the hard gate and it holds; 67.5% recall means roughly a third of
+  ground-truth facts are not yet being extracted, which is not the same
+  claim as "100% extraction accuracy" and should not be read as one. See
+  `Results.md`'s Phase 1A section for that run's full detail, the dataset
+  gap that was found and fixed along the way (some fact types weren't
+  actually stated in the source documents for the model to find — a
+  benchmark bug, not a model bug), and what's still open before this can
+  be called formally accepted: **one more confirmed run against real,
+  reachable Ollama/Qwen** (not a stub server) with the current dataset,
+  its result recorded with the model name and reachability explicitly
+  logged, superseding every earlier, now-historical result file.
 
 ```bash
 cd backend
 python3 eval_property_policy.py /path/to/dataset
 ```
+
+Every run is kept as its own timestamped file under
+`backend/evaluations/phase1a/` (never overwritten in place — see
+`backend/evaluations/README.md` for the full layout and why it exists),
+and `backend/evaluations/phase1a/latest.json` always reflects the most
+recent run where the model was genuinely reachable. The script itself
+exits non-zero, and prints a plain warning, for a run where the model was
+not reachable — that run is still saved for the record, but is never
+written to `latest.json` and must never be read as a Phase 1A result.
+Historical pre-`evaluations/` result files (from before this layout
+existed) are preserved under `backend/evaluations/historical/`.
 
 **Phase 1B — coverage comparison.** `policy_comparison.py` diffs two
 submissions' CURRENT facts — typically this year's renewal against last

@@ -1,6 +1,6 @@
 # Phase 0 Evaluation Results — Aurevia Synthetic Insurance World v1
 
-> **⚠️ STALE RESULT FILE — READ THIS FIRST.** The `backend/eval_results.json`
+> **⚠️ STALE RESULT FILE — READ THIS FIRST.** The `backend/evaluations/phase0/eval_results.json`
 > currently checked into this repo does **not** match the numbers documented
 > below. As of the last check, the file on disk shows `value_accuracy_pct:
 > 30.0`, `found_a_fact_pct: 30.0`, `confidence_type_distribution.model_self_
@@ -20,10 +20,10 @@
 > **The 100% numbers and per-company detail below are the last real,
 > verified run** (see the "read this before the numbers" section — this
 > document's own text is trustworthy history). They are **not** currently
-> reproducible from the `eval_results.json` sitting in the repo. Before
+> reproducible from the `backend/evaluations/phase0/eval_results.json` sitting in the repo. Before
 > treating Phase 0 as freshly re-verified, re-run `backend/eval_harness.py`
 > **through Docker** (`docker-compose exec backend python3 eval_harness.py`,
-> with Ollama actually running and reachable), confirm `eval_results.json`
+> with Ollama actually running and reachable), confirm `backend/evaluations/phase0/eval_results.json`
 > regenerates with `model_self_reported` counts matching the 14 real-model
 > cases again, and only then trust its numbers over this document's history.
 
@@ -33,7 +33,7 @@ Run against all 20 companies in the dataset, through the real pipeline
 
 **The numbers below are from a real, complete run** — real `qwen2.5:7b` via
 local Ollama, real Tesseract OCR, real Poppler, captured at the time this
-document was written. `backend/eval_results.json` was that exact run's full
+document was written. `backend/evaluations/phase0/eval_results.json` was that exact run's full
 per-company output at the time; see the stale-file warning above for why the
 copy currently on disk no longer matches it. Nothing in this repo is a
 stand-in or simulation. (An earlier draft of this evaluation used a
@@ -63,7 +63,7 @@ for a model-accuracy problem when it is actually an environment problem.
 Across the 14 companies that used the model path (rather than the
 deterministic rule), `qwen2.5:7b`'s self-reported confidence was **0.90 for
 13 of them, and 0.95 for the remaining one** — checked directly against
-`eval_results.json`, not assumed. On a dataset this clean, that is a
+`backend/evaluations/phase0/eval_results.json`, not assumed. On a dataset this clean, that is a
 plausible outcome on its own. But it is also exactly the failure mode the
 schema's design already warned about: *"an LLM's stated plausibility, never
 a calibrated probability."* A model reporting near-identical high confidence
@@ -165,7 +165,7 @@ needing a running server.
 **Now covered by the automated run, not just the manual check above.**
 `eval_harness.py` runs a dedicated contradiction check for all 4 test
 companies plus a negative control (checking that a genuinely agreeing pair
-is never flagged), reported in its own section of `eval_results.json`
+is never flagged), reported in its own section of `backend/evaluations/phase0/eval_results.json`
 (`contradiction_checks`) and summarised as `contradiction_accuracy_pct` and
 `contradiction_false_positives`. Latest run: **4/4 caught (100%), 0 false
 positives** — matching the manual verification above exactly, now
@@ -382,13 +382,13 @@ script states which model actually ran, in the output itself.**
 prints an explicit warning if the model is not reachable, and records
 `model_used`, `model_was_reachable`, and
 `run_is_authoritative_for_model_path_results` directly in
-`hard_ocr_results.json`. This run's output file carries
+`backend/evaluations/phase0/hard_ocr_results.json`. This run's output file carries
 `model_used: "qwen2.5:7b"`, `model_was_reachable: true` — so this specific
 results file is verifiably the real-model run, not a stand-in artifact
 mislabeled as one.
 
 Reproducible: `python3 build_hard_ocr_set.py <path-to-source-pdf>` then
-`python3 run_hard_ocr_test.py`, full detail in `hard_ocr_results.json`.
+`python3 run_hard_ocr_test.py`, full detail in `backend/evaluations/phase0/hard_ocr_results.json`.
 
 ---
 
@@ -412,7 +412,7 @@ Reproducible: `python3 build_hard_ocr_set.py <path-to-source-pdf>` then
    exist), not just a test.
 6. ~~Extend `eval_harness.py` to cover contradiction detection
    automatically.~~ **Done** — see `contradiction_checks` in
-   `eval_results.json` and the summary fields `contradiction_accuracy_pct`
+   `backend/evaluations/phase0/eval_results.json` and the summary fields `contradiction_accuracy_pct`
    / `contradiction_false_positives`.
 7. ~~A submission-picker UI... Not yet done: an equivalent for P0-06/P0-07
    (org isolation, persistence) has no UI either.~~ **The org-isolation half

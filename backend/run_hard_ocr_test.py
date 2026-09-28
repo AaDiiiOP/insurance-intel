@@ -119,7 +119,8 @@ def main():
                 f"ocr_conf={ocr_conf}  model_conf_type={r['confidence_type']}{danger}"
             )
 
-    out_path = Path(__file__).parent / "hard_ocr_results.json"
+    out_path = Path(__file__).parent / "evaluations" / "phase0" / "hard_ocr_results.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     output = {
         "model_used": model_name,
         "model_was_reachable": model_available,
