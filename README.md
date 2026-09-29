@@ -1,7 +1,13 @@
 # Aurevia BrokerOS
 
-**Version: 0.4.0** (see `frontend/package.json` — the one version number
+**Version: 0.5.0** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
+
+**Phase 1 status: all three fresh acceptance results current and
+passing** — Phase 0 (100% accuracy, 0 silent guesses), Phase 1A
+(`model_reachable: true`, 0 silent wrong facts, 67.5% recall), Phase 1B
+(13/13 deterministic comparison cases), regression suite (17/17). See
+`Results.md` for the full run-by-run detail.
 
 *(Previously "Insurance Intelligence" — renamed, same codebase, same
 principles: everything below still applies.)*
@@ -368,8 +374,8 @@ property/policy fact types instead of one — into a small, versioned entity
 graph (Business/Asset/Policy), rather than one bare fact per document.
 
 **Phase 1A — Knowledge Core plumbing hardened and permanently regression-
-tested; real-model extraction quality partially verified, one more
-confirmed run still needed before calling this "accepted."**
+tested; real-model extraction quality confirmed by a fresh, authoritative
+run (2026-09-29) with `model_reachable: true`.**
 `property_policy_intelligence.py` extracts `property.sum_insured`,
 `property.location`, `property.occupancy`, `property.construction`,
 `property.risk_factors`, `policy.coverage`, `policy.coverage_limit`,
@@ -390,21 +396,22 @@ Two separate things are true here, and it matters not to conflate them:
   Postgres database and real application code. This does not need
   re-proving; it does not depend on any one model's extraction quality.
 - **Real-model extraction quality** — whether `qwen2.5:7b` actually
-  extracts all ten fact types correctly from real documents — has a real
-  local run on record showing **zero silently-wrong facts, 67.5% fact
-  recall, 1.7% false-extraction rate** across all 20 synthetic companies
+  extracts all ten fact types correctly from real documents — is now
+  confirmed by `backend/evaluations/phase1a/latest.json`
+  (`model_reachable: true`, run 2026-09-29T18:11:41Z, `qwen2.5:7b` via
+  local Ollama): **zero silently-wrong facts, 67.5% fact recall, 1.7%
+  false-extraction rate** across all 20 synthetic companies
   (`backend/eval_property_policy.py`). The zero-silent-wrong-facts result
   is the hard gate and it holds; 67.5% recall means roughly a third of
   ground-truth facts are not yet being extracted, which is not the same
-  claim as "100% extraction accuracy" and should not be read as one. See
-  `Results.md`'s Phase 1A section for that run's full detail, the dataset
-  gap that was found and fixed along the way (some fact types weren't
-  actually stated in the source documents for the model to find — a
-  benchmark bug, not a model bug), and what's still open before this can
-  be called formally accepted: **one more confirmed run against real,
-  reachable Ollama/Qwen** (not a stub server) with the current dataset,
-  its result recorded with the model name and reachability explicitly
-  logged, superseding every earlier, now-historical result file.
+  claim as "100% extraction accuracy" and should not be read as one — it's
+  the statistical threshold to keep improving over time, not a pass/fail
+  gate. This fresh run reproduces the earlier historical result
+  (`backend/evaluations/historical/2026-09-28_run3_silent_wrong_0.json`)
+  almost exactly, confirming it wasn't a fluke. See `Results.md`'s Phase 1A
+  section for the full detail and the dataset gap that was found and fixed
+  along the way (some fact types weren't actually stated in the source
+  documents for the model to find — a benchmark bug, not a model bug).
 
 ```bash
 cd backend

@@ -1,0 +1,2748 @@
+{
+  "run": {
+    "model": "qwen2.5:7b",
+    "model_reachable": true,
+    "ollama_host": "http://host.docker.internal:11434",
+    "dataset_path": "/app/benchmark_data",
+    "timestamp_utc": "2026-09-29T18:11:41.519818+00:00",
+    "git_commit": null
+  },
+  "summary": {
+    "companies_total": 20,
+    "companies_scored": 20,
+    "companies_with_no_ground_truth": [],
+    "hard_gates": {
+      "zero_silent_wrong_facts": true,
+      "silent_wrong_fact_count": 0
+    },
+    "statistical_thresholds": {
+      "fact_recall_pct": 67.5,
+      "false_extraction_rate_pct": 1.7,
+      "avg_evidence_snippet_verified_pct": null,
+      "avg_fact_recall_pct_per_company": 67.5
+    },
+    "note": "hard_gates must read exactly as required (zero_silent_wrong_facts=True) before Phase 1A is considered accepted. statistical_thresholds are reported, not graded here \u2014 decide the acceptable bar for each and track it run over run, per this script's module docstring."
+  },
+  "companies": [
+    {
+      "company_id": "AUR-SYN-001",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "932 Technology Park, Pune, Maharashtra",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Precision component manufacturing facility with machine shop and assembly floor",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure, class A construction, fire-rated compartment walls",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n720,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Machinery breakdown arising from normal wear and tear",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "932 Technology Park, Pune, Maharashtra",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-002",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "750 Logistics Hub, Ahmedabad, Gujarat",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Pharmaceutical formulation and packaging facility with clean-room areas",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure with clean-room panel partitions, class A construction",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n360,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Product recall costs and contamination not caused by an insured peril",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "750 Logistics Hub, Ahmedabad, Gujarat",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-003",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "267 Technology Park, Gurugram, Haryana",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Third-party logistics warehousing and cross-docking facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Pre-engineered steel building, class B construction, high-bay racking",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n500,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Goods in transit beyond the insured premises",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n500,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n500,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "267 Technology Park, Gurugram, Haryana",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n500,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-004",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 1,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 3,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "464 Industrial Estate, Indore, Madhya Pradesh",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Food processing and cold storage facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame with insulated cold-storage panels, class B construction",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n350,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Spoilage of stock following a power interruption under 24 hours",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n370,000,000",
+          "status": "contradiction_flagged",
+          "correct": false,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "464 Industrial Estate, Indore, Madhya Pradesh",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-005",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 13,
+      "recalled_fact_count": 9,
+      "fact_recall_pct": 75.0,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "203 Business Park, Chennai, Tamil Nadu",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Automotive component manufacturing and assembly facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Steel frame structure, class B construction, paint booth area separated",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Machinery breakdown arising from normal wear and tear",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Additional named insured endorsement: Vertex Auto Components Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "203 Business Park, Chennai, Tamil Nadu",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-006",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "729 Industrial Estate, Surat, Gujarat",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Technical textile weaving and finishing facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Steel truss shed structure, class C construction, high combustible loading",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Consequential loss from spontaneous combustion of raw fiber stock",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "729 Industrial Estate, Surat, Gujarat",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-007",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "746 Industrial Estate, Noida, Uttar Pradesh",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Electronics assembly facility with SMT lines and static-controlled areas",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure, class A construction, raised anti-static flooring",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n200,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n240,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Product recall costs and contamination not caused by an insured peril",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n200,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n200,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "746 Industrial Estate, Noida, Uttar Pradesh",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n200,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-008",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "89 Logistics Hub, Hyderabad, Telangana",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Contractor's yard, plant storage and pre-fabrication facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Open yard with steel-clad workshop sheds, class C construction",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n180,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n180,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Faulty workmanship or design not resulting in physical loss",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n180,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n180,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "89 Logistics Hub, Hyderabad, Telangana",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n180,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-009",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 1,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 3,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "319 Industrial Estate, Jaipur, Rajasthan",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Hotel and hospitality premises with guest accommodation and kitchen facilities",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure, class A construction, commercial kitchen fire suppression fitted",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n400,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n400,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Loss of guest revenue not resulting from physical damage to the premises",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n420,000,000",
+          "status": "contradiction_flagged",
+          "correct": false,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n400,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "319 Industrial Estate, Jaipur, Rajasthan",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n400,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-010",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "HarborPoint Diagnostics Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "346 Technology Park, Bengaluru, Karnataka",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "346 Technology Park, Bengaluru, Karnataka",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Diagnostic and healthcare services facility with imaging equipment",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure, class A construction, radiation-shielded imaging suite",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Equipment breakdown covered under a separate biomedical equipment policy",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-011",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "696 Industrial Estate, Jodhpur, Rajasthan",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Solar module assembly and balance-of-plant equipment storage facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Pre-engineered steel building, class B construction",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Performance shortfall of installed generation assets",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "696 Industrial Estate, Jodhpur, Rajasthan",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-012",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "96 Logistics Hub, Vadodara, Gujarat",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Specialty chemicals manufacturing facility with bulk storage tanks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure with bunded tank farm, class B construction",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n360,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Gradual pollution not resulting from a sudden and accidental event",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "96 Logistics Hub, Vadodara, Gujarat",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-013",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "548 Logistics Hub, Mumbai, Maharashtra",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Specialty retail showroom and back-of-house storage",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure, class A construction, glazed shopfront",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Shoplifting and inventory shrinkage not evidenced by forced entry",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "548 Logistics Hub, Mumbai, Maharashtra",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n150,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-014",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "208 Business Park, Coimbatore, Tamil Nadu",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Heavy engineering fabrication and machining works",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Steel frame structure, class B construction, overhead crane bays",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Machinery breakdown arising from normal wear and tear",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "208 Business Park, Coimbatore, Tamil Nadu",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-015",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 1,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 1,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "552 Industrial Estate, Lucknow, Uttar Pradesh",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Cold storage and cold-chain logistics facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Insulated panel construction over steel frame, class B construction",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n400,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n400,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Spoilage of stock following a power interruption under 24 hours",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n420,000,000",
+          "status": "contradiction_flagged",
+          "correct": false,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n400,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "552 Industrial Estate, Lucknow, Uttar Pradesh",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n400,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-016",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "78 Business Park, Kolkata, West Bengal",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Industrial packaging manufacturing facility with corrugation and printing lines",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Steel truss shed structure, class C construction, high combustible loading",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Consequential loss from spontaneous combustion of raw fiber stock",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "78 Business Park, Kolkata, West Bengal",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n120,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-017",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "369 Logistics Hub, Bengaluru, Karnataka",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Data center and IT services facility with server halls",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure, class A construction, raised flooring and clean-agent suppression",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n350,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Business interruption arising solely from a software or data corruption event",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "369 Logistics Hub, Bengaluru, Karnataka",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-018",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "884 Logistics Hub, Kochi, Kerala",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Marine cargo trading office and bonded warehouse facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure, class A construction, bonded warehouse area segregated",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n360,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Goods in transit beyond the insured premises",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "884 Logistics Hub, Kochi, Kerala",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-019",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 13,
+      "recalled_fact_count": 9,
+      "fact_recall_pct": 75.0,
+      "false_extraction_count": 1,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 1,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "46 Technology Park, Nashik, Maharashtra",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Agricultural produce processing and storage facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Steel truss shed structure, class C construction, grain silo attached",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n250,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Spoilage of stock following a power interruption under 24 hours",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n270,000,000",
+          "status": "contradiction_flagged",
+          "correct": false,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Additional named insured endorsement: Granite Agri Processing Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "46 Technology Park, Nashik, Maharashtra",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n250,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-020",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 12,
+      "extracted_fact_count": 12,
+      "recalled_fact_count": 8,
+      "fact_recall_pct": 66.7,
+      "false_extraction_count": 0,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": null,
+      "contradictions_flagged": 0,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "397 Business Park, Bhubaneswar, Odisha",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Industrial maintenance and equipment services facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Steel frame structure, class B construction, workshop and stores combined",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n720,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Machinery breakdown arising from normal wear and tear",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "397 Business Park, Bhubaneswar, Odisha",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "snippet_verified": null,
+          "evidence_page": null
+        }
+      ]
+    }
+  ]
+}

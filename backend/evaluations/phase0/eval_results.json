@@ -3,15 +3,15 @@
     "companies_total": 20,
     "companies_scored": 20,
     "companies_skipped": [],
-    "value_accuracy_pct": 30.0,
-    "evidence_page_accuracy_pct": 30.0,
-    "found_a_fact_pct": 30.0,
+    "value_accuracy_pct": 100.0,
+    "evidence_page_accuracy_pct": 100.0,
+    "found_a_fact_pct": 100.0,
     "ocr_trigger_accuracy_pct": 100.0,
     "confidence_type_distribution": {
       "deterministic": 6,
       "ocr_engine": 0,
-      "model_self_reported": 0,
-      "null": 14
+      "model_self_reported": 14,
+      "null": 0
     },
     "contradiction_cases_total": 4,
     "contradiction_detection_implemented": true,
@@ -30,25 +30,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nApex Precision Components Pvt. Ltd.\nInsured\nApex Precision Components Pvt. Ltd.\n932 Technology Park, Pune, Maharashtra\nPolicy Details\nPolicy Number: SYN-PROP-0001\nCarrier: Meridian Shield Insurance Ltd.\nPeriod: 08 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n600,000,000\nBusiness Interruption Sum Insured: n120,000,000\nDeductible: n1,500,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nApex Precision Components Pvt. Ltd.\nInsured\nApex Precision Components Pvt. Ltd.\n932 Technology Park, Pune, Maharashtra\nPolicy Details:\nPolicy Number: SYN-PROP-0001\nCarrier: Meridian Shield Insurance Ltd.\nPeriod: 08 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n600,000,000\nBusiness Interruption Sum Insured: n120,000,000\nDeductible: n1,500,000\nProperty Details:\nProperty Location: 932 Technology Park, Pune, Maharashtra\nOccupancy: Precision component manufacturing facility with machine shop and assembly floor\nConstruction: RCC frame structure, class A construction, fire-rated compartment walls\nExclusions:\n1. War, terrorism and nuclear risks\n2. Machinery breakdown arising from normal wear and tear\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9600,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9600,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.95,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9600,000,000",
       "expected_value": 600000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.95,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -62,25 +80,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nNorthstar Pharma Systems Pvt. Ltd.\nInsured\nNorthstar Pharma Systems Pvt. Ltd.\n750 Logistics Hub, Ahmedabad, Gujarat\nPolicy Details\nPolicy Number: SYN-PROP-0002\nCarrier: Northstar General Assurance Ltd.\nPeriod: 15 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n300,000,000\nBusiness Interruption Sum Insured: n60,000,000\nDeductible: n500,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nNorthstar Pharma Systems Pvt. Ltd.\nInsured\nNorthstar Pharma Systems Pvt. Ltd.\n750 Logistics Hub, Ahmedabad, Gujarat\nPolicy Details:\nPolicy Number: SYN-PROP-0002\nCarrier: Northstar General Assurance Ltd.\nPeriod: 15 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n300,000,000\nBusiness Interruption Sum Insured: n60,000,000\nDeductible: n500,000\nProperty Details:\nProperty Location: 750 Logistics Hub, Ahmedabad, Gujarat\nOccupancy: Pharmaceutical formulation and packaging facility with clean-room areas\nConstruction: RCC frame structure with clean-room panel partitions, class A construction\nExclusions:\n1. War, terrorism and nuclear risks\n2. Product recall costs and contamination not caused by an insured peril\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9300,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9300,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9300,000,000",
       "expected_value": 300000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -97,6 +133,9 @@
             "text": "[Page 1]\nSYNTHETIC COMMERCIAL PROPERTY POLICY Blue Peak Logistics Pvt Ltd. Policy Number. SYN-PROP-0003 Property Sum Insured: INR500,000,000 Coverage: Property Damage / Business Interruption Deductible: INR 1,000,000 This page is intentionally scan-like for OCR testing.",
             "pages": 1,
             "avg_ocr_confidence": 88.8,
+            "page_confidences": {
+              "1": 88.8
+            },
             "low_confidence_pages": [],
             "notes": []
           },
@@ -143,25 +182,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nCrestline Foods Pvt. Ltd.\nInsured\nCrestline Foods Pvt. Ltd.\n464 Industrial Estate, Indore, Madhya Pradesh\nPolicy Details\nPolicy Number: SYN-PROP-0004\nCarrier: BluePeak Risk Underwriters Ltd.\nPeriod: 29 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n350,000,000\nBusiness Interruption Sum Insured: n70,000,000\nDeductible: n1,500,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nCrestline Foods Pvt. Ltd.\nInsured\nCrestline Foods Pvt. Ltd.\n464 Industrial Estate, Indore, Madhya Pradesh\nPolicy Details:\nPolicy Number: SYN-PROP-0004\nCarrier: BluePeak Risk Underwriters Ltd.\nPeriod: 29 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n350,000,000\nBusiness Interruption Sum Insured: n70,000,000\nDeductible: n1,500,000\nProperty Details:\nProperty Location: 464 Industrial Estate, Indore, Madhya Pradesh\nOccupancy: Food processing and cold storage facility\nConstruction: RCC frame with insulated cold-storage panels, class B construction\nExclusions:\n1. War, terrorism and nuclear risks\n2. Spoilage of stock following a power interruption under 24 hours\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9350,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9350,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet clearly states the sum insured for property damage and there are no other competing figures in the document."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9350,000,000",
       "expected_value": 350000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "fixed_not_covered_by_this_harness",
       "contradiction_note": "Ground truth has a deliberate mismatch (policy: 350000000, schedule: 370000000). Contradiction detection now exists (doc_intelligence.find_contradiction, wired into the /doc-intelligence/upload endpoint) and was verified manually against this exact case \u2014 see Results.md. This harness calls extraction directly and does not go through the endpoint, so it does not itself exercise the check.",
       "silent_guess_suspected": false
@@ -176,25 +233,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nVertex Auto Components Pvt. Ltd.\nInsured\nVertex Auto Components Pvt. Ltd.\n203 Business Park, Chennai, Tamil Nadu\nPolicy Details\nPolicy Number: SYN-PROP-0005\nCarrier: Meridian Shield Insurance Ltd.\nPeriod: 06 May 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n250,000,000\nBusiness Interruption Sum Insured: n50,000,000\nDeductible: n1,000,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nVertex Auto Components Pvt. Ltd.\nInsured\nVertex Auto Components Pvt. Ltd.\n203 Business Park, Chennai, Tamil Nadu\nPolicy Details:\nPolicy Number: SYN-PROP-0005\nCarrier: Meridian Shield Insurance Ltd.\nPeriod: 06 May 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n250,000,000\nBusiness Interruption Sum Insured: n50,000,000\nDeductible: n1,000,000\nProperty Details:\nProperty Location: 203 Business Park, Chennai, Tamil Nadu\nOccupancy: Automotive component manufacturing and assembly facility\nConstruction: Steel frame structure, class B construction, paint booth area separated\nExclusions:\n1. War, terrorism and nuclear risks\n2. Machinery breakdown arising from normal wear and tear\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9250,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9250,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9250,000,000",
       "expected_value": 250000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -211,6 +286,9 @@
             "text": "[Page 1]\nSYNTHETIC COMMERCIAL PROPERTY POLICY Evergreen Technical Textiles Pvt Ltd. Policy Number. SYN-PROP-0006 Property Sum Insured: INR 150,000,000 Coverage: Property Damage / Business Interruption Deductible: INR 1,000,000 This page is intentionally scan-like for OCR testing.",
             "pages": 1,
             "avg_ocr_confidence": 93.9,
+            "page_confidences": {
+              "1": 93.9
+            },
             "low_confidence_pages": [],
             "notes": []
           },
@@ -257,25 +335,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nSummit Electronics Pvt. Ltd.\nInsured\nSummit Electronics Pvt. Ltd.\n746 Industrial Estate, Noida, Uttar Pradesh\nPolicy Details\nPolicy Number: SYN-PROP-0007\nCarrier: Crescent Harbor Insurance Ltd.\nPeriod: 08 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n200,000,000\nBusiness Interruption Sum Insured: n40,000,000\nDeductible: n1,000,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nSummit Electronics Pvt. Ltd.\nInsured\nSummit Electronics Pvt. Ltd.\n746 Industrial Estate, Noida, Uttar Pradesh\nPolicy Details:\nPolicy Number: SYN-PROP-0007\nCarrier: Crescent Harbor Insurance Ltd.\nPeriod: 08 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n200,000,000\nBusiness Interruption Sum Insured: n40,000,000\nDeductible: n1,000,000\nProperty Details:\nProperty Location: 746 Industrial Estate, Noida, Uttar Pradesh\nOccupancy: Electronics assembly facility with SMT lines and static-controlled areas\nConstruction: RCC frame structure, class A construction, raised anti-static flooring\nExclusions:\n1. War, terrorism and nuclear risks\n2. Product recall costs and contamination not caused by an insured peril\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9200,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9200,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9200,000,000",
       "expected_value": 200000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -289,25 +385,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nPioneer Buildworks Pvt. Ltd.\nInsured\nPioneer Buildworks Pvt. Ltd.\n89 Logistics Hub, Hyderabad, Telangana\nPolicy Details\nPolicy Number: SYN-PROP-0008\nCarrier: BluePeak Risk Underwriters Ltd.\nPeriod: 15 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n180,000,000\nBusiness Interruption Sum Insured: n36,000,000\nDeductible: n1,000,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nPioneer Buildworks Pvt. Ltd.\nInsured\nPioneer Buildworks Pvt. Ltd.\n89 Logistics Hub, Hyderabad, Telangana\nPolicy Details:\nPolicy Number: SYN-PROP-0008\nCarrier: BluePeak Risk Underwriters Ltd.\nPeriod: 15 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n180,000,000\nBusiness Interruption Sum Insured: n36,000,000\nDeductible: n1,000,000\nProperty Details:\nProperty Location: 89 Logistics Hub, Hyderabad, Telangana\nOccupancy: Contractor's yard, plant storage and pre-fabrication facility\nConstruction: Open yard with steel-clad workshop sheds, class C construction\nExclusions:\n1. War, terrorism and nuclear risks\n2. Faulty workmanship or design not resulting in physical loss\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9180,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9180,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage and is unambiguous."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9180,000,000",
       "expected_value": 180000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -324,6 +438,9 @@
             "text": "[Page 1]\nSYNTHETIC COMMERCIAL PROPERTY POLICY SilverOak Hospitality Pvt Ltd. Policy Number: SYN-PROP-0009 Property Sum Insured: INR 400,000,000 Coverage: Property Damage / Business Interruption Deductible: INR 1,000,000 This page is intentionally scan-like for OCR testing.",
             "pages": 1,
             "avg_ocr_confidence": 93.1,
+            "page_confidences": {
+              "1": 93.1
+            },
             "low_confidence_pages": [],
             "notes": []
           },
@@ -371,25 +488,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nHarborPoint Diagnostics Pvt. Ltd.\nInsured\nHarborPoint Diagnostics Pvt. Ltd.\n346 Technology Park, Bengaluru, Karnataka\nPolicy Details\nPolicy Number: SYN-PROP-0010\nCarrier: Northstar General Assurance Ltd.\nPeriod: 29 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n300,000,000\nBusiness Interruption Sum Insured: n60,000,000\nDeductible: n500,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nHarborPoint Diagnostics Pvt. Ltd.\nInsured\nHarborPoint Diagnostics Pvt. Ltd.\n346 Technology Park, Bengaluru, Karnataka\nPolicy Details:\nPolicy Number: SYN-PROP-0010\nCarrier: Northstar General Assurance Ltd.\nPeriod: 29 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n300,000,000\nBusiness Interruption Sum Insured: n60,000,000\nDeductible: n500,000\nProperty Details:\nProperty Location: 346 Technology Park, Bengaluru, Karnataka\nOccupancy: Diagnostic and healthcare services facility with imaging equipment\nConstruction: RCC frame structure, class A construction, radiation-shielded imaging suite\nExclusions:\n1. War, terrorism and nuclear risks\n2. Equipment breakdown covered under a separate biomedical equipment policy\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9300,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9300,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the Property Damage Sum Insured without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9300,000,000",
       "expected_value": 300000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -403,25 +538,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nTrueNorth Solar Systems Pvt. Ltd.\nInsured\nTrueNorth Solar Systems Pvt. Ltd.\n696 Industrial Estate, Jodhpur, Rajasthan\nPolicy Details\nPolicy Number: SYN-PROP-0011\nCarrier: Crescent Harbor Insurance Ltd.\nPeriod: 06 May 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n120,000,000\nBusiness Interruption Sum Insured: n24,000,000\nDeductible: n1,000,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nTrueNorth Solar Systems Pvt. Ltd.\nInsured\nTrueNorth Solar Systems Pvt. Ltd.\n696 Industrial Estate, Jodhpur, Rajasthan\nPolicy Details:\nPolicy Number: SYN-PROP-0011\nCarrier: Crescent Harbor Insurance Ltd.\nPeriod: 06 May 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n120,000,000\nBusiness Interruption Sum Insured: n24,000,000\nDeductible: n1,000,000\nProperty Details:\nProperty Location: 696 Industrial Estate, Jodhpur, Rajasthan\nOccupancy: Solar module assembly and balance-of-plant equipment storage facility\nConstruction: Pre-engineered steel building, class B construction\nExclusions:\n1. War, terrorism and nuclear risks\n2. Performance shortfall of installed generation assets\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9120,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9120,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage and is unambiguous."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9120,000,000",
       "expected_value": 120000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -438,6 +591,9 @@
             "text": "[Page 1]\nSYNTHETIC COMMERCIAL PROPERTY POLICY Prime Axis Chemicals Pvt Ltd. Policy Number. SYN-PROP-0012 Property Sum Insured: INR300,000,000 Coverage: Property Damage / Business Interruption Deductible: INR 1,000,000 This page is intentionally scan-like for OCR testing.",
             "pages": 1,
             "avg_ocr_confidence": 86.5,
+            "page_confidences": {
+              "1": 86.5
+            },
             "low_confidence_pages": [],
             "notes": []
           },
@@ -484,25 +640,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nOakridge Specialty Retail Pvt. Ltd.\nInsured\nOakridge Specialty Retail Pvt. Ltd.\n548 Logistics Hub, Mumbai, Maharashtra\nPolicy Details\nPolicy Number: SYN-PROP-0013\nCarrier: Meridian Shield Insurance Ltd.\nPeriod: 08 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n150,000,000\nBusiness Interruption Sum Insured: n30,000,000\nDeductible: n1,500,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nOakridge Specialty Retail Pvt. Ltd.\nInsured\nOakridge Specialty Retail Pvt. Ltd.\n548 Logistics Hub, Mumbai, Maharashtra\nPolicy Details:\nPolicy Number: SYN-PROP-0013\nCarrier: Meridian Shield Insurance Ltd.\nPeriod: 08 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n150,000,000\nBusiness Interruption Sum Insured: n30,000,000\nDeductible: n1,500,000\nProperty Details:\nProperty Location: 548 Logistics Hub, Mumbai, Maharashtra\nOccupancy: Specialty retail showroom and back-of-house storage\nConstruction: RCC frame structure, class A construction, glazed shopfront\nExclusions:\n1. War, terrorism and nuclear risks\n2. Shoplifting and inventory shrinkage not evidenced by forced entry\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9150,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9150,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage and is unambiguous."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9150,000,000",
       "expected_value": 150000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -516,25 +690,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nRedwood Engineering Works Pvt. Ltd.\nInsured\nRedwood Engineering Works Pvt. Ltd.\n208 Business Park, Coimbatore, Tamil Nadu\nPolicy Details\nPolicy Number: SYN-PROP-0014\nCarrier: Northstar General Assurance Ltd.\nPeriod: 15 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n250,000,000\nBusiness Interruption Sum Insured: n50,000,000\nDeductible: n1,500,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nRedwood Engineering Works Pvt. Ltd.\nInsured\nRedwood Engineering Works Pvt. Ltd.\n208 Business Park, Coimbatore, Tamil Nadu\nPolicy Details:\nPolicy Number: SYN-PROP-0014\nCarrier: Northstar General Assurance Ltd.\nPeriod: 15 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n250,000,000\nBusiness Interruption Sum Insured: n50,000,000\nDeductible: n1,500,000\nProperty Details:\nProperty Location: 208 Business Park, Coimbatore, Tamil Nadu\nOccupancy: Heavy engineering fabrication and machining works\nConstruction: Steel frame structure, class B construction, overhead crane bays\nExclusions:\n1. War, terrorism and nuclear risks\n2. Machinery breakdown arising from normal wear and tear\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9250,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9250,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the overall coverage limit for property damage without any qualifiers or sub-limits."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9250,000,000",
       "expected_value": 250000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -551,6 +743,9 @@
             "text": "[Page 1]\nSYNTHETIC COMMERCIAL PROPERTY POLICY Cedar Cold Chain Pvt Ltd. Policy Number: SYN-PROP-0015 Property Sum Insured: INR 400,000,000 Coverage: Property Damage / Business Interruption Deductible: INR 1,000,000 This page is intentionally scan-like for OCR testing.",
             "pages": 1,
             "avg_ocr_confidence": 92.9,
+            "page_confidences": {
+              "1": 92.9
+            },
             "low_confidence_pages": [],
             "notes": []
           },
@@ -598,25 +793,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nAtlas Industrial Packaging Pvt. Ltd.\nInsured\nAtlas Industrial Packaging Pvt. Ltd.\n78 Business Park, Kolkata, West Bengal\nPolicy Details\nPolicy Number: SYN-PROP-0016\nCarrier: BluePeak Risk Underwriters Ltd.\nPeriod: 29 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n120,000,000\nBusiness Interruption Sum Insured: n24,000,000\nDeductible: n1,000,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nAtlas Industrial Packaging Pvt. Ltd.\nInsured\nAtlas Industrial Packaging Pvt. Ltd.\n78 Business Park, Kolkata, West Bengal\nPolicy Details:\nPolicy Number: SYN-PROP-0016\nCarrier: BluePeak Risk Underwriters Ltd.\nPeriod: 29 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n120,000,000\nBusiness Interruption Sum Insured: n24,000,000\nDeductible: n1,000,000\nProperty Details:\nProperty Location: 78 Business Park, Kolkata, West Bengal\nOccupancy: Industrial packaging manufacturing facility with corrugation and printing lines\nConstruction: Steel truss shed structure, class C construction, high combustible loading\nExclusions:\n1. War, terrorism and nuclear risks\n2. Consequential loss from spontaneous combustion of raw fiber stock\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9120,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9120,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9120,000,000",
       "expected_value": 120000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -630,25 +843,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nIronwood Data Services Pvt. Ltd.\nInsured\nIronwood Data Services Pvt. Ltd.\n369 Logistics Hub, Bengaluru, Karnataka\nPolicy Details\nPolicy Number: SYN-PROP-0017\nCarrier: Meridian Shield Insurance Ltd.\nPeriod: 06 May 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n350,000,000\nBusiness Interruption Sum Insured: n70,000,000\nDeductible: n1,000,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nIronwood Data Services Pvt. Ltd.\nInsured\nIronwood Data Services Pvt. Ltd.\n369 Logistics Hub, Bengaluru, Karnataka\nPolicy Details:\nPolicy Number: SYN-PROP-0017\nCarrier: Meridian Shield Insurance Ltd.\nPeriod: 06 May 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n350,000,000\nBusiness Interruption Sum Insured: n70,000,000\nDeductible: n1,000,000\nProperty Details:\nProperty Location: 369 Logistics Hub, Bengaluru, Karnataka\nOccupancy: Data center and IT services facility with server halls\nConstruction: RCC frame structure, class A construction, raised flooring and clean-agent suppression\nExclusions:\n1. War, terrorism and nuclear risks\n2. Business interruption arising solely from a software or data corruption event\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9350,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9350,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9350,000,000",
       "expected_value": 350000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     },
@@ -665,6 +896,9 @@
             "text": "[Page 1]\nSYNTHETIC COMMERCIAL PROPERTY POLICY Skyline Marine Trading Pvt Ltd. Policy Number. SYN-PROP-0018 Property Sum Insured: INR300,000,000 Coverage: Property Damage / Business Interruption Deductible: INR 1,000,000 This page is intentionally scan-like for OCR testing.",
             "pages": 1,
             "avg_ocr_confidence": 92.1,
+            "page_confidences": {
+              "1": 92.1
+            },
             "low_confidence_pages": [],
             "notes": []
           },
@@ -711,25 +945,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nGranite Agri Processing Pvt. Ltd.\nInsured\nGranite Agri Processing Pvt. Ltd.\n46 Technology Park, Nashik, Maharashtra\nPolicy Details\nPolicy Number: SYN-PROP-0019\nCarrier: Crescent Harbor Insurance Ltd.\nPeriod: 08 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n250,000,000\nBusiness Interruption Sum Insured: n50,000,000\nDeductible: n500,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nGranite Agri Processing Pvt. Ltd.\nInsured\nGranite Agri Processing Pvt. Ltd.\n46 Technology Park, Nashik, Maharashtra\nPolicy Details:\nPolicy Number: SYN-PROP-0019\nCarrier: Crescent Harbor Insurance Ltd.\nPeriod: 08 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n250,000,000\nBusiness Interruption Sum Insured: n50,000,000\nDeductible: n500,000\nProperty Details:\nProperty Location: 46 Technology Park, Nashik, Maharashtra\nOccupancy: Agricultural produce processing and storage facility\nConstruction: Steel truss shed structure, class C construction, grain silo attached\nExclusions:\n1. War, terrorism and nuclear risks\n2. Spoilage of stock following a power interruption under 24 hours\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9250,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9250,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9250,000,000",
       "expected_value": 250000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "fixed_not_covered_by_this_harness",
       "contradiction_note": "Ground truth has a deliberate mismatch (policy: 250000000, schedule: 270000000). Contradiction detection now exists (doc_intelligence.find_contradiction, wired into the /doc-intelligence/upload endpoint) and was verified manually against this exact case \u2014 see Results.md. This harness calls extraction directly and does not go through the endpoint, so it does not itself exercise the check.",
       "silent_guess_suspected": false
@@ -744,25 +996,43 @@
           "error": null,
           "quality": {
             "used_ocr": false,
-            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nWestbridge Industrial Services Pvt. Ltd.\nInsured\nWestbridge Industrial Services Pvt. Ltd.\n397 Business Park, Bhubaneswar, Odisha\nPolicy Details\nPolicy Number: SYN-PROP-0020\nCarrier: BluePeak Risk Underwriters Ltd.\nPeriod: 15 April 2026 to 31 March 2027\nCoverage\nProperty Damage Sum Insured: n600,000,000\nBusiness Interruption Sum Insured: n120,000,000\nDeductible: n1,000,000\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.0 \u2014 NOT REAL INSURANCE DATA Page 1",
+            "text": "[Page 1]\nSYNTHETIC / NOT REAL\nProperty Policy\nWestbridge Industrial Services Pvt. Ltd.\nInsured\nWestbridge Industrial Services Pvt. Ltd.\n397 Business Park, Bhubaneswar, Odisha\nPolicy Details:\nPolicy Number: SYN-PROP-0020\nCarrier: BluePeak Risk Underwriters Ltd.\nPeriod: 15 April 2026 to 31 March 2027\nCoverage:\nProperty Damage Sum Insured: n600,000,000\nBusiness Interruption Sum Insured: n120,000,000\nDeductible: n1,000,000\nProperty Details:\nProperty Location: 397 Business Park, Bhubaneswar, Odisha\nOccupancy: Industrial maintenance and equipment services facility\nConstruction: Steel frame structure, class B construction, workshop and stores combined\nExclusions:\n1. War, terrorism and nuclear risks\n2. Machinery breakdown arising from normal wear and tear\nConditions\nFire protection systems must be maintained. Material changes in occupancy or operations must be notified.\nAUREVIA SYNTHETIC INSURANCE WORLD v1.1 (PHASE 1 SUPPLEMENT) \u2014 NOT REAL INSURANCE DATA Page 1",
             "pages": 1,
             "avg_ocr_confidence": null,
+            "page_confidences": null,
             "low_confidence_pages": [],
             "notes": []
           },
-          "fact": null
+          "fact": {
+            "fact_type": "coverage_limit",
+            "label": "Coverage limit (sum insured)",
+            "value": "\u20b9600,000,000",
+            "evidence": {
+              "page": 1,
+              "section": "Coverage",
+              "snippet": "Property Damage Sum Insured: \u20b9600,000,000",
+              "source": "text_layer"
+            },
+            "confidence": {
+              "value": 0.9,
+              "type": "model_self_reported",
+              "method": "qwen2.5:7b_extraction_v1",
+              "note": "The snippet directly states the sum insured for property damage without any qualifiers or sub-limits, making it the most direct answer to the overall coverage limit."
+            },
+            "produced_by": "model:qwen2.5:7b_extraction_v1"
+          }
         }
       },
-      "value_correct": false,
-      "extracted_value_raw": null,
+      "value_correct": true,
+      "extracted_value_raw": "\u20b9600,000,000",
       "expected_value": 600000000,
-      "evidence_page_correct": null,
-      "confidence_type": null,
-      "confidence_value": null,
+      "evidence_page_correct": true,
+      "confidence_type": "model_self_reported",
+      "confidence_value": 0.9,
       "ocr_should_trigger": false,
       "ocr_did_trigger": false,
       "ocr_trigger_correct": true,
-      "found_a_fact": false,
+      "found_a_fact": true,
       "contradiction_test": "not_applicable",
       "silent_guess_suspected": false
     }
