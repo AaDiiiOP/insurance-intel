@@ -1,13 +1,16 @@
 # Aurevia BrokerOS
 
-**Version: 0.5.0** (see `frontend/package.json` — the one version number
+**Version: 0.6.1** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
-**Phase 1 status: all three fresh acceptance results current and
-passing** — Phase 0 (100% accuracy, 0 silent guesses), Phase 1A
-(`model_reachable: true`, 0 silent wrong facts, 67.5% recall), Phase 1B
-(13/13 deterministic comparison cases), regression suite (17/17). See
-`Results.md` for the full run-by-run detail.
+**Phase 1 status:** Phase 0, Phase 1A safety and Phase 1B are accepted.
+Phase 1A extraction *quality* is being improved — the v0.6.0 code changes
+(see "Phase 1A extraction-improvement loop" below) are in, but their effect
+has not been measured with real Qwen yet. Last measured results: Phase 0
+100% accuracy with 0 silent guesses; Phase 1A (`model_reachable: true`) 0
+silent wrong facts, 67.5% recall; Phase 1B 13/13 deterministic comparison
+cases; regression suite now 45/45. A 3-company quick check of v0.6.0 gave 100% recall but 4 silently wrong risk-factor facts (hard gate FAILED); v0.6.1 fixed it: the same 3-company quick check now shows 0 silent wrong, 100% recall and 100% evidence verified. The full 20-company run is PENDING (running overnight 2026-09-30); until it finishes, treat 3/20 as a partial result, not an accepted Phase 1A. See `Results.md`
+for the full run-by-run detail.
 
 *(Previously "Insurance Intelligence" — renamed, same codebase, same
 principles: everything below still applies.)*
@@ -428,6 +431,74 @@ not reachable — that run is still saved for the record, but is never
 written to `latest.json` and must never be read as a Phase 1A result.
 Historical pre-`evaluations/` result files (from before this layout
 existed) are preserved under `backend/evaluations/historical/`.
+
+**Phase 1A extraction-improvement loop (v0.6.0 — code changed, NOT yet
+re-measured with real Qwen).** The fresh real-Qwen run showed recall is very
+uneven by fact type, which the blended 67.5% hid: `policy.coverage` 0/40,
+`property.risk_factors` 0/20, `policy.endorsement` 3/40, while location,
+occupancy, construction, sum insured, deductible, coverage limit and
+exclusions were all at or near 100%. Findings and changes:
+
+- **Benchmark defect found and fixed.** 20 of the 40 endorsement ground-truth
+  facts (the "Additional named insured…" sentence) were clipped off the page
+  in every generated PDF, so no reader — human or model — could ever extract
+  them. `scripts/gen_phase1_supplement.py` now wraps long lines, and an audit
+  confirms every ground-truth value now appears in its source PDF (0 missing,
+  down from 20). The endorsement recall ceiling was 50% until this fix.
+- **Extraction prompt rewritten** (`prompts/extract_property_facts.txt`): it
+  said "one entry per fact type" and later "one per occurrence"; it now
+  separates single-valued from multi-valued types explicitly, and its
+  coverage example no longer teaches the model to emit one combined phrase.
+  Abstention rules are unchanged.
+- **Recovery pass** (`property_policy_intelligence.extract_with_recovery`,
+  `prompts/extract_multivalued_facts.txt`): only when the main pass returned
+  nothing for a multi-valued type whose labelled section is visibly in the
+  text, one focused second call asks for just those types. It costs nothing
+  when the main prompt already works, and it is stricter than the main pass:
+  a recovered item whose snippet does not verify against the source is
+  dropped, not written.
+- **Evidence is now measured from what the Knowledge Core persisted**
+  (Fact → Evidence → Document), with each snippet independently re-verified
+  against the stored document text. Previously the benchmark reported
+  `snippet_verified` / `evidence_page` as null for every fact.
+- **Result files now carry per-fact-type recall** and `extraction_diagnostics`
+  (what the model returned, what was dropped and under what name, whether
+  the recovery pass fired) so a low number can be explained without another
+  long run. Scoring rules were not changed.
+
+**v0.6.1 — hard-gate fix (quick check on 3/20 passed; full 20-company run pending).** The v0.6.0 quick check
+(`--limit 3`, saved in `backend/evaluations/phase1a/result-20260930T155314…json`,
+NOT `latest.json`) showed 100% recall on all 10 fact types for those 3
+companies, but 4 silently wrong `property.risk_factors` facts, all from
+`04_risk_survey.pdf`: "Moderate risk rating", "Low overall risk rating", "Low
+risk rating" and "Fire protection: hydrants and portable extinguishers
+reported". The prompt already said these are not risk factors and the 7B model
+ignored it. v0.6.1 adds a narrow deterministic validity rule
+(`is_non_hazard_risk_factor`) that rejects a risk rating or a positive
+protection statement (a protection statement with negative wording such as "no
+hydrants" is kept), plus an explicit prompt example. It is counted in
+`extraction_diagnostics` as `dropped_non_hazard_risk_factor`. Scoring is
+unchanged. Known remaining issues from that run: occupancy paraphrases from
+the risk survey and one `coverage_limit` "n1,650,000,000" from an endorsement
+(both flagged as contradictions, not silent), and one endorsement snippet that
+did not verify (98.4% verified).
+
+Do not read any of this as an improvement yet: the last measured real-Qwen
+numbers are still 0 silent wrong, 67.5% recall, 1.7% false extraction. Run
+a quick check first, then the full run:
+
+```bash
+# regenerate the dataset with the wrapping fix (only needed once).
+# The container only sees backend/, so copy the script there first
+# (PowerShell shown; use cp on Mac/Linux). If it complains that reportlab is
+# missing: docker-compose exec backend pip install reportlab
+Copy-Item scripts\gen_phase1_supplement.py backend\
+docker-compose exec backend python3 gen_phase1_supplement.py /app/benchmark_data
+# quick check, 3 companies (does NOT overwrite phase1a/latest.json)
+docker-compose exec backend python3 eval_property_policy.py /app/benchmark_data --limit 3
+# full run (writes phase1a/latest.json)
+docker-compose exec backend python3 eval_property_policy.py /app/benchmark_data
+```
 
 **Phase 1B — coverage comparison.** `policy_comparison.py` diffs two
 submissions' CURRENT facts — typically this year's renewal against last

@@ -13,7 +13,7 @@ evaluations/
   phase1a/
     result-<timestamp>.json  every eval_property_policy.py run, kept —
                               never overwritten in place
-    latest.json              a copy of the most recent run where the model
+    latest.json              a copy of the most recent FULL (all-company) run where the model
                               was ACTUALLY reachable (model_reachable=true
                               in its own "run" block) — this is the file
                               to read for "what does Phase 1A currently
@@ -77,3 +77,15 @@ never be mistaken for a passing benchmark by an automated caller either.
 
 Neither historical file carries the newer `"run"` metadata block (they
 predate it) — their provenance is documented here instead, by hand.
+
+## Partial runs and diagnostics (v0.6.0)
+
+`eval_property_policy.py ... --limit N` scores only the first N companies. It
+is saved as its own `result-<timestamp>.json` (with `"company_limit": N` in
+its `run` block) and never becomes `latest.json`, so a quick check can never
+be mistaken for the full authoritative run.
+
+Every Phase 1A result now also contains `extraction_diagnostics` (how many
+facts the model returned, how many were dropped and under which invalid
+fact-type names, how often the recovery pass fired) and
+`summary.by_fact_type` (ground truth / recalled / recall % per fact type).

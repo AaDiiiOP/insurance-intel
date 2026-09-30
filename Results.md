@@ -998,3 +998,96 @@ historical.** 67.5% recall remains the honest number — a third of
 ground-truth facts are not yet extracted — and stays a statistical
 threshold to improve over time, not something to round up or reinterpret
 as "accepted at 100%."
+
+
+---
+
+## Phase 1A extraction-improvement loop (2026-09-30) — analysis and code, NOT yet re-measured
+
+Baseline (authoritative, `backend/evaluations/phase1a/latest.json`, real
+`qwen2.5:7b`, `model_reachable: true`): 0 silent wrong facts, 67.5% recall,
+1.7% false extraction. Per fact type (from that file):
+
+| fact type | ground truth | extracted correctly |
+|---|---:|---:|
+| policy.coverage | 40 | **0** |
+| property.risk_factors | 20 | **0** |
+| policy.endorsement | 40 | **3** |
+| policy.exclusion | 40 | 40 |
+| property.location / occupancy / construction | 20 each | 20 each |
+| policy.deductible | 20 | 20 |
+| policy.coverage_limit | 20 | 19 |
+| property.sum_insured | 20 | present in every company |
+
+`property.risk_factors` was not in the first analysis of this result but is
+the same failure as coverage.
+
+**Root cause, endorsement (partly proven, benchmark-side).** Auditing every
+ground-truth value against its source PDF text showed 20 of 40 endorsement
+values were not in the PDF at all: the second endorsement sentence was drawn
+with `drawString`, which never wraps, and was clipped mid-word at the page
+edge ("...notice-of-los"). That half of the endorsement ground truth was
+unreachable by any extractor. Fixed in `scripts/gen_phase1_supplement.py`
+(wrap to page width); re-audit: 0 of 200 ground-truth values missing.
+
+**Root cause, coverage / risk factors / remaining endorsements (NOT proven).**
+Both are stated verbatim in the source ("Perils Covered: …", "Risk Factors:
+…") and the model returned no fact of those types at all, so this is model
+behaviour on the prompt, not a scoring artefact. What the code shows: the
+prompt said "one entry per fact type" and later "one per occurrence", its
+coverage example ("fire, lightning, explosion, flood") invited one combined
+phrase, and any fact returned under an unregistered name was dropped with no
+trace. Which of these actually caused the empty answers cannot be determined
+without a real-model run, so the changes address all of them and add
+diagnostics that will identify it next time.
+
+**Changes:** rewritten `prompts/extract_property_facts.txt`; recovery pass
+`extract_with_recovery` + `prompts/extract_multivalued_facts.txt`;
+`EXTRACTION_DIAGNOSTICS`; evaluator now scores evidence from persisted
+Fact → Evidence → Document rows (snippets re-verified against the stored
+document text) and reports recall by fact type; `--limit N` quick-run flag
+(never writes `latest.json`). Scoring criteria were not changed.
+
+**Tests:** 14 new regression tests (`tests/test_multivalued_extraction.py`);
+suite is now 31 passed (17 pre-existing + 14 new). They prove structure only —
+every distinct coverage/endorsement preserved, singleton facts never
+overwritten, recovery only when needed, abstention (unsupported items
+dropped, nothing invented), real evidence linked, and evidence scoring
+rejecting a fabricated snippet — using a scripted HTTP model stand-in, not a
+language model. Two deliberate code breakages were confirmed to make the
+relevant tests fail. They say nothing about Qwen's own extraction quality.
+
+**Status:** the improvement is unmeasured. Recall must be reported from a new
+real-Qwen run, compared against the 67.5% baseline above, with zero silent
+wrong facts still required. A dry run against the stub model confirmed the
+evaluator's new evidence and per-type reporting work end to end; its recall
+numbers are meaningless (regex stand-in) and are not recorded anywhere.
+
+
+## Phase 1A quick check of v0.6.0 (2026-09-30, `--limit 3`) and the v0.6.1 fix
+
+Partial run, 3 of 20 companies, real qwen2.5:7b (`result-20260930T155314…json`;
+not `latest.json`). Recall 100% on all 10 fact types (coverage 6/6, endorsement
+6/6, risk_factors 3/3); recovery pass never fired (the rewritten main prompt
+alone did it). **Hard gate FAILED: 4 silently wrong facts**, all
+`property.risk_factors` from `04_risk_survey.pdf` (overall risk ratings and a
+fire-protection statement). False-extraction 12.7%; evidence snippet-verified
+98.4%, page accuracy 100%. Non-silent false extractions: 3 occupancy
+paraphrases from the risk survey and 1 coverage_limit "n1,650,000,000"
+(contradiction_flagged); 1 endorsement snippet unverified (AUR-SYN-002).
+
+v0.6.1 change: deterministic rule rejecting rating / positive-protection
+statements as risk factors, plus prompt example; 14 new tests (suite 45/45).
+Scoring criteria unchanged. NOT re-measured. Next: `--limit 3`, then the full run.
+
+
+### v0.6.1 quick check (2026-09-30 16:39 UTC, `--limit 3`) — PASSED on 3 of 20
+
+Silent wrong 0 (was 4). Recall 100% on all 10 fact types, false-extraction 9.7%,
+evidence snippet-verified / traceable 100%, page accuracy 100%. Diagnostics:
+67 facts returned, 5 rating/protection lines dropped by the validity rule.
+Remaining non-silent false extractions: 3 coverage_limit and 3 occupancy
+(contradiction_flagged; risk-survey restatements). Result file
+`result-20260930T163949.869177+0000.json` is on the developer's machine.
+**STATUS: full 20-company run pending (started overnight). Phase 1A is NOT yet
+accepted; 3/20 is a partial result.**

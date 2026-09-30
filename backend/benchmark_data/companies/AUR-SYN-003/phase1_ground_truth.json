@@ -23,6 +23,12 @@
       "page": 1
     },
     {
+      "fact_type": "property.risk_factors",
+      "value": "High-density pallet racking and forklift traffic",
+      "source_document": "AUR-SYN-003_01_property_policy.pdf",
+      "page": 1
+    },
+    {
       "fact_type": "policy.coverage",
       "value": "Property Damage",
       "value_inr": 500000000,

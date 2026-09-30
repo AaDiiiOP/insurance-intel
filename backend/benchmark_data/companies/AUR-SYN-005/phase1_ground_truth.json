@@ -23,6 +23,12 @@
       "page": 1
     },
     {
+      "fact_type": "property.risk_factors",
+      "value": "Paint shop solvent storage and welding operations",
+      "source_document": "AUR-SYN-005_01_property_policy.pdf",
+      "page": 1
+    },
+    {
       "fact_type": "policy.coverage",
       "value": "Property Damage",
       "value_inr": 250000000,

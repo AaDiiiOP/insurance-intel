@@ -23,6 +23,12 @@
       "page": 1
     },
     {
+      "fact_type": "property.risk_factors",
+      "value": "Open-yard equipment storage and inverter room fire load",
+      "source_document": "AUR-SYN-011_01_property_policy.pdf",
+      "page": 1
+    },
+    {
       "fact_type": "policy.coverage",
       "value": "Property Damage",
       "value_inr": 120000000,

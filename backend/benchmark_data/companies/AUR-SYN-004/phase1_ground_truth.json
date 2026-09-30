@@ -23,6 +23,12 @@
       "page": 1
     },
     {
+      "fact_type": "property.risk_factors",
+      "value": "Refrigeration ammonia system and cold-chain dependency",
+      "source_document": "AUR-SYN-004_01_property_policy.pdf",
+      "page": 1
+    },
+    {
       "fact_type": "policy.coverage",
       "value": "Property Damage",
       "value_inr": 350000000,

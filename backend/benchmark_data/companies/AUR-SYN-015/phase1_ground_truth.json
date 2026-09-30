@@ -23,6 +23,12 @@
       "page": 1
     },
     {
+      "fact_type": "property.risk_factors",
+      "value": "Ammonia refrigeration plant and continuous cold-chain dependency",
+      "source_document": "AUR-SYN-015_01_property_policy.pdf",
+      "page": 1
+    },
+    {
       "fact_type": "policy.coverage",
       "value": "Property Damage",
       "value_inr": 400000000,

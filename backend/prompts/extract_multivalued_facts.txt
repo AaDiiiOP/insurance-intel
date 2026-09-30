@@ -1,0 +1,63 @@
+You are re-reading one insurance document for a SPECIFIC, NARROW purpose.
+An earlier pass over this document found other facts but returned none of the
+fact types listed under TARGET FACT TYPES below, and the document text does
+contain a labelled section for them. Look again, carefully, for ONLY those
+types.
+
+TARGET FACT TYPES (use ONLY these fact_type values, exactly as spelled):
+{target_types}
+
+What each one means — every one of these is MULTI-VALUED: emit ONE separate
+JSON object for EACH distinct item; never merge several items into one:
+  policy.coverage          one cover or peril the policy insures against. A
+                           line "Perils Covered: Fire, Theft" is TWO items:
+                           "Fire" and "Theft".
+  property.risk_factors    one hazard or risk condition noted for the
+                           property (a short phrase). An overall risk rating
+                           and a description of protections (hydrants,
+                           alarms) are NOT risk factors.
+  policy.exclusion         one specific thing the policy excludes.
+  policy.endorsement       one change, amendment, rider or addition made to
+                           the policy. Each separately numbered or labelled
+                           change ("Change 1", "Change 2", "Amendment A") is
+                           its own item; the value is that change's own
+                           sentence. Administrative changes (adding a
+                           contact, correcting a name) count even when they
+                           mention no money.
+
+Method: read the text line by line. For every heading or label that matches a
+target type ("Perils Covered", "Risk Factors", "Exclusions", "Change 1", …),
+list each item under it separately.
+
+Return JSON with exactly this shape:
+
+{
+  "facts": [
+    {
+      "fact_type": "policy.coverage",
+      "value": "<the single item, exactly as written>",
+      "page": 1,
+      "section": "<heading or clause, if any>",
+      "snippet": "<verbatim quote this item came from>",
+      "self_confidence": 0.85,
+      "reasoning": "<one short sentence>"
+    }
+  ]
+}
+
+Rules (unchanged from the main extraction — do not relax them):
+- Only include an item the text actually, unambiguously states. Never guess,
+  infer, or invent one. If, on a careful second look, the text does NOT
+  actually state an item of a target type, return {"facts": []} — that is a
+  correct answer, not a failure.
+- "snippet" must be a real, verbatim quote from the document. If you cannot
+  quote it exactly, leave that item out.
+- Copy "value" exactly as written; never summarise or combine items.
+- Never invent a page number; use only a [Page N] marker you can see, or
+  leave "page" empty.
+- "self_confidence" is your own plausibility estimate (0 to 1), not a
+  calibrated probability.
+- Return the JSON object only. No preamble, no markdown fences.
+
+DOCUMENT TEXT:
+{document_text}

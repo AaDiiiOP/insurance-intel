@@ -260,7 +260,93 @@ def values_match(fact_type: str, extracted_value: str, extracted_normalized,
     return expected_text in got_text or got_text in expected_text
 
 
-def score_company(company_dir: Path, ingest_result: dict) -> dict:
+def _by_fact_type(by_fact_type: dict, fact_scores: list[dict], matched_gt_ids: set,
+                   singleton_recalled_types: set) -> dict:
+    """Per-fact-type ground-truth / extracted / recalled / false counts for
+    one company — so recall can be read by fact type, not just as one
+    blended number (which is what hid coverage=0/40 behind '67.5%')."""
+    out = {}
+    for fact_type, candidates in by_fact_type.items():
+        definition = FACT_DEFINITIONS.get(fact_type)
+        is_singleton = definition is None or definition.is_singleton
+        out[fact_type] = {
+            "ground_truth": 1 if is_singleton else len(candidates),
+            "recalled": (1 if fact_type in singleton_recalled_types else 0) if is_singleton
+                        else sum(1 for (ft, _i) in matched_gt_ids if ft == fact_type),
+        }
+    for f in fact_scores:
+        entry = out.setdefault(f["fact_type"], {"ground_truth": 0, "recalled": 0})
+        entry["extracted"] = entry.get("extracted", 0) + 1
+        if f["has_ground_truth_for_type"] and not f["correct"]:
+            entry["false"] = entry.get("false", 0) + 1
+    for entry in out.values():
+        entry.setdefault("extracted", 0)
+        entry.setdefault("false", 0)
+    return out
+
+
+def score_evidence(conn, organization_id: str, written: dict, matched_gt: dict | None,
+                    _doc_text_cache: dict) -> dict:
+    """
+    Score one written fact's evidence from what the Knowledge Core actually
+    PERSISTED (Fact -> kc_evidence -> documents), not from the extractor's
+    in-memory dict.
+
+    Why: kc.reconcile_fact() returns the fact row, which does not carry the
+    extractor's `evidence` dict — so the previous version of this scorer
+    read written["evidence"], got nothing, and reported snippet_verified /
+    evidence_page as null for every fact even though evidence was stored
+    correctly. That made the benchmark unable to measure the very property
+    (traceable evidence) the architecture is built around.
+
+    snippet_verified here is RE-COMPUTED, independently, by running
+    ppi.verify_snippet() on the persisted snippet against the persisted
+    document's stored text — it does not trust the extractor's own flag,
+    and a fact with no snippet, no document link, or a snippet that is not
+    in the source text counts as NOT verified (never skipped from the
+    denominator).
+
+    evidence_page_correct is only judged when it can be judged fairly: the
+    fact matched a ground-truth entry that names a page, AND the evidence
+    comes from that same source document. A correct restatement of a
+    singleton from a different document (e.g. the sum insured repeated in
+    the risk survey) is not penalised for having a different page/document
+    than the ground-truth entry's — it is None there, not False.
+    """
+    rows = ppi.kc.get_evidence_for_fact(conn, str(written["id"]), organization_id)
+    result = {
+        "evidence_exists": bool(rows),
+        "evidence_has_document": False,
+        "snippet_present": False,
+        "snippet_verified": False,
+        "evidence_page": None,
+        "evidence_document": None,
+        "evidence_page_correct": None,
+    }
+    if not rows:
+        return result
+    row = rows[0]
+    result["evidence_has_document"] = bool(row.get("document_id"))
+    result["evidence_page"] = row.get("page")
+    result["evidence_document"] = row.get("document_filename")
+    snippet = (row.get("snippet") or "").strip()
+    result["snippet_present"] = bool(snippet)
+    if snippet and row.get("document_id"):
+        doc_id = str(row["document_id"])
+        if doc_id not in _doc_text_cache:
+            doc = db.get_document_with_text(conn, doc_id, organization_id)
+            _doc_text_cache[doc_id] = (doc or {}).get("extracted_text") or ""
+        result["snippet_verified"] = bool(ppi.verify_snippet(snippet, _doc_text_cache[doc_id]))
+
+    if matched_gt and matched_gt.get("page") is not None and matched_gt.get("source_document"):
+        gt_file = str(matched_gt["source_document"]).split("_", 1)[-1]
+        if row.get("document_filename") == gt_file and row.get("page") is not None:
+            result["evidence_page_correct"] = int(row["page"]) == int(matched_gt["page"])
+    return result
+
+
+def score_company(company_dir: Path, ingest_result: dict, conn=None,
+                   organization_id: str | None = None) -> dict:
     company_id = company_dir.name
     ground_truth_facts = load_ground_truth_facts(company_dir)
     written_facts = ingest_result["analysis"]["facts"]
@@ -289,6 +375,7 @@ def score_company(company_dir: Path, ingest_result: dict) -> dict:
     # correct repeat matches the same entry again); only multi-valued
     # matches are consumed once each, since two different exclusions really
     # are two different facts that must each be accounted for separately.
+    doc_text_cache: dict = {}
     matched_gt_ids = set()  # (fact_type, index) pairs — multi-valued only
     singleton_recalled_types = set()  # fact_type names — at least one correct match seen
     fact_scores = []
@@ -306,8 +393,16 @@ def score_company(company_dir: Path, ingest_result: dict) -> dict:
                 best_match = (idx, gt)
                 break
 
-        evidence = written.get("evidence") or {}
-        snippet_verified = evidence.get("snippet_verified")
+        if conn is not None and organization_id is not None and written.get("id") is not None:
+            ev = score_evidence(conn, organization_id, written,
+                                best_match[1] if best_match else None, doc_text_cache)
+        else:
+            # No DB handle (e.g. a pure scoring unit test): evidence cannot
+            # be measured, say so honestly rather than fabricate a value.
+            ev = {"evidence_exists": None, "evidence_has_document": None,
+                  "snippet_present": None, "snippet_verified": None,
+                  "evidence_page": None, "evidence_document": None,
+                  "evidence_page_correct": None}
         # A fact is "silently wrong" iff: ground truth exists for this
         # fact_type, nothing matched it, AND the fact was written as
         # verified/needs_review-without-a-flag rather than routed to
@@ -338,8 +433,7 @@ def score_company(company_dir: Path, ingest_result: dict) -> dict:
             "correct": best_match is not None,
             "silently_wrong": is_silent,
             "has_ground_truth_for_type": bool(candidates),
-            "snippet_verified": snippet_verified,
-            "evidence_page": evidence.get("page"),
+            **ev,
         })
 
     # total_gt counts each singleton fact_type ONCE, however many candidate
@@ -375,13 +469,21 @@ def score_company(company_dir: Path, ingest_result: dict) -> dict:
             1 for f in fact_scores if f["has_ground_truth_for_type"] and not f["correct"]
         ),
         "silent_wrong_fact_count": sum(1 for f in fact_scores if f["silently_wrong"]),
+        # Every persisted fact is in the denominator — a fact with no
+        # traceable evidence counts against this number, it is not skipped.
         "evidence_snippet_verified_pct": (
-            round(
-                sum(1 for f in fact_scores if f["snippet_verified"]) /
-                sum(1 for f in fact_scores if f["snippet_verified"] is not None) * 100, 1
-            )
-            if any(f["snippet_verified"] is not None for f in fact_scores) else None
+            round(sum(1 for f in fact_scores if f["snippet_verified"]) /
+                  len(fact_scores) * 100, 1)
+            if fact_scores and all(f["snippet_verified"] is not None for f in fact_scores) else None
         ),
+        "evidence_traceable_count": sum(
+            1 for f in fact_scores
+            if f["evidence_exists"] and f["evidence_has_document"] and f["snippet_verified"]
+        ),
+        "evidence_page_checked": sum(1 for f in fact_scores if f["evidence_page_correct"] is not None),
+        "evidence_page_correct_count": sum(1 for f in fact_scores if f["evidence_page_correct"]),
+        "by_fact_type": _by_fact_type(by_fact_type, fact_scores, matched_gt_ids,
+                                       singleton_recalled_types),
         "contradictions_flagged": len(ingest_result["analysis"]["contradictions"]),
         "fact_scores": fact_scores,
     }
@@ -414,7 +516,30 @@ def summarise(company_results: list[dict]) -> dict:
         ),
         "avg_evidence_snippet_verified_pct": avg("evidence_snippet_verified_pct"),
         "avg_fact_recall_pct_per_company": avg("fact_recall_pct"),
+        # Pooled over every persisted fact (not an average of averages).
+        "evidence_traceable_pct": (
+            round(sum(r.get("evidence_traceable_count", 0) for r in scored) / total_extracted * 100, 1)
+            if total_extracted else None
+        ),
+        "evidence_page_accuracy_pct": (
+            round(sum(r.get("evidence_page_correct_count", 0) for r in scored) /
+                  sum(r.get("evidence_page_checked", 0) for r in scored) * 100, 1)
+            if sum(r.get("evidence_page_checked", 0) for r in scored) else None
+        ),
     }
+
+    # Recall/false-extraction BY FACT TYPE — one blended recall number hid
+    # the fact that policy.coverage was 0/40 and policy.endorsement 3/40
+    # while five other types were at 100%.
+    by_type: dict[str, dict] = {}
+    for r in scored:
+        for ft, e in (r.get("by_fact_type") or {}).items():
+            agg = by_type.setdefault(ft, {"ground_truth": 0, "recalled": 0, "extracted": 0, "false": 0})
+            for k in agg:
+                agg[k] += e.get(k, 0)
+    for agg in by_type.values():
+        agg["recall_pct"] = (round(agg["recalled"] / agg["ground_truth"] * 100, 1)
+                             if agg["ground_truth"] else None)
 
     return {
         "companies_total": len(company_results),
@@ -424,6 +549,7 @@ def summarise(company_results: list[dict]) -> dict:
         ],
         "hard_gates": hard_gates,
         "statistical_thresholds": statistical,
+        "by_fact_type": dict(sorted(by_type.items())),
         "note": (
             "hard_gates must read exactly as required (zero_silent_wrong_facts=True) "
             "before Phase 1A is considered accepted. statistical_thresholds are "
@@ -447,12 +573,42 @@ def _git_commit() -> str | None:
         return None
 
 
+def _print_by_fact_type_table(summary: dict, diagnostics: dict) -> None:
+    """Compact per-fact-type recall table, printed last so it is the first
+    thing visible at the end of a long run."""
+    print("\n" + "=" * 66)
+    print(f"{'fact type':<24}{'ground truth':>13}{'recalled':>10}{'recall %':>10}{'false':>8}")
+    print("-" * 66)
+    for ft, e in summary.get("by_fact_type", {}).items():
+        pct = "-" if e.get("recall_pct") is None else f"{e['recall_pct']:.1f}"
+        print(f"{ft:<24}{e['ground_truth']:>13}{e['recalled']:>10}{pct:>10}{e['false']:>8}")
+    print("=" * 66)
+    st = summary["statistical_thresholds"]
+    print(f"overall recall {st['fact_recall_pct']}%   false-extraction {st['false_extraction_rate_pct']}%   "
+          f"silent-wrong {summary['hard_gates']['silent_wrong_fact_count']}")
+    print(f"evidence: snippet-verified {st['avg_evidence_snippet_verified_pct']}%   "
+          f"fully traceable {st['evidence_traceable_pct']}%   page-accuracy {st['evidence_page_accuracy_pct']}%")
+    counters = diagnostics.get("counters", {})
+    if counters:
+        print("extraction diagnostics:", json.dumps(counters, sort_keys=True))
+    if diagnostics.get("dropped_fact_type_names"):
+        print("fact-type names the model used that are NOT valid (dropped):",
+              json.dumps(diagnostics["dropped_fact_type_names"], sort_keys=True))
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 eval_property_policy.py /path/to/Aurevia_Synthetic_Insurance_World_v1")
         sys.exit(1)
 
     dataset_root = Path(sys.argv[1])
+    # Optional quick-run flag: `--limit N` scores only the first N companies
+    # (~6 min for N=3 instead of ~2 h for all 20). A limited run is saved as
+    # its own timestamped result but NEVER becomes latest.json — latest.json
+    # always means "a full, model-reachable 20-company run".
+    company_limit = None
+    if "--limit" in sys.argv:
+        company_limit = int(sys.argv[sys.argv.index("--limit") + 1])
     companies_dir = dataset_root / "companies"
     if not companies_dir.is_dir():
         print(f"No companies/ directory found under {dataset_root}")
@@ -471,6 +627,7 @@ def main():
         "dataset_path": str(dataset_root),
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "git_commit": _git_commit(),
+        "company_limit": company_limit,
     }
 
     if not model_reachable:
@@ -489,14 +646,18 @@ def main():
         )
 
         company_dirs = sorted(d for d in companies_dir.iterdir() if d.is_dir())
+        if company_limit:
+            company_dirs = company_dirs[:company_limit]
         print(f"Found {len(company_dirs)} companies. Running Phase 1A benchmark "
               f"(organization {organization_id})...\n")
 
+        ppi.reset_extraction_diagnostics()
         company_results = []
         for company_dir in company_dirs:
             print(f"  {company_dir.name}...", end=" ", flush=True)
             ingest_result = ingest_company(conn, organization_id, company_dir)
-            result = score_company(company_dir, ingest_result)
+            result = score_company(company_dir, ingest_result, conn=conn,
+                                    organization_id=organization_id)
             company_results.append(result)
             print(
                 f"recall={result['fact_recall_pct']}%  "
@@ -507,7 +668,13 @@ def main():
 
     summary = summarise(company_results)
 
-    output = {"run": run_metadata, "summary": summary, "companies": company_results}
+    # What the model actually returned vs. what survived validation, and how
+    # often the recovery pass fired — so a low recall on some fact type can be
+    # traced to "model returned nothing" vs. "model returned it under another
+    # name / shape and it was dropped" without another 2-hour run.
+    diagnostics = ppi.snapshot_extraction_diagnostics()
+    output = {"run": run_metadata, "summary": summary,
+              "extraction_diagnostics": diagnostics, "companies": company_results}
     # Timestamped, not overwritten in place — each run is kept as its own
     # historical record (evaluations/phase1a/README.md explains the layout)
     # rather than every run silently erasing the last one, which is exactly
@@ -523,15 +690,18 @@ def main():
 
     print(f"\nFull results written to {out_path}")
     print(json.dumps({"run": run_metadata, "summary": summary}, indent=2))
+    _print_by_fact_type_table(summary, diagnostics)
 
     # latest.json only ever reflects a run where the model was genuinely
     # reachable — a smoke-test run (model unreachable) is still saved above
     # as its own timestamped record, but must never become "the current
     # Phase 1A result" just by running last.
-    if model_reachable:
+    if model_reachable and company_limit is None:
         latest_path = evaluations_dir / "latest.json"
         latest_path.write_text(json.dumps(output, indent=2, default=str))
         print(f"Also updated {latest_path} (this run's model was reachable).")
+    elif company_limit is not None:
+        print(f"(--limit {company_limit} run: saved above, latest.json NOT updated.)")
 
     # A run where the model was never reachable "passes" zero_silent_wrong_
     # facts vacuously — nothing was extracted, so nothing could be wrong.

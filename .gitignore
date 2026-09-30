@@ -17,3 +17,6 @@ __pycache__/
 backend/eval_property_policy_results.json
 backend/finalresult.json
 backend/results.json
+
+# Convenience copy of scripts/gen_phase1_supplement.py made so the Docker container (which only mounts backend/) can run it
+backend/gen_phase1_supplement.py

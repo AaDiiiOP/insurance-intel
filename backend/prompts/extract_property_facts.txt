@@ -2,8 +2,10 @@ You are reading one insurance document (a property policy, coverage
 schedule, endorsement, or risk survey) to find facts about the insured
 BUSINESS, the PROPERTY it insures, and the POLICY covering it.
 
-Return JSON with exactly this shape — one entry per fact type, only for
-facts this document actually, clearly states:
+Return JSON with exactly this shape. "facts" is a list with one object per
+fact you find — a fact type may appear in the list several times (see
+MULTI-VALUED below). Include only facts this document actually, clearly
+states:
 
 {
   "facts": [
@@ -20,51 +22,79 @@ facts this document actually, clearly states:
 }
 
 Valid values for "fact_type" — use ONLY these, exactly as spelled:
-  property.location       — the insured property's address/site location
+
+SINGLE-VALUED (at most one true value per document — emit once):
+  property.location        — the insured property's address/site location
   property.occupancy       — how the property is used (warehouse, factory,
                              office, retail, etc.)
-  property.construction     — construction type (RCC, steel-frame, masonry,
+  property.construction    — construction type (RCC, steel-frame, masonry,
                              etc.)
-  property.sum_insured      — the property's insured value (may be the same
+  property.sum_insured     — the property's insured value (may be the same
                              figure as policy.coverage_limit on a simple
                              policy, or a different, more specific figure on
-                             a schedule that breaks sum insured out by item)
-  property.risk_factors     — hazards or risk conditions noted (fire load,
-                             flood zone, prior claims history mentioned in
-                             this specific document, etc.) — as a short
-                             phrase, not a paragraph
-  policy.coverage          — what perils/events this policy covers, as a
-                             short phrase (e.g. "fire, lightning, explosion,
-                             flood")
-  policy.coverage_limit     — the policy's overall coverage limit / sum
+                             a schedule that breaks sum insured out by item).
+                             A single component of the total (buildings only,
+                             machinery only, stock only) is NOT the sum
+                             insured unless the text calls it that.
+  policy.coverage_limit    — the policy's overall coverage limit / sum
                              insured (the headline figure, if named
                              separately from property.sum_insured)
-  policy.deductible         — the deductible / excess amount
-  policy.exclusion          — one specific thing this policy excludes (emit
-                             one fact per distinct exclusion mentioned, not
-                             one fact combining several)
-  policy.endorsement        — one specific endorsement/rider this document
-                             adds or amends (emit one per endorsement)
+  policy.deductible        — the deductible / excess amount
+
+MULTI-VALUED (a document can state SEVERAL — emit ONE separate object for
+EACH distinct one; never merge them into one object):
+  policy.coverage          — ONE cover or peril the policy insures against.
+                             A line such as "Perils Covered: Fire, Theft"
+                             states TWO coverages: emit one object with value
+                             "Fire" and another with value "Theft". Do the
+                             same for a bulleted or numbered list of covers.
+  property.risk_factors    — ONE hazard or risk condition noted for the
+                             property (fire load, flood zone, hazardous
+                             storage, prior-claims remark, etc.), as a short
+                             phrase. A section headed "Risk Factors" or
+                             "Hazards" is a source of these. An overall risk
+                             rating ("Elevated", "Moderate") and a description
+                             of protections (hydrants, alarms, extinguishers)
+                             are NOT risk factors. "Overall risk rating: Moderate" and
+                             "Fire protection: hydrants and portable
+                             extinguishers reported" must produce NO
+                             property.risk_factors object.
+  policy.exclusion         — ONE specific thing this policy excludes (one
+                             object per distinct exclusion, not one object
+                             combining several)
+  policy.endorsement       — ONE change, amendment, rider or addition an
+                             endorsement makes to the policy. Each separately
+                             numbered or labelled change ("Change 1",
+                             "Change 2", "Amendment A", "Rider 3") is its own
+                             endorsement: emit one object per change, with the
+                             change's own sentence as the value. Administrative
+                             changes (adding a contact, correcting a name) are
+                             endorsements too, even when they mention no
+                             money.
 
 Rules:
-- Only include a fact type this document actually, unambiguously states.
-  Do not guess, infer, or fill in a fact type this document does not
-  mention — an empty "facts" list for a document with none of the above is
-  correct and expected, not an error.
+- Only include a fact this document actually, unambiguously states. Do not
+  guess, infer, or fill in a fact this document does not mention — an empty
+  "facts" list for a document with none of the above is correct and
+  expected, not an error. Do not invent an endorsement, coverage, exclusion
+  or risk factor that is not written in the text.
+- Finding one fact never means you can skip the others: go through the
+  document section by section and check EVERY fact type above against it,
+  including the multi-valued ones, even after you have found the figures and
+  names.
 - Copy "value" EXACTLY as written for figures (currency symbols, commas,
-  units intact). Never convert, round, or normalise.
+  units intact). Never convert, round, or normalise. For multi-valued
+  types, copy the item's own wording (e.g. "Business Interruption", not a
+  summary of the whole list).
 - "snippet" must be a real, verbatim quote from the document — evidence a
   human reviewer checks against the source. If you cannot quote it exactly,
-  leave that fact type out rather than approximate.
+  leave that fact out rather than approximate.
 - "self_confidence" is YOUR OWN stated plausibility (0 to 1) — not a
   calibrated probability. Lower it when the document is ambiguous or the
   text looks OCR-garbled; higher only when the fact is unambiguous and
   clearly labelled.
 - Never invent a page number you cannot see stated or implied by a
   [Page N] marker in the text. If pages are not marked, leave "page" empty.
-- A document can state the same fact_type more than once (e.g. several
-  exclusions, several endorsements) — emit one JSON object per distinct
-  occurrence.
 - Return the JSON object only. No preamble, no markdown fences.
 
 DOCUMENT TEXT:

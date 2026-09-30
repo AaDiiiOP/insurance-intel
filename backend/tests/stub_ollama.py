@@ -99,7 +99,56 @@ def _property_facts_response(text: str) -> dict:
     return {"facts": facts}
 
 
+def _target_types_from_prompt(prompt: str) -> set:
+    """Read the fact types listed under 'TARGET FACT TYPES' in the recovery
+    prompt (extract_multivalued_facts.txt), the same list a real model sees."""
+    m = re.search(r"TARGET FACT TYPES[^\n]*\n(.*?)\n\s*\nWhat each one means", prompt, re.S)
+    block = m.group(1) if m else ""
+    return {line.strip() for line in block.splitlines() if line.strip().startswith(("policy.", "property."))}
+
+
+def _recovery_facts_response(text: str, prompt: str) -> dict:
+    """Stand-in for extract_multivalued_facts.txt — deterministic, regex
+    based. The main-prompt stub above deliberately does NOT extract these
+    multi-valued types (mirroring the first real-Qwen run, where they came
+    back empty); this focused pass does, so the recovery path can be
+    exercised end to end."""
+    targets = _target_types_from_prompt(prompt)
+    facts = []
+
+    def add(fact_type, value, pos, snippet_line):
+        facts.append({
+            "fact_type": fact_type, "value": value.strip()[:300],
+            "page": _find_page(text, pos), "section": None,
+            "snippet": snippet_line[:300], "self_confidence": 0.86,
+            "reasoning": f"Stub recovery: labelled {fact_type} section found.",
+        })
+
+    if "policy.coverage" in targets:
+        for m in re.finditer(r"Perils Covered:\s*([^\n]+)", text, re.I):
+            for item in [i.strip() for i in m.group(1).split(",") if i.strip()]:
+                add("policy.coverage", item, m.start(1), _line_at(text, m.start(1)))
+    if "property.risk_factors" in targets:
+        for m in re.finditer(r"Risk Factors?:\s*([^\n]+)", text, re.I):
+            add("property.risk_factors", m.group(1), m.start(1), _line_at(text, m.start(1)))
+    if "policy.endorsement" in targets:
+        for m in re.finditer(
+            r"Change\s+\d+:\s*\n\s*([^\n]+(?:\n(?!\s*(?:Change|Policy Reference)\b)[^\n]+)?)",
+            text, re.I,
+        ):
+            value = " ".join(m.group(1).split())
+            add("policy.endorsement", value, m.start(1), _line_at(text, m.start(1)))
+    if "policy.exclusion" in targets:
+        for m in re.finditer(r"^\s*\d+\.\s*([^\n]+)", text, re.M):
+            add("policy.exclusion", m.group(1), m.start(1), _line_at(text, m.start(1)))
+    return {"facts": facts}
+
+
 class _Handler(BaseHTTPRequestHandler):
+    # Optional hook for tests that need to script the model's exact reply
+    # (and count calls): a callable(prompt) -> dict | None. Returning None
+    # falls through to the default deterministic behaviour below.
+    responder = None
     def log_message(self, fmt, *args):
         pass  # keep test output quiet
 
@@ -128,7 +177,12 @@ class _Handler(BaseHTTPRequestHandler):
         if self.path == "/api/generate":
             prompt = payload.get("prompt", "")
             text = _extract_document_text(prompt)
-            if "Valid values for \"fact_type\"" in prompt:
+            scripted = self.responder(prompt) if self.responder else None
+            if scripted is not None:
+                result = scripted
+            elif "TARGET FACT TYPES" in prompt:
+                result = _recovery_facts_response(text, prompt)
+            elif "Valid values for \"fact_type\"" in prompt:
                 result = _property_facts_response(text)
             else:
                 result = _coverage_limit_response(text)
@@ -145,14 +199,18 @@ class StubOllamaServer:
     in a background thread for the duration of one test (or the session),
     rather than as a separate standalone process."""
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 11434):
+    def __init__(self, host: str = "127.0.0.1", port: int = 11434, responder=None):
         self.host = host
         self.port = port
+        self.responder = responder
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
-        self._server = ThreadingHTTPServer((self.host, self.port), _Handler)
+        handler = type("_ScriptedHandler", (_Handler,), {
+            "responder": staticmethod(self.responder) if self.responder else None,
+        })
+        self._server = ThreadingHTTPServer((self.host, self.port), handler)
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
 

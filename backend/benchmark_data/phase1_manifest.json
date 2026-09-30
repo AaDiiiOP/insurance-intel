@@ -22,6 +22,13 @@
   },
   {
     "company_id": "AUR-SYN-001",
+    "fact_type": "property.risk_factors",
+    "value": "Machine shop operations with metalworking fluids present",
+    "source_document": "AUR-SYN-001_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-001",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 600000000,
@@ -82,6 +89,13 @@
     "company_id": "AUR-SYN-002",
     "fact_type": "property.construction",
     "value": "RCC frame structure with clean-room panel partitions, class A construction",
+    "source_document": "AUR-SYN-002_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-002",
+    "fact_type": "property.risk_factors",
+    "value": "Clean-room HVAC dependency and solvent storage",
     "source_document": "AUR-SYN-002_01_property_policy.pdf",
     "page": 1
   },
@@ -152,6 +166,13 @@
   },
   {
     "company_id": "AUR-SYN-003",
+    "fact_type": "property.risk_factors",
+    "value": "High-density pallet racking and forklift traffic",
+    "source_document": "AUR-SYN-003_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-003",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 500000000,
@@ -212,6 +233,13 @@
     "company_id": "AUR-SYN-004",
     "fact_type": "property.construction",
     "value": "RCC frame with insulated cold-storage panels, class B construction",
+    "source_document": "AUR-SYN-004_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-004",
+    "fact_type": "property.risk_factors",
+    "value": "Refrigeration ammonia system and cold-chain dependency",
     "source_document": "AUR-SYN-004_01_property_policy.pdf",
     "page": 1
   },
@@ -282,6 +310,13 @@
   },
   {
     "company_id": "AUR-SYN-005",
+    "fact_type": "property.risk_factors",
+    "value": "Paint shop solvent storage and welding operations",
+    "source_document": "AUR-SYN-005_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-005",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 250000000,
@@ -342,6 +377,13 @@
     "company_id": "AUR-SYN-006",
     "fact_type": "property.construction",
     "value": "Steel truss shed structure, class C construction, high combustible loading",
+    "source_document": "AUR-SYN-006_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-006",
+    "fact_type": "property.risk_factors",
+    "value": "High fabric and fiber storage density, dust accumulation",
     "source_document": "AUR-SYN-006_01_property_policy.pdf",
     "page": 1
   },
@@ -412,6 +454,13 @@
   },
   {
     "company_id": "AUR-SYN-007",
+    "fact_type": "property.risk_factors",
+    "value": "ESD-sensitive component storage and soldering operations",
+    "source_document": "AUR-SYN-007_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-007",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 200000000,
@@ -472,6 +521,13 @@
     "company_id": "AUR-SYN-008",
     "fact_type": "property.construction",
     "value": "Open yard with steel-clad workshop sheds, class C construction",
+    "source_document": "AUR-SYN-008_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-008",
+    "fact_type": "property.risk_factors",
+    "value": "Open storage of construction plant and combustible formwork materials",
     "source_document": "AUR-SYN-008_01_property_policy.pdf",
     "page": 1
   },
@@ -542,6 +598,13 @@
   },
   {
     "company_id": "AUR-SYN-009",
+    "fact_type": "property.risk_factors",
+    "value": "Commercial kitchen deep-fry operations and LPG storage",
+    "source_document": "AUR-SYN-009_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-009",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 400000000,
@@ -602,6 +665,13 @@
     "company_id": "AUR-SYN-010",
     "fact_type": "property.construction",
     "value": "RCC frame structure, class A construction, radiation-shielded imaging suite",
+    "source_document": "AUR-SYN-010_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-010",
+    "fact_type": "property.risk_factors",
+    "value": "High-value imaging equipment and biomedical waste handling",
     "source_document": "AUR-SYN-010_01_property_policy.pdf",
     "page": 1
   },
@@ -672,6 +742,13 @@
   },
   {
     "company_id": "AUR-SYN-011",
+    "fact_type": "property.risk_factors",
+    "value": "Open-yard equipment storage and inverter room fire load",
+    "source_document": "AUR-SYN-011_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-011",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 120000000,
@@ -732,6 +809,13 @@
     "company_id": "AUR-SYN-012",
     "fact_type": "property.construction",
     "value": "RCC frame structure with bunded tank farm, class B construction",
+    "source_document": "AUR-SYN-012_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-012",
+    "fact_type": "property.risk_factors",
+    "value": "Bulk chemical storage tanks and process reactor area",
     "source_document": "AUR-SYN-012_01_property_policy.pdf",
     "page": 1
   },
@@ -802,6 +886,13 @@
   },
   {
     "company_id": "AUR-SYN-013",
+    "fact_type": "property.risk_factors",
+    "value": "High-value merchandise density and public footfall exposure",
+    "source_document": "AUR-SYN-013_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-013",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 150000000,
@@ -862,6 +953,13 @@
     "company_id": "AUR-SYN-014",
     "fact_type": "property.construction",
     "value": "Steel frame structure, class B construction, overhead crane bays",
+    "source_document": "AUR-SYN-014_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-014",
+    "fact_type": "property.risk_factors",
+    "value": "Heavy fabrication welding operations and overhead crane loads",
     "source_document": "AUR-SYN-014_01_property_policy.pdf",
     "page": 1
   },
@@ -932,6 +1030,13 @@
   },
   {
     "company_id": "AUR-SYN-015",
+    "fact_type": "property.risk_factors",
+    "value": "Ammonia refrigeration plant and continuous cold-chain dependency",
+    "source_document": "AUR-SYN-015_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-015",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 400000000,
@@ -992,6 +1097,13 @@
     "company_id": "AUR-SYN-016",
     "fact_type": "property.construction",
     "value": "Steel truss shed structure, class C construction, high combustible loading",
+    "source_document": "AUR-SYN-016_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-016",
+    "fact_type": "property.risk_factors",
+    "value": "Corrugated board and printing solvent storage, high combustible loading",
     "source_document": "AUR-SYN-016_01_property_policy.pdf",
     "page": 1
   },
@@ -1062,6 +1174,13 @@
   },
   {
     "company_id": "AUR-SYN-017",
+    "fact_type": "property.risk_factors",
+    "value": "Server hall heat density and UPS battery room fire load",
+    "source_document": "AUR-SYN-017_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-017",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 350000000,
@@ -1122,6 +1241,13 @@
     "company_id": "AUR-SYN-018",
     "fact_type": "property.construction",
     "value": "RCC frame structure, class A construction, bonded warehouse area segregated",
+    "source_document": "AUR-SYN-018_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-018",
+    "fact_type": "property.risk_factors",
+    "value": "Bonded warehouse cargo accumulation and dockside exposure",
     "source_document": "AUR-SYN-018_01_property_policy.pdf",
     "page": 1
   },
@@ -1192,6 +1318,13 @@
   },
   {
     "company_id": "AUR-SYN-019",
+    "fact_type": "property.risk_factors",
+    "value": "Grain dust accumulation and silo storage",
+    "source_document": "AUR-SYN-019_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-019",
     "fact_type": "policy.coverage",
     "value": "Property Damage",
     "value_inr": 250000000,
@@ -1252,6 +1385,13 @@
     "company_id": "AUR-SYN-020",
     "fact_type": "property.construction",
     "value": "Steel frame structure, class B construction, workshop and stores combined",
+    "source_document": "AUR-SYN-020_01_property_policy.pdf",
+    "page": 1
+  },
+  {
+    "company_id": "AUR-SYN-020",
+    "fact_type": "property.risk_factors",
+    "value": "Rotating equipment repair bay and lubricant storage",
     "source_document": "AUR-SYN-020_01_property_policy.pdf",
     "page": 1
   },

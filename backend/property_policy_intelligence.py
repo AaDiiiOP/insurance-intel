@@ -24,6 +24,7 @@ extraction_facts before anything else was built on it.
 This module deliberately does NOT touch extraction_facts, doc_intelligence.py,
 or the coverage-limit slice — additive only, per the project's Phase 1 scope.
 """
+import collections
 import difflib
 import logging
 import re
@@ -32,7 +33,9 @@ from llm import LLMError, generate_json, load_prompt
 
 import db
 import knowledge.service as kc
-from knowledge.fact_types import ALL_FACT_TYPES, NUMERIC_FACT_TYPES, target_entity_kind
+from knowledge.fact_types import (
+    ALL_FACT_TYPES, FACT_DEFINITIONS, NUMERIC_FACT_TYPES, target_entity_kind,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +52,71 @@ MAX_CHUNK_CHARS = 12000
 # source text (item 5's fix) — chosen loose enough to tolerate whitespace/
 # OCR noise but tight enough that an unrelated sentence does not pass.
 SNIPPET_SIMILARITY_THRESHOLD = 0.85
+
+# Multi-valued fact types (several independently-true values per entity —
+# every coverage, every exclusion, every endorsement, every risk factor).
+# Derived from the registry, never re-listed by hand, so a new multi-valued
+# type added to FACT_DEFINITIONS is picked up here automatically.
+MULTI_VALUED_FACT_TYPES = frozenset(
+    ft for ft, definition in FACT_DEFINITIONS.items() if not definition.is_singleton
+)
+
+# Cheap, deterministic "does this text even have a labelled section for that
+# fact type?" cues, used ONLY to decide whether a recovery pass is worth an
+# extra model call (see extract_with_recovery). They never create a fact —
+# a cue matching only means "ask the model again, with a prompt focused on
+# just this type"; the model must still quote real evidence or abstain.
+_RECOVERY_CUES = {
+    "policy.coverage": re.compile(r"perils?\s+covered|covered\s+perils?|\bcovers?\s*:|\bcoverage\s*:", re.I),
+    "property.risk_factors": re.compile(r"risk\s+factors?|\bhazards?\b", re.I),
+    "policy.endorsement": re.compile(r"endorsement|\bchange\s+\d+\b|\bamend(?:ed|ment)?\b", re.I),
+    "policy.exclusion": re.compile(r"\bexclusions?\b|\bexcluded\b|\bnot\s+covered\b", re.I),
+}
+
+# Every extraction call's outcome is counted here so a run can be diagnosed
+# after the fact. Before this existed, a fact type the model returned under
+# a slightly different name (or in an unexpected JSON shape) was dropped with
+# no trace — "coverage = 0/40" could not be told apart from "the model never
+# mentioned coverage at all". eval_property_policy.py records these counters
+# in its result file.
+EXTRACTION_DIAGNOSTICS: collections.Counter = collections.Counter()
+DROPPED_FACT_TYPE_NAMES: collections.Counter = collections.Counter()
+
+
+# Validity rule for property.risk_factors (v0.6.1). A risk FACTOR is a hazard.
+# An overall survey rating ("Overall risk rating: Moderate") is a grade, and
+# a statement that protections exist ("Fire protection: hydrants and portable
+# extinguishers reported") is a mitigation. The prompt says so explicitly, but
+# the 7B model still returned both in the 3-company quick check (4 silently
+# wrong facts), so the rule is also enforced here, deterministically. It is
+# deliberately narrow: it only rejects a rating, or a protection statement
+# with no negative wording. "Fire protection: no hydrants on site" is a real
+# hazard and is NOT rejected. This filter does not touch the scoring.
+_RATING_RE = re.compile(r"\brisk\s+(?:rating|grade|score|level)\b", re.I)
+_PROTECTION_RE = re.compile(r"^\s*(?:fire\s+)?(?:protection|safety\s+systems?)\b", re.I)
+_NEGATIVE_RE = re.compile(
+    r"\b(?:no|not|none|without|lack(?:s|ing)?|inadequate|insufficient|absent|"
+    r"missing|deficien\w*|defective|faulty|out\s+of\s+service|non-?functional|overdue)\b", re.I)
+
+
+def is_non_hazard_risk_factor(value: str) -> bool:
+    """True if a candidate property.risk_factors value is a rating or a
+    positive protection statement rather than a hazard."""
+    if _RATING_RE.search(value):
+        return True
+    if _PROTECTION_RE.search(value) and not _NEGATIVE_RE.search(value):
+        return True
+    return False
+
+
+def reset_extraction_diagnostics() -> None:
+    EXTRACTION_DIAGNOSTICS.clear()
+    DROPPED_FACT_TYPE_NAMES.clear()
+
+
+def snapshot_extraction_diagnostics() -> dict:
+    return {"counters": dict(EXTRACTION_DIAGNOSTICS),
+            "dropped_fact_type_names": dict(DROPPED_FACT_TYPE_NAMES)}
 
 # NUMERIC_FACT_TYPES and target_entity_kind() now live in
 # knowledge/fact_types.py's FACT_DEFINITIONS registry (imported above) —
@@ -198,7 +266,9 @@ def verify_snippet(claimed_snippet: str, source_text: str,
 
 def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = None,
                                    page_confidences: dict | None = None,
-                                   full_text: str | None = None) -> list[dict]:
+                                   full_text: str | None = None,
+                                   prompt_name: str = "extract_property_facts",
+                                   only_types: set | frozenset | None = None) -> list[dict]:
     """
     Extract every property/policy fact ONE chunk of a document's text
     states, using the same LLM-calling convention as
@@ -234,25 +304,43 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
     verified against the real source text — item 5's fix).
     """
     verification_text = full_text if full_text is not None else text
+    fields = {"document_text": text}
+    if only_types:
+        fields["target_types"] = "\n".join(f"  {t}" for t in sorted(only_types))
     try:
-        data = generate_json(
-            load_prompt("extract_property_facts", document_text=text)
-        )
+        data = generate_json(load_prompt(prompt_name, **fields))
     except LLMError as exc:
         logger.warning("Property/policy extraction failed: %s", exc)
+        EXTRACTION_DIAGNOSTICS["model_call_failed"] += 1
         return []
 
     raw_facts = data.get("facts")
     if not isinstance(raw_facts, list):
+        EXTRACTION_DIAGNOSTICS["response_missing_facts_list"] += 1
         return []
 
     results = []
     for item in raw_facts:
         if not isinstance(item, dict):
+            EXTRACTION_DIAGNOSTICS["dropped_non_object_item"] += 1
             continue
+        EXTRACTION_DIAGNOSTICS["model_facts_returned"] += 1
         fact_type = str(item.get("fact_type") or "").strip()
         value = str(item.get("value") or "").strip()
-        if fact_type not in ALL_FACT_TYPES or not value:
+        if fact_type not in ALL_FACT_TYPES:
+            # Never "corrected" or guessed into a valid type — dropped, but
+            # counted and named so the next run shows what the model said.
+            EXTRACTION_DIAGNOSTICS["dropped_unknown_fact_type"] += 1
+            DROPPED_FACT_TYPE_NAMES[fact_type or "<empty>"] += 1
+            continue
+        if not value:
+            EXTRACTION_DIAGNOSTICS["dropped_empty_value"] += 1
+            continue
+        if only_types and fact_type not in only_types:
+            EXTRACTION_DIAGNOSTICS["dropped_out_of_scope_type"] += 1
+            continue
+        if fact_type == "property.risk_factors" and is_non_hazard_risk_factor(value):
+            EXTRACTION_DIAGNOSTICS["dropped_non_hazard_risk_factor"] += 1
             continue
 
         self_confidence = item.get("self_confidence")
@@ -335,6 +423,80 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
     return results
 
 
+def _dedupe_key(fact: dict) -> tuple:
+    return (fact["fact_type"], " ".join(fact["value"].split()).lower())
+
+
+def extract_with_recovery(*, text: str, ocr_confidence: float | None = None,
+                           page_confidences: dict | None = None,
+                           full_text: str | None = None) -> list[dict]:
+    """
+    Stage A: the normal all-fact-types extraction (unchanged behaviour —
+    singleton types are already extracted reliably this way).
+
+    Stage B (recovery, only when needed): for each MULTI-VALUED fact type
+    that Stage A returned nothing for on this chunk, but whose section is
+    visibly labelled in the text (see _RECOVERY_CUES), ask the model again
+    with a prompt focused on just those types. The first real-Qwen benchmark
+    showed policy.coverage at 0/40 and property.risk_factors at 0/20 even
+    though both are stated verbatim in the source PDFs: a 7B model given ten
+    fact types at once tends to stop after the figures and names it finds
+    first. A short, single-purpose second pass is the standard remedy.
+
+    What this does NOT do, deliberately:
+      - It never runs when Stage A already found that type (no extra cost
+        once the main prompt does its job).
+      - It never invents anything: recovered items go through the exact same
+        validation as Stage A (registered type, real snippet check, page
+        marker check, needs_review status).
+      - It never loosens the abstention rule — the recovery prompt repeats
+        it, an empty answer is a normal outcome, and (stricter than Stage A)
+        a recovered item whose snippet does not verify against the source
+        text is dropped outright.
+      - Every recovered fact still reaches the Knowledge Core only through
+        reconcile_fact() (the caller does that), so evidence linking and
+        versioning are identical.
+    Recovered items identical to something Stage A already returned are
+    dropped, since multi-valued facts are inserted as new rows and would
+    otherwise be duplicated.
+    """
+    kwargs = dict(ocr_confidence=ocr_confidence, page_confidences=page_confidences,
+                  full_text=full_text)
+    facts = extract_property_policy_facts(text=text, **kwargs)
+
+    found_types = {f["fact_type"] for f in facts}
+    wanted = {
+        ft for ft in MULTI_VALUED_FACT_TYPES
+        if ft not in found_types and ft in _RECOVERY_CUES and _RECOVERY_CUES[ft].search(text)
+    }
+    if not wanted:
+        return facts
+
+    for ft in wanted:
+        EXTRACTION_DIAGNOSTICS[f"recovery_pass_for:{ft}"] += 1
+    recovered = extract_property_policy_facts(
+        text=text, prompt_name="extract_multivalued_facts", only_types=wanted, **kwargs,
+    )
+    seen = {_dedupe_key(f) for f in facts}
+    for fact in recovered:
+        # Stricter than Stage A on purpose: the recovery pass is the path
+        # where a model is being asked to look harder for something, which is
+        # exactly when fabrication is most tempting. A recovered item whose
+        # quoted snippet cannot be found in the source text is abstained
+        # from (dropped), not written as "needs_review".
+        if not fact["evidence"].get("snippet_verified"):
+            EXTRACTION_DIAGNOSTICS["recovery_unverified_dropped"] += 1
+            continue
+        key = _dedupe_key(fact)
+        if key in seen:
+            EXTRACTION_DIAGNOSTICS["recovery_duplicate_dropped"] += 1
+            continue
+        seen.add(key)
+        EXTRACTION_DIAGNOSTICS[f"recovered_fact:{fact['fact_type']}"] += 1
+        facts.append(fact)
+    return facts
+
+
 def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
     """
     Run Property Policy Intelligence over every document in one submission.
@@ -408,7 +570,7 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
         chunks = split_into_chunks(text)
         extracted: list[dict] = []
         for chunk in chunks:
-            extracted.extend(extract_property_policy_facts(
+            extracted.extend(extract_with_recovery(
                 text=chunk, ocr_confidence=ocr_confidence,
                 page_confidences=page_confidences,
                 # Full document text (item 2's fix), not just this chunk —

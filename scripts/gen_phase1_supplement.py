@@ -48,6 +48,7 @@ from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
+from reportlab.lib.utils import simpleSplit
 from reportlab.pdfgen import canvas
 
 # This script lives in <project_root>/scripts/ — its sibling backend/
@@ -275,7 +276,17 @@ def _draw_doc(path: Path, title: str, company_name: str, lines: list[str]):
             c.drawString(MARGIN, y, line)
             c.setFont("Helvetica", 10)
         else:
-            c.drawString(MARGIN, y, line)
+            # Wrap to the printable width. drawString never wraps, so a
+            # line longer than the page (the 2nd endorsement sentence, ~150
+            # chars) was silently clipped at the page edge in v1.1 — the
+            # ground truth then expected text no reader, human or model,
+            # could ever see in the PDF. Found by auditing every ground-
+            # truth value against its source PDF's text.
+            wrapped = simpleSplit(line, "Helvetica", 10, PAGE_W - 2 * MARGIN)
+            for i, piece in enumerate(wrapped):
+                c.drawString(MARGIN, y, piece)
+                if i < len(wrapped) - 1:
+                    y -= 5 * mm
         y -= 6 * mm
 
     c.setFont("Helvetica-Oblique", 7)
