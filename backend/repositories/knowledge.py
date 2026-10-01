@@ -128,7 +128,8 @@ def update_entity(conn, entity_id: str, organization_id: str, *,
 def create_fact(conn, *, organization_id: str, entity_id: str, fact_type: str,
                  value: str, normalized_value: float | None, unit: str | None,
                  confidence: dict, status: str, produced_by: str,
-                 valid_from, valid_to=None) -> dict:
+                 valid_from, valid_to=None, effective_from=None,
+                 effective_to=None) -> dict:
     """
     Insert one fact row. `confidence` is {value, type, method, note}, same
     shape as extraction.save_extraction_fact's `confidence` argument.
@@ -139,9 +140,10 @@ def create_fact(conn, *, organization_id: str, entity_id: str, fact_type: str,
             INSERT INTO kc_facts (
                 organization_id, entity_id, fact_type, value, normalized_value, unit,
                 confidence_value, confidence_type, confidence_method, confidence_note,
-                status, produced_by, valid_from, valid_to
+                status, produced_by, valid_from, valid_to,
+                effective_from, effective_to
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
@@ -149,6 +151,7 @@ def create_fact(conn, *, organization_id: str, entity_id: str, fact_type: str,
                 confidence["value"], confidence["type"], confidence.get("method"),
                 confidence.get("note"),
                 status, produced_by, valid_from, valid_to,
+                effective_from, effective_to,
             ),
         )
         return dict(cur.fetchone())
@@ -207,6 +210,25 @@ def get_historical_facts(conn, entity_id: str, organization_id: str, fact_type: 
             "AND fact_type = %s ORDER BY COALESCE(valid_from, created_at) ASC",
             (entity_id, organization_id, fact_type),
         )
+        return cur.fetchall()
+
+
+def get_facts_effective_on(conn, entity_id: str, organization_id: str, as_of,
+                            fact_type: str | None = None) -> list[dict]:
+    """Facts whose stated EFFECTIVE period contains `as_of` (a date) —
+    excludes 'superseded' rows. Facts with no stated period are NOT returned
+    here (their period is unknown); see knowledge/versions.py."""
+    clauses = ["entity_id = %s", "organization_id = %s", "status <> 'superseded'",
+               "effective_from IS NOT NULL", "effective_from <= %s",
+               "(effective_to IS NULL OR effective_to >= %s)"]
+    params = [entity_id, organization_id, as_of, as_of]
+    if fact_type:
+        clauses.append("fact_type = %s")
+        params.append(fact_type)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"SELECT * FROM kc_facts WHERE {' AND '.join(clauses)} "
+            f"ORDER BY fact_type, created_at DESC", params)
         return cur.fetchall()
 
 

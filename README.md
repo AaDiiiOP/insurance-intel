@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.7.2** (see `frontend/package.json` — the one version number
+**Version: 0.8.0** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Phase 1 status:** Phase 0, Phase 1A safety and Phase 1B are accepted.
@@ -9,7 +9,7 @@ Phase 1A extraction *quality* is being improved — the v0.6.0 code changes
 has not been measured with real Qwen yet. Last measured results: Phase 0
 100% accuracy with 0 silent guesses; Phase 1A (`model_reachable: true`) 0
 silent wrong facts, 67.5% recall; Phase 1B 13/13 deterministic comparison
-cases; regression suite now 55/55. The first FULL 20-company run of v0.7.0 (2026-10-01) gave 100% recall on every fact type but FAILED the hard gate with 2 silently wrong facts (fixed in v0.7.1, not yet re-measured). A 3-company quick check of v0.6.0 gave 100% recall but 4 silently wrong risk-factor facts (hard gate FAILED); v0.6.1 fixed it: the same 3-company quick check now shows 0 silent wrong, 100% recall and 100% evidence verified. The full 20-company run is PENDING (running overnight 2026-09-30); until it finishes, treat 3/20 as a partial result, not an accepted Phase 1A. See `Results.md`
+cases; regression suite now 73/73 (v0.8.0). The first FULL 20-company run of v0.7.0 (2026-10-01) gave 100% recall on every fact type but FAILED the hard gate with 2 silently wrong facts (fixed in v0.7.1, not yet re-measured). A 3-company quick check of v0.6.0 gave 100% recall but 4 silently wrong risk-factor facts (hard gate FAILED); v0.6.1 fixed it: the same 3-company quick check now shows 0 silent wrong, 100% recall and 100% evidence verified. The full 20-company run is PENDING (running overnight 2026-09-30); until it finishes, treat 3/20 as a partial result, not an accepted Phase 1A. See `Results.md`
 for the full run-by-run detail.
 
 *(Previously "Insurance Intelligence" — renamed, same codebase, same
@@ -554,6 +554,47 @@ gave 100% recall, 19 of 20 companies clean and 2 silent wrong facts in one
 company (AUR-SYN-014). That company was fixed in v0.7.1 and re-verified on its
 own with 0 silent wrong. A full 20-company run on v0.7.1 has NOT been done;
 `phase1a/latest.json` is still the v0.7.0 full run. 55/55 regression tests pass.
+
+## Knowledge Core v2 (v0.8.0) — effective dates, entity read, review
+
+Built on the existing Knowledge Core (not a rewrite). Phase 1A extraction was
+NOT changed, so the extraction benchmark was not rerun; `eval_policy_comparison`
+still passes 13/13 and the suite is 73/73.
+
+- **Effective dates.** `kc_facts.effective_from / effective_to` (nullable DATE,
+  migration is additive and safe on existing data) hold the period a value
+  applies to, as stated by the source. They are separate from `valid_from /
+  valid_to`, which record when a value was learned or replaced. NULL = period
+  unknown, never guessed.
+- **History is not contradiction.** If a new fact and the current fact both
+  state a period and the periods do not overlap (2025 limit vs 2026 limit),
+  both are kept; the later period is current, the earlier is closed as
+  historical. Overlapping periods with different values are still a
+  contradiction; facts with no stated period behave exactly as before.
+- **As-of reads.** `get_facts_in_force(entity, as_of)` answers "what was true
+  on this date" separately from "what is current"; undated current facts are
+  listed apart (period unknown), never assumed to apply.
+- **`get_entity_knowledge(entity, as_of=None)`.** Current facts with evidence,
+  historical facts, unresolved conflicts, relationships both ways (with the
+  other entity's type and name), all organization-scoped.
+- **Relationship rules.** `ALLOWED_RELATIONSHIPS` (owns, located_at,
+  operates_at, has_policy, contains/provides, applies_to, protects, exposed_to,
+  has_claim, supports) with the entity types each may join; unknown kinds,
+  wrong type pairs and cross-tenant ids are rejected. Creation was already
+  idempotent (confirmed by a new test).
+- **Human review.** `review_fact(verify | reject)`: verify needs at least one
+  evidence row and refuses a contradicted fact (settle those with the
+  correction endpoint); reject closes the fact as `superseded` and keeps the
+  row for audit.
+- **API.** `GET /knowledge/entities/{id}/knowledge?as_of=YYYY-MM-DD`,
+  `GET /knowledge/entities/{id}/relationships`,
+  `POST /knowledge/facts/{id}/review`; fact responses now include
+  `effective_from / effective_to`.
+
+**Not done yet (known limitations):** the extractor does not yet read policy
+periods from documents, so extracted facts are still undated; there is no
+frontend panel for relationships / as-of / review yet (API only); entity
+resolution is still exact-name only; hybrid retrieval is untouched.
 
 Do not read any of this as an improvement yet: the last measured real-Qwen
 numbers are still 0 silent wrong, 67.5% recall, 1.7% false extraction. Run

@@ -611,6 +611,13 @@ CREATE TABLE IF NOT EXISTS kc_facts (
     valid_from           TIMESTAMPTZ,
     valid_to             TIMESTAMPTZ,
 
+    -- EFFECTIVE period: when the fact is true in the insured's world (the
+    -- policy period a limit applies to), as stated by the source. Distinct
+    -- from valid_from/valid_to above, which record when AURE learned/replaced
+    -- a value. NULL = the source stated no period (UNKNOWN, never guessed).
+    effective_from       DATE,
+    effective_to         DATE,
+
     produced_by          TEXT NOT NULL,
 
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -887,6 +894,10 @@ ALTER TABLE document_quality
 -- which row is newest. Same replace-the-CHECK-by-name pattern as
 -- extraction_facts_status_check/draft_events_event_check above, since the
 -- original CHECK predates this status.
+-- v0.8.0: effective period of a fact (see kc_facts above). Nullable, so every
+-- existing row stays valid and keeps its meaning (period unknown).
+ALTER TABLE kc_facts ADD COLUMN IF NOT EXISTS effective_from DATE;
+ALTER TABLE kc_facts ADD COLUMN IF NOT EXISTS effective_to DATE;
 ALTER TABLE kc_facts DROP CONSTRAINT IF EXISTS kc_facts_status_check;
 ALTER TABLE kc_facts ADD CONSTRAINT kc_facts_status_check
     CHECK (status IN ('needs_review', 'verified', 'corrected',

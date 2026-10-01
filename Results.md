@@ -1130,3 +1130,16 @@ companies clean + 1 company fixed and re-verified individually in v0.7.1. A full
 20-company rerun on v0.7.1 has not been performed. Result file for this run is on
 the developer's machine (result-20261001T150200…json); only console output was
 shared.
+
+
+## Knowledge Core v2 (v0.8.0, 2026-10-01) — implementation, no extraction change
+
+Added effective-dated facts (additive nullable columns), non-overlapping periods
+treated as history rather than contradiction, `get_facts_in_force` (as-of read),
+`get_entity_knowledge`, relationship type rules, `review_fact`, and three API
+endpoints. 18 new tests (suite 73/73). `eval_policy_comparison` 13/13 (run in a
+throwaway copy). Phase 1A extraction unchanged: no extraction benchmark rerun.
+Audit correction: the audit's suspected duplicate-relationship bug does not exist
+(`service.create_relationship` was already idempotent). Limitations: extractor
+supplies no periods yet, no UI panel, exact-name entity resolution, hybrid
+retrieval untouched.

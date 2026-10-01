@@ -147,7 +147,8 @@ def find_relationships(conn, organization_id: str, entity_id: str,
 def create_fact(conn, *, organization_id: str, entity_id: str, fact_type: str,
                  value: str, confidence: dict, produced_by: str,
                  normalized_value: float | None = None, unit: str | None = None,
-                 status: str = "needs_review") -> dict:
+                 status: str = "needs_review",
+                 effective_from=None, effective_to=None) -> dict:
     """
     Create a fact directly, with no reconciliation against any existing
     current fact for the same entity+fact_type. Most callers extracting a
@@ -161,7 +162,7 @@ def create_fact(conn, *, organization_id: str, entity_id: str, fact_type: str,
         conn, organization_id=organization_id, entity_id=entity_id,
         fact_type=fact_type, value=value, confidence=confidence,
         produced_by=produced_by, normalized_value=normalized_value, unit=unit,
-        status=status,
+        status=status, effective_from=effective_from, effective_to=effective_to,
     )
 
 
@@ -170,9 +171,18 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
                     normalized_value: float | None = None, unit: str | None = None,
                     document_id: str | None = None, evidence_page: int | None = None,
                     evidence_section: str | None = None, evidence_snippet: str | None = None,
-                    evidence_source: str | None = None) -> dict:
+                    evidence_source: str | None = None,
+                    effective_from=None, effective_to=None) -> dict:
     """
     Write a newly-extracted fact for entity_id+fact_type.
+
+    effective_from / effective_to (optional, date or ISO string) are the
+    period the SOURCE says the value applies to (e.g. a 2025 policy period).
+    When the new fact AND the current fact both state a period and the two
+    periods do not overlap, they are different truths about different times,
+    not a contradiction: both are kept, the later period stays current and
+    the earlier one is closed as historical. Without stated periods on both
+    sides the behaviour below is unchanged.
 
     First checks whether fact_type is singleton or multi-valued
     (knowledge/fact_types.py's FACT_DEFINITIONS registry):
@@ -225,6 +235,9 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
     same evidence rigor as Phase 0, never optional.
     """
     contradiction_info = None
+    effective_from = _facts.to_date(effective_from)
+    effective_to = _facts.to_date(effective_to)
+    period = {"effective_from": effective_from, "effective_to": effective_to}
 
     if not _facts.is_singleton_fact_type(fact_type):
         # Multi-valued: every extraction is its own new, independently-true
@@ -234,7 +247,7 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
             conn, organization_id=organization_id, entity_id=entity_id,
             fact_type=fact_type, value=value, confidence=confidence,
             produced_by=produced_by, normalized_value=normalized_value, unit=unit,
-            status="needs_review",
+            status="needs_review", **period,
         )
     else:
         current = _versions.get_current_value(conn, entity_id, organization_id, fact_type)
@@ -244,8 +257,24 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
                 conn, organization_id=organization_id, entity_id=entity_id,
                 fact_type=fact_type, value=value, confidence=confidence,
                 produced_by=produced_by, normalized_value=normalized_value, unit=unit,
-                status="needs_review",
+                status="needs_review", **period,
             )
+        elif _different_periods(current, effective_from, effective_to):
+            # Two values for two non-overlapping stated periods (2025 limit vs
+            # 2026 limit): history, not disagreement. Keep both; the later
+            # period is current, the earlier is closed as historical. Neither
+            # is overwritten, so both stay queryable (get_facts_in_force).
+            fact = _facts.create_fact(
+                conn, organization_id=organization_id, entity_id=entity_id,
+                fact_type=fact_type, value=value, confidence=confidence,
+                produced_by=produced_by, normalized_value=normalized_value, unit=unit,
+                status="needs_review", **period,
+            )
+            now = _facts._now()
+            if effective_from >= current["effective_from"]:
+                db.close_fact_validity(conn, str(current["id"]), organization_id, now)
+            else:
+                fact = db.close_fact_validity(conn, str(fact["id"]), organization_id, now)
         else:
             agree = _values_agree(current, value, normalized_value)
             if agree:
@@ -257,7 +286,7 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
                     conn, organization_id=organization_id, entity_id=entity_id,
                     fact_type=fact_type, value=value, confidence=confidence,
                     produced_by=produced_by, normalized_value=normalized_value, unit=unit,
-                    status="contradiction_flagged",
+                    status="contradiction_flagged", **period,
                 )
                 db.set_fact_status(conn, str(current["id"]), organization_id, "contradiction_flagged")
                 current = db.get_fact(conn, str(current["id"]), organization_id)
@@ -377,6 +406,17 @@ def correct_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
     return new_fact
 
 
+def _different_periods(current: dict, new_from, new_to) -> bool:
+    """True only when BOTH facts state a period and the periods do not
+    overlap. A missing period on either side means the period is unknown, so
+    the facts are compared by value exactly as before."""
+    cur_from, cur_to = current.get("effective_from"), current.get("effective_to")
+    if new_from is None or cur_from is None:
+        return False
+    far = _facts.date.max
+    return not (new_from <= (cur_to or far) and cur_from <= (new_to or far))
+
+
 def _values_agree(current_fact: dict, new_value: str, new_normalized: float | None) -> bool:
     """
     Whether a newly-extracted value agrees with the current fact, within
@@ -408,3 +448,103 @@ def _values_agree(current_fact: dict, new_value: str, new_normalized: float | No
 
     relative_difference = abs(new_number - current_number) / abs(current_number)
     return relative_difference <= CONTRADICTION_TOLERANCE
+
+
+# ---------------------------------------------------------------------------
+# Reading everything known about one entity, and human review
+# ---------------------------------------------------------------------------
+
+def get_facts_in_force(conn, entity_id: str, organization_id: str, as_of,
+                        fact_type: str | None = None) -> dict:
+    """What was true on a date (see versions.get_facts_in_force)."""
+    return _versions.get_facts_in_force(conn, entity_id, organization_id, as_of, fact_type)
+
+
+def get_entity_knowledge(conn, entity_id: str, organization_id: str, as_of=None) -> dict | None:
+    """
+    Everything the Knowledge Core holds about one entity, in one organization-
+    scoped read: current facts (each with its evidence), historical facts,
+    unresolved conflicts, relationships in both directions (with the other
+    entity's type and name), and — when `as_of` is given — what was in force
+    on that date, separate from "current". None if the entity does not exist
+    in this organization (a cross-tenant id looks identical to a missing one).
+    """
+    entity = db.get_entity(conn, entity_id, organization_id)
+    if not entity:
+        return None
+
+    all_facts = db.list_facts_for_entity(conn, entity_id, organization_id)
+    current, historical = [], []
+    for f in all_facts:
+        f = dict(f)
+        if f.get("valid_to") is None and f.get("status") != "superseded":
+            f["evidence"] = db.get_evidence_for_fact(conn, str(f["id"]), organization_id)
+            current.append(f)
+        else:
+            historical.append(f)
+
+    conflicts = []
+    for fact_type in sorted({f["fact_type"] for f in current}):
+        c = db.get_unresolved_conflict(conn, entity_id, organization_id, fact_type)
+        if c is not None:
+            conflicts.append({"conflict_id": str(c["id"]), "fact_type": fact_type,
+                              "fact_ids": db.get_conflict_fact_ids(conn, str(c["id"]))})
+
+    def _edges(direction: str) -> list[dict]:
+        out = []
+        for r in _relationships.find_relationships(conn, organization_id, entity_id, None, direction):
+            other_id = r["to_entity_id"] if direction == "from" else r["from_entity_id"]
+            other = db.get_entity(conn, str(other_id), organization_id)
+            if other is None:      # never reveal an entity outside this organization
+                continue
+            out.append({"relationship_id": str(r["id"]), "type": r["relationship_type"],
+                        "entity_id": str(other["id"]), "entity_type": other["entity_type"],
+                        "name": other["name"]})
+        return out
+
+    result = {
+        "entity": entity,
+        "current_facts": current,
+        "historical_facts": historical,
+        "unresolved_conflicts": conflicts,
+        "relationships": {"outgoing": _edges("from"), "incoming": _edges("to")},
+    }
+    if as_of is not None:
+        result["in_force"] = _versions.get_facts_in_force(conn, entity_id, organization_id, as_of)
+    return result
+
+
+def review_fact(conn, fact_id: str, organization_id: str, *, action: str,
+                 reviewed_by: str) -> dict:
+    """
+    Human review of one fact.
+
+      verify  needs_review -> verified. Refused unless the fact has at least
+              one evidence row (nothing is verified without evidence) and is
+              not part of a contradiction (a conflict is settled by
+              correct_fact(), which picks the right value).
+      reject  needs_review -> superseded, closed as no longer current. The row
+              is kept for audit; it is never deleted.
+
+    Raises ValueError for a missing fact (or one in another organization), an
+    unknown action, a missing reviewer name, or a fact in a state that action
+    does not apply to.
+    """
+    reviewed_by = " ".join((reviewed_by or "").split())
+    if not reviewed_by:
+        raise ValueError("A reviewer name is required.")
+    if action not in ("verify", "reject"):
+        raise ValueError("action must be 'verify' or 'reject'.")
+    fact = db.get_fact(conn, fact_id, organization_id)
+    if not fact:
+        raise ValueError("Fact not found.")
+    if fact["status"] != "needs_review":
+        raise ValueError(f"Only a needs_review fact can be reviewed (this one is {fact['status']}).")
+
+    if action == "verify":
+        if not db.get_evidence_for_fact(conn, fact_id, organization_id):
+            raise ValueError("A fact with no evidence cannot be verified.")
+        return db.set_fact_status(conn, fact_id, organization_id, "verified", reviewed_by=reviewed_by)
+
+    db.close_fact_validity(conn, fact_id, organization_id, _facts._now())
+    return db.set_fact_status(conn, fact_id, organization_id, "superseded", reviewed_by=reviewed_by)

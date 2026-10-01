@@ -8,6 +8,7 @@ through every db/service call, no exceptions — the whole point of this
 package's schema (organization_id from the first line of DDL) is wasted if
 an endpoint skips this.
 """
+import datetime
 import logging
 
 import knowledge.service as kc
@@ -67,6 +68,8 @@ def _fact_response(row: dict, *, evidence: list[dict] | None = None) -> dict:
         "produced_by": row["produced_by"],
         "valid_from": row["valid_from"].isoformat() if row.get("valid_from") else None,
         "valid_to": row["valid_to"].isoformat() if row.get("valid_to") else None,
+        "effective_from": row["effective_from"].isoformat() if row.get("effective_from") else None,
+        "effective_to": row["effective_to"].isoformat() if row.get("effective_to") else None,
         "created_at": row["created_at"].isoformat(),
         "reviewed_at": row["reviewed_at"].isoformat() if row.get("reviewed_at") else None,
         "reviewed_by": row.get("reviewed_by"),
@@ -116,6 +119,77 @@ def get_entity(entity_id: str, x_organization_id: str | None = Header(None)):
         if not row:
             raise HTTPException(status_code=404, detail="Entity not found.")
     return _entity_response(row)
+
+
+def _json_safe(value):
+    """Dates/datetimes/UUIDs/Decimals -> JSON-friendly values (recursive)."""
+    import datetime as _dt, decimal as _dec, uuid as _uuid
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (_dt.date, _dt.datetime)):
+        return value.isoformat()
+    if isinstance(value, _uuid.UUID):
+        return str(value)
+    if isinstance(value, _dec.Decimal):
+        return float(value)
+    return value
+
+
+@router.get("/knowledge/entities/{entity_id}/knowledge")
+def get_entity_knowledge(entity_id: str, as_of: str | None = None,
+                          x_organization_id: str | None = Header(None)):
+    """Everything known about one entity: current + historical facts (with
+    evidence), unresolved conflicts, relationships both ways, and — with
+    ?as_of=YYYY-MM-DD — what was in force on that date, kept separate from
+    "current". Organization-scoped; another tenant's id is a 404."""
+    entity_id = _validate_uuid(entity_id, "entity id")
+    if as_of is not None:
+        try:
+            datetime.date.fromisoformat(as_of)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="as_of must be YYYY-MM-DD.")
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        result = kc.get_entity_knowledge(conn, entity_id, organization_id, as_of=as_of)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Entity not found.")
+    return _json_safe(result)
+
+
+@router.get("/knowledge/entities/{entity_id}/relationships")
+def get_entity_relationships(entity_id: str, x_organization_id: str | None = Header(None)):
+    entity_id = _validate_uuid(entity_id, "entity id")
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        result = kc.get_entity_knowledge(conn, entity_id, organization_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Entity not found.")
+    return _json_safe(result["relationships"])
+
+
+class ReviewFactBody(BaseModel):
+    action: str
+    reviewed_by: str
+
+
+@router.post("/knowledge/facts/{fact_id}/review")
+def review_fact(fact_id: str, body: ReviewFactBody, x_organization_id: str | None = Header(None)):
+    """Human review: action 'verify' (needs evidence, not in a conflict) or
+    'reject' (kept for audit as superseded). Conflicts are settled by the
+    correction endpoint, not here."""
+    fact_id = _validate_uuid(fact_id, "fact id")
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        try:
+            row = kc.review_fact(conn, fact_id, organization_id, action=body.action,
+                                 reviewed_by=body.reviewed_by)
+        except ValueError as exc:
+            status = 404 if "not found" in str(exc).lower() else 400
+            raise HTTPException(status_code=status, detail=str(exc))
+        evidence = kc.get_evidence_for_fact(conn, fact_id, organization_id)
+    return _fact_response(row, evidence=evidence)
 
 
 @router.get("/knowledge/entities/{entity_id}/facts")

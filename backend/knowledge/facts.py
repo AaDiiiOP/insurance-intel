@@ -10,7 +10,7 @@ closes that row and opens a new one, so the full history is just every row
 for that entity+fact_type ordered by valid_from. See knowledge/versions.py
 for the read side of this.
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import db
 from knowledge.fact_types import is_singleton_fact_type  # noqa: F401 — re-exported for existing callers
@@ -26,6 +26,18 @@ VALID_CONFIDENCE_TYPES = {"deterministic", "ocr_engine", "model_self_reported"}
 # previously duplicated here AND in property_policy_intelligence.py.
 
 
+def to_date(value):
+    """date / 'YYYY-MM-DD' string / None -> date or None. Anything else is an
+    error: an unreadable period is never silently turned into "unknown"."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value))
+
+
 def _now():
     return datetime.now(timezone.utc)
 
@@ -33,7 +45,8 @@ def _now():
 def create_fact(conn, *, organization_id: str, entity_id: str, fact_type: str,
                  value: str, confidence: dict, produced_by: str,
                  normalized_value: float | None = None, unit: str | None = None,
-                 status: str = "needs_review", make_current: bool = True) -> dict:
+                 status: str = "needs_review", make_current: bool = True,
+                 effective_from=None, effective_to=None) -> dict:
     """
     Insert a new fact row.
 
@@ -53,12 +66,18 @@ def create_fact(conn, *, organization_id: str, entity_id: str, fact_type: str,
     if confidence.get("type") not in VALID_CONFIDENCE_TYPES:
         raise ValueError(f"Unknown confidence type '{confidence.get('type')}'.")
 
+    effective_from = to_date(effective_from)
+    effective_to = to_date(effective_to)
+    if effective_from and effective_to and effective_to < effective_from:
+        raise ValueError("effective_to is before effective_from.")
+
     valid_from = _now() if make_current else None
     return db.create_fact(
         conn, organization_id=organization_id, entity_id=entity_id,
         fact_type=fact_type, value=value, normalized_value=normalized_value,
         unit=unit, confidence=confidence, status=status, produced_by=produced_by,
         valid_from=valid_from, valid_to=None,
+        effective_from=effective_from, effective_to=effective_to,
     )
 
 
@@ -106,6 +125,8 @@ def supersede_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
         produced_by=produced_by,
         valid_from=now,
         valid_to=None,
+        effective_from=old.get("effective_from"),
+        effective_to=old.get("effective_to"),
     )
 
 

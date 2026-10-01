@@ -3,6 +3,8 @@ Knowledge Core versioning — the read side of valid_from/valid_to on
 kc_facts. Writing a version is knowledge/facts.py's supersede_fact(); this
 module only reads.
 """
+from datetime import datetime, timezone
+
 import db
 
 
@@ -66,3 +68,47 @@ def get_historical_values(conn, entity_id: str, organization_id: str, fact_type:
     """Every version of this entity+fact_type, oldest first, including the
     current one — so a caller can render a full timeline in one call."""
     return db.get_historical_facts(conn, entity_id, organization_id, fact_type)
+
+
+def get_facts_in_force(conn, entity_id: str, organization_id: str, as_of,
+                        fact_type: str | None = None) -> dict:
+    """
+    What was true on `as_of` (a date), kept separate from "what is current".
+
+    Returns {"as_of", "in_force": [...], "undated_current": [...]}:
+      in_force         facts whose STATED effective period contains as_of.
+                       For a single-valued type, a corrected row and the row
+                       it replaced share a period, so only the newest of each
+                       (fact_type, effective_from) is returned.
+      undated_current  current facts (valid_to IS NULL, not superseded) that
+                       state NO period. Their period is UNKNOWN — they are
+                       listed so a reader sees them, never assumed to apply.
+    """
+    from knowledge.fact_types import is_singleton_fact_type
+    from knowledge.facts import to_date
+
+    day = to_date(as_of)
+    rows = db.get_facts_effective_on(conn, entity_id, organization_id, day, fact_type)
+    # Newest version first. created_at is NOT used to order versions: inside
+    # one database transaction every row gets the same now(), so a correction
+    # and the row it replaced can tie. An open row (valid_to IS NULL) beats a
+    # closed one; among closed rows the latest valid_from wins.
+    epoch = datetime.min.replace(tzinfo=timezone.utc)
+    rows = sorted(rows, key=lambda r: (r.get("valid_to") is None,
+                                       r.get("valid_from") or epoch), reverse=True)
+    in_force, seen = [], set()
+    for row in rows:
+        if is_singleton_fact_type(row["fact_type"]):
+            key = (row["fact_type"], row["effective_from"])
+            if key in seen:
+                continue
+            seen.add(key)
+        elif row.get("valid_to") is not None:
+            continue
+        in_force.append(row)
+
+    undated = [
+        f for f in db.list_facts_for_entity(conn, entity_id, organization_id, fact_type, True)
+        if f.get("effective_from") is None and f.get("status") != "superseded"
+    ]
+    return {"as_of": day.isoformat(), "in_force": in_force, "undated_current": undated}
