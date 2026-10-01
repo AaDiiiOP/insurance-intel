@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.8.0** (see `frontend/package.json` — the one version number
+**Version: 0.8.1** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Phase 1 status:** Phase 0, Phase 1A safety and Phase 1B are accepted.
@@ -9,7 +9,7 @@ Phase 1A extraction *quality* is being improved — the v0.6.0 code changes
 has not been measured with real Qwen yet. Last measured results: Phase 0
 100% accuracy with 0 silent guesses; Phase 1A (`model_reachable: true`) 0
 silent wrong facts, 67.5% recall; Phase 1B 13/13 deterministic comparison
-cases; regression suite now 73/73 (v0.8.0). The first FULL 20-company run of v0.7.0 (2026-10-01) gave 100% recall on every fact type but FAILED the hard gate with 2 silently wrong facts (fixed in v0.7.1, not yet re-measured). A 3-company quick check of v0.6.0 gave 100% recall but 4 silently wrong risk-factor facts (hard gate FAILED); v0.6.1 fixed it: the same 3-company quick check now shows 0 silent wrong, 100% recall and 100% evidence verified. The full 20-company run is PENDING (running overnight 2026-09-30); until it finishes, treat 3/20 as a partial result, not an accepted Phase 1A. See `Results.md`
+cases; regression suite now 88/88 (v0.8.1). The first FULL 20-company run of v0.7.0 (2026-10-01) gave 100% recall on every fact type but FAILED the hard gate with 2 silently wrong facts (fixed in v0.7.1, not yet re-measured). A 3-company quick check of v0.6.0 gave 100% recall but 4 silently wrong risk-factor facts (hard gate FAILED); v0.6.1 fixed it: the same 3-company quick check now shows 0 silent wrong, 100% recall and 100% evidence verified. The full 20-company run is PENDING (running overnight 2026-09-30); until it finishes, treat 3/20 as a partial result, not an accepted Phase 1A. See `Results.md`
 for the full run-by-run detail.
 
 *(Previously "Insurance Intelligence" — renamed, same codebase, same
@@ -591,10 +591,26 @@ still passes 13/13 and the suite is 73/73.
   `POST /knowledge/facts/{id}/review`; fact responses now include
   `effective_from / effective_to`.
 
-**Not done yet (known limitations):** the extractor does not yet read policy
-periods from documents, so extracted facts are still undated; there is no
+**Not done yet (known limitations):** (the extractor now reads policy periods — see v0.8.1 below); there is no
 frontend panel for relationships / as-of / review yet (API only); entity
 resolution is still exact-name only; hybrid retrieval is untouched.
+
+### v0.8.1 — policy period read from documents (deterministic)
+
+`property_policy_intelligence.extract_policy_period()` reads "Period: <date> to
+<date>" (also "Policy Period" / "Period of Insurance") from the document text
+with plain pattern matching — **no model, so it cannot guess**. Dates must use a
+month name or ISO form; numeric dd/mm/yyyy is deliberately not read (3/4/2026 is
+ambiguous), and two different periods, an unreadable date or an end before the
+start all give "unknown". The period found in a document is attached as
+`effective_from / effective_to` to that document's period-bound facts only
+(coverage, coverage limit, deductible, exclusion, endorsement, sum insured);
+location, occupancy, construction and risk factors stay undated. Documents with no
+stated period (schedule, endorsement, survey) stay undated, so cross-document
+contradictions behave exactly as before. Checked against the real benchmark: the
+period is read from 20 of 20 `01_property_policy.pdf` and from none of the other
+document types. 88/88 tests. **Not yet run with real Qwen** — it only touches
+dates, but run `--limit 3` once to confirm recall and silent wrong are unchanged.
 
 Do not read any of this as an improvement yet: the last measured real-Qwen
 numbers are still 0 silent wrong, 67.5% recall, 1.7% false extraction. Run

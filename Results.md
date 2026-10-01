@@ -1143,3 +1143,12 @@ Audit correction: the audit's suspected duplicate-relationship bug does not exis
 (`service.create_relationship` was already idempotent). Limitations: extractor
 supplies no periods yet, no UI panel, exact-name entity resolution, hybrid
 retrieval untouched.
+
+
+## v0.8.1 — policy period extraction (2026-10-01), not yet run with real Qwen
+
+Deterministic `extract_policy_period` (no model); period attached as effective_from/
+effective_to to period-bound facts of the document that states it. Verified on the
+real benchmark PDFs: found in 20/20 policy documents, none in schedules,
+endorsements, surveys or loss runs. 15 new tests (suite 88/88). Extraction logic for
+facts is unchanged; a --limit 3 real-Qwen check is still to be run.

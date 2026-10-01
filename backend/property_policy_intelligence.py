@@ -28,6 +28,7 @@ import collections
 import difflib
 import logging
 import re
+from datetime import date
 
 from llm import LLMError, generate_json, load_prompt
 
@@ -150,6 +151,58 @@ def numeric_value_grounded(value: str, source_text: str) -> bool:
             if abs(sum(combo) - target) < 0.5:
                 return True
     return False
+
+
+# Policy period (v0.8.1) — read DETERMINISTICALLY from the document text, never
+# by the model, so it cannot be guessed. A period is returned only when the
+# text states "Period: <date> to <date>" (or "Policy Period" / "Period of
+# Insurance") with dates written with a month NAME or as ISO yyyy-mm-dd.
+# Numeric dd/mm/yyyy is deliberately NOT read: 03/04/2026 is 3 April in India
+# and 4 March in the US, and guessing wrong would silently shift a policy year.
+# Two different periods in one document, an unreadable date, or an end before
+# the start all give None (period unknown).
+_MONTHS = {m: i for i, m in enumerate(
+    ["january", "february", "march", "april", "may", "june", "july", "august",
+     "september", "october", "november", "december"], 1)}
+_DATE_PAT = (r"(?:\d{4}-\d{2}-\d{2}|\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]{3,9}\.?,?\s+\d{4})")
+_PERIOD_RE = re.compile(
+    rf"(?:policy\s+period|period\s+of\s+insurance|\bperiod)\s*[:\-]\s*({_DATE_PAT})\s*"
+    rf"(?:to|until|through|[-\u2013\u2014])\s*({_DATE_PAT})", re.I)
+
+# Fact types whose value holds for the policy period. Attributes of the
+# insured property itself (location, occupancy, construction, risk factors)
+# are not tied to a policy year and stay undated.
+PERIOD_BOUND_FACT_TYPES = frozenset({
+    "policy.coverage", "policy.coverage_limit", "policy.deductible",
+    "policy.exclusion", "policy.endorsement", "property.sum_insured",
+})
+
+
+def _parse_date(token: str) -> date | None:
+    token = token.strip().rstrip(".,")
+    try:
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", token):
+            return date.fromisoformat(token)
+        m = re.fullmatch(r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})", token)
+        if not m:
+            return None
+        name = m.group(2).lower()
+        month = _MONTHS.get(name) or next(
+            (i for full, i in _MONTHS.items() if len(name) >= 3 and full.startswith(name)), None)
+        return date(int(m.group(3)), month, int(m.group(1))) if month else None
+    except (ValueError, TypeError):
+        return None
+
+
+def extract_policy_period(text: str) -> tuple[date, date] | None:
+    """(start, end) of the policy period stated in `text`, or None."""
+    found = set()
+    for a, b in _PERIOD_RE.findall(text or ""):
+        start, end = _parse_date(a), _parse_date(b)
+        if start is None or end is None or end < start:
+            return None            # a stated-but-unreadable period is unknown, not guessed
+        found.add((start, end))
+    return found.pop() if len(found) == 1 else None
 
 
 def reset_extraction_diagnostics() -> None:
@@ -635,10 +688,14 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
                 full_text=text,
             ))
 
+        period = extract_policy_period(text)
+        EXTRACTION_DIAGNOSTICS["policy_period_found" if period else "policy_period_not_found"] += 1
+
         documents_processed.append({
             "document_id": document_id, "filename": document["filename"],
             "facts_found": len(extracted),
             "chunks_processed": len(chunks),
+            "policy_period": [period[0].isoformat(), period[1].isoformat()] if period else None,
         })
 
         for item in extracted:
@@ -657,6 +714,11 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
                 evidence_section=item["evidence"]["section"],
                 evidence_snippet=item["evidence"]["snippet"],
                 evidence_source=item["evidence"]["source"],
+                # The period stated IN THIS DOCUMENT applies to the
+                # period-bound facts read from this document; anything else,
+                # or a document with no readable period, stays undated.
+                effective_from=period[0] if period and item["fact_type"] in PERIOD_BOUND_FACT_TYPES else None,
+                effective_to=period[1] if period and item["fact_type"] in PERIOD_BOUND_FACT_TYPES else None,
             )
             facts_written.append(fact)
             if fact.get("_contradiction"):
