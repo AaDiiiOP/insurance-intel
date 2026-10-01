@@ -109,6 +109,49 @@ def is_non_hazard_risk_factor(value: str) -> bool:
     return False
 
 
+# Numeric grounding rule (v0.7.0). The 3-company quick check of v0.6.1 showed a
+# policy.coverage_limit of "n1,650,000,000" for AUR-SYN-003. That number is in
+# NONE of the company's documents (the endorsement states n150,000,000 and
+# n500,000,000), yet it carried a real, verified snippet: verify_snippet()
+# proves the QUOTE is real, not that the extracted VALUE is what the quote
+# says. So a numeric value must also be grounded in the text it came from:
+# either that number appears in it, or it is the sum of 2-3 figures that do
+# (a policy listing "Property Damage Sum Insured n500,000,000" and "Business
+# Interruption Sum Insured n100,000,000" legitimately yields a combined
+# n600,000,000 — the benchmark accepts that reading). Anything else is an
+# unsupported number and is dropped, never written.
+_NUMBER_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
+
+
+def _figures(text: str) -> list[float]:
+    out = []
+    for tok in _NUMBER_RE.findall(text or ""):
+        tok = tok.replace(",", "").rstrip(".")
+        try:
+            out.append(float(tok))
+        except ValueError:
+            pass
+    return out
+
+
+def numeric_value_grounded(value: str, source_text: str) -> bool:
+    """True if the number in `value` appears in `source_text`, or equals the
+    sum of 2-3 of the larger (>=10,000) figures in it."""
+    target = _numeric(value)
+    if target is None:
+        return False
+    figs = _figures(source_text)
+    if any(abs(f - target) < 0.5 for f in figs):
+        return True
+    big = sorted({f for f in figs if f >= 10_000})[:40]
+    import itertools
+    for r in (2, 3):
+        for combo in itertools.combinations(big, r):
+            if abs(sum(combo) - target) < 0.5:
+                return True
+    return False
+
+
 def reset_extraction_diagnostics() -> None:
     EXTRACTION_DIAGNOSTICS.clear()
     DROPPED_FACT_TYPE_NAMES.clear()
@@ -338,6 +381,17 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
             continue
         if only_types and fact_type not in only_types:
             EXTRACTION_DIAGNOSTICS["dropped_out_of_scope_type"] += 1
+            continue
+        if fact_type in NUMERIC_FACT_TYPES and not numeric_value_grounded(value, verification_text):
+            EXTRACTION_DIAGNOSTICS["dropped_numeric_not_in_source"] += 1
+            continue
+        if fact_type == "policy.endorsement" and not _RECOVERY_CUES["policy.endorsement"].search(verification_text):
+            # v0.7.1: an endorsement is a change attached to a policy. A
+            # document that never mentions an endorsement, change or amendment
+            # cannot be where one is stated — the full 20-company run had the
+            # model label two policy CONDITIONS ("Fire protection systems must
+            # be maintained...") as endorsements (2 silently wrong facts).
+            EXTRACTION_DIAGNOSTICS["dropped_endorsement_without_endorsement_text"] += 1
             continue
         if fact_type == "property.risk_factors" and is_non_hazard_risk_factor(value):
             EXTRACTION_DIAGNOSTICS["dropped_non_hazard_risk_factor"] += 1

@@ -1091,3 +1091,42 @@ Remaining non-silent false extractions: 3 coverage_limit and 3 occupancy
 `result-20260930T163949.869177+0000.json` is on the developer's machine.
 **STATUS: full 20-company run pending (started overnight). Phase 1A is NOT yet
 accepted; 3/20 is a partial result.**
+
+
+## v0.7.0 — false-extraction investigation (2026-09-30, 3-company loop)
+
+Input: v0.6.1 quick check (3 companies, 100% recall, 0 silent wrong, 9.7% false).
+Findings (full detail in README "v0.7.0"): (1) `n1,650,000,000` coverage_limit is in
+no source document for AUR-SYN-003 — an unsupported number that passed because
+snippet verification checks the quote, not the value; now rejected unless stated
+in, or a sum of 2-3 figures stated in, the source. (2) occupancy "false" facts
+are verbatim restatements in the risk survey, exact-text compared by the
+Knowledge Core -> flagged contradictions (safe, noisy). (3) "duplicate" singleton
+facts are an occurrence-count artefact; reconcile_fact already stores one fact
+with several evidence rows. Evaluator: false facts classified (reporting only),
+`unique_persisted_facts` added. Tests 45 -> 53. NOT yet re-measured with real
+Qwen; the 20-company benchmark has NOT been rerun.
+
+
+## Full 20-company run of v0.7.0 (2026-10-01) — hard gate FAILED, v0.7.1 fix
+
+Real qwen2.5:7b, 20 companies. Recall 100% (all 10 fact types), false-extraction
+6.7%, snippet-verified 99.8%, traceable 99.8%, page accuracy 100%, **silent
+wrong 2** (AUR-SYN-014: two policy conditions labelled policy.endorsement).
+Unique persisted facts 303 / occurrences 406. Diagnostics: 445 facts returned,
+37 rating/protection risk factors dropped, 2 ungrounded numbers dropped.
+False-extraction breakdown: 25 CONTRADICTORY_FACT, 2 LEGITIMATE_ADDITIONAL_FACT
+(the silent ones — value present, type wrong). Fix in v0.7.1 (endorsement-text
+rule + prompt), 55/55 tests. Phase 1A NOT accepted until a rerun shows 0.
+latest.json = this failed run (historical 67.5% result stays in historical/).
+
+
+## AUR-SYN-014 re-check (v0.7.1, 2026-10-01, --only) — PASSED
+
+Silent wrong 0 (was 2); recall 100% (10/10 fact types); false-extraction 5.0%
+(1 CONTRADICTORY_FACT coverage_limit); evidence 100/100/100. The endorsement
+rule did not fire (model was correct this run). Status: full run v0.7.0 = 19/20
+companies clean + 1 company fixed and re-verified individually in v0.7.1. A full
+20-company rerun on v0.7.1 has not been performed. Result file for this run is on
+the developer's machine (result-20261001T150200…json); only console output was
+shared.

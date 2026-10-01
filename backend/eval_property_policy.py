@@ -59,6 +59,7 @@ cleaned up automatically — same convention as tests/conftest.py's
 test_org, since these are inert rows scoped to an id nothing else
 references).
 """
+import collections
 import json
 import subprocess
 import sys
@@ -71,7 +72,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import db
 import llm
 import property_policy_intelligence as ppi
-from knowledge.fact_types import FACT_DEFINITIONS
+from knowledge.fact_types import FACT_DEFINITIONS, NUMERIC_FACT_TYPES
 from parsers import ParseError, parse_file_with_quality
 
 DOCUMENT_FILES = [
@@ -322,6 +323,7 @@ def score_evidence(conn, organization_id: str, written: dict, matched_gt: dict |
         "evidence_page": None,
         "evidence_document": None,
         "evidence_page_correct": None,
+        "_document_id": None,
     }
     if not rows:
         return result
@@ -329,6 +331,7 @@ def score_evidence(conn, organization_id: str, written: dict, matched_gt: dict |
     result["evidence_has_document"] = bool(row.get("document_id"))
     result["evidence_page"] = row.get("page")
     result["evidence_document"] = row.get("document_filename")
+    result["_document_id"] = str(row["document_id"]) if row.get("document_id") else None
     snippet = (row.get("snippet") or "").strip()
     result["snippet_present"] = bool(snippet)
     if snippet and row.get("document_id"):
@@ -343,6 +346,37 @@ def score_evidence(conn, organization_id: str, written: dict, matched_gt: dict |
         if row.get("document_filename") == gt_file and row.get("page") is not None:
             result["evidence_page_correct"] = int(row["page"]) == int(matched_gt["page"])
     return result
+
+
+def classify_false_extraction(fact_type: str, value: str, status: str | None,
+                              source_text: str | None) -> str:
+    """
+    Explain WHY an extracted fact that matched no ground-truth entry is
+    "false". REPORTING ONLY — it never changes whether a fact counts as false
+    or silently wrong (that scoring is unchanged).
+
+      UNSUPPORTED               the value is not in (or derivable from) the
+                                document the evidence points to, or there is
+                                no such document — a real extraction error.
+      CONTRADICTORY_FACT        the value IS in its source document and the
+                                Knowledge Core flagged it against another
+                                current value (contradiction_flagged).
+      LEGITIMATE_ADDITIONAL_FACT the value IS in its source document and was
+                                not flagged; ground truth simply does not list
+                                it.
+    Text values count as supported only when they appear verbatim
+    (whitespace/case-insensitive) in the source; numbers use
+    ppi.numeric_value_grounded (stated, or a sum of stated figures).
+    """
+    if not source_text:
+        return "UNSUPPORTED"
+    if fact_type in NUMERIC_FACT_TYPES:
+        grounded = ppi.numeric_value_grounded(value, source_text)
+    else:
+        grounded = " ".join(value.lower().split()) in " ".join(source_text.lower().split())
+    if not grounded:
+        return "UNSUPPORTED"
+    return "CONTRADICTORY_FACT" if status == "contradiction_flagged" else "LEGITIMATE_ADDITIONAL_FACT"
 
 
 def score_company(company_dir: Path, ingest_result: dict, conn=None,
@@ -412,6 +446,12 @@ def score_company(company_dir: Path, ingest_result: dict, conn=None,
         # so a wrong value sitting in needs_review still counts as a silent
         # wrong fact: nothing about its status distinguishes it from a
         # correct one, which is exactly the failure mode "silent" describes.
+        doc_id = ev.pop("_document_id", None)
+        classification = None
+        if candidates and best_match is None:
+            classification = classify_false_extraction(
+                fact_type, written["value"], written.get("status"),
+                doc_text_cache.get(doc_id) if doc_id else None)
         is_wrong = best_match is None and candidates
         is_silent = is_wrong and written.get("status") not in ("contradiction_flagged",)
 
@@ -433,6 +473,8 @@ def score_company(company_dir: Path, ingest_result: dict, conn=None,
             "correct": best_match is not None,
             "silently_wrong": is_silent,
             "has_ground_truth_for_type": bool(candidates),
+            "false_classification": classification,
+            "fact_id": str(written["id"]) if written.get("id") is not None else None,
             **ev,
         })
 
@@ -484,6 +526,14 @@ def score_company(company_dir: Path, ingest_result: dict, conn=None,
         "evidence_page_correct_count": sum(1 for f in fact_scores if f["evidence_page_correct"]),
         "by_fact_type": _by_fact_type(by_fact_type, fact_scores, matched_gt_ids,
                                        singleton_recalled_types),
+        # Repeats: a singleton restated by another document is merged onto
+        # ONE persisted fact (extra evidence, not a new row), but the extractor
+        # returns that same fact once per occurrence. unique_fact_count is the
+        # number of distinct persisted facts; extracted_fact_count above is
+        # the unchanged occurrence count the old metrics are built on.
+        "unique_fact_count": len({f["fact_id"] for f in fact_scores if f["fact_id"]}) or None,
+        "false_extraction_breakdown": dict(collections.Counter(
+            f["false_classification"] for f in fact_scores if f["false_classification"])),
         "contradictions_flagged": len(ingest_result["analysis"]["contradictions"]),
         "fact_scores": fact_scores,
     }
@@ -550,6 +600,13 @@ def summarise(company_results: list[dict]) -> dict:
         "hard_gates": hard_gates,
         "statistical_thresholds": statistical,
         "by_fact_type": dict(sorted(by_type.items())),
+        # Why "false" facts are false (reporting only; scoring unchanged) and
+        # how many persisted facts there really are vs. occurrences.
+        "false_extraction_breakdown": dict(sum(
+            (collections.Counter(r.get("false_extraction_breakdown") or {}) for r in scored),
+            collections.Counter())),
+        "unique_persisted_facts": sum(r.get("unique_fact_count") or 0 for r in scored),
+        "fact_occurrences": total_extracted,
         "note": (
             "hard_gates must read exactly as required (zero_silent_wrong_facts=True) "
             "before Phase 1A is considered accepted. statistical_thresholds are "
@@ -584,6 +641,8 @@ def _print_by_fact_type_table(summary: dict, diagnostics: dict) -> None:
         print(f"{ft:<24}{e['ground_truth']:>13}{e['recalled']:>10}{pct:>10}{e['false']:>8}")
     print("=" * 66)
     st = summary["statistical_thresholds"]
+    print(f"false-extraction breakdown: {summary.get('false_extraction_breakdown')}   "
+          f"unique persisted facts {summary.get('unique_persisted_facts')} / occurrences {summary.get('fact_occurrences')}")
     print(f"overall recall {st['fact_recall_pct']}%   false-extraction {st['false_extraction_rate_pct']}%   "
           f"silent-wrong {summary['hard_gates']['silent_wrong_fact_count']}")
     print(f"evidence: snippet-verified {st['avg_evidence_snippet_verified_pct']}%   "
@@ -609,6 +668,12 @@ def main():
     company_limit = None
     if "--limit" in sys.argv:
         company_limit = int(sys.argv[sys.argv.index("--limit") + 1])
+    # `--only AUR-SYN-014,AUR-SYN-009` scores just those companies (partial
+    # run, same rules as --limit: saved, never becomes latest.json).
+    only_ids = None
+    if "--only" in sys.argv:
+        only_ids = {x.strip() for x in sys.argv[sys.argv.index("--only") + 1].split(",") if x.strip()}
+        company_limit = len(only_ids)
     companies_dir = dataset_root / "companies"
     if not companies_dir.is_dir():
         print(f"No companies/ directory found under {dataset_root}")
@@ -646,7 +711,9 @@ def main():
         )
 
         company_dirs = sorted(d for d in companies_dir.iterdir() if d.is_dir())
-        if company_limit:
+        if only_ids:
+            company_dirs = [d for d in company_dirs if d.name in only_ids]
+        elif company_limit:
             company_dirs = company_dirs[:company_limit]
         print(f"Found {len(company_dirs)} companies. Running Phase 1A benchmark "
               f"(organization {organization_id})...\n")

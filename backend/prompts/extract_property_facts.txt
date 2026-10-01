@@ -38,7 +38,9 @@ SINGLE-VALUED (at most one true value per document — emit once):
                              insured unless the text calls it that.
   policy.coverage_limit    — the policy's overall coverage limit / sum
                              insured (the headline figure, if named
-                             separately from property.sum_insured)
+                             separately from property.sum_insured). A revised
+                             value for one item (e.g. "Revised machinery
+                             declared value") is NOT the coverage limit.
   policy.deductible        — the deductible / excess amount
 
 MULTI-VALUED (a document can state SEVERAL — emit ONE separate object for
@@ -70,7 +72,10 @@ EACH distinct one; never merge them into one object):
                              change's own sentence as the value. Administrative
                              changes (adding a contact, correcting a name) are
                              endorsements too, even when they mention no
-                             money.
+                             money. Policy CONDITIONS or obligations (e.g.
+                             "Fire protection systems must be maintained",
+                             "Material changes must be notified") are NOT
+                             endorsements: extract nothing for them.
 
 Rules:
 - Only include a fact this document actually, unambiguously states. Do not

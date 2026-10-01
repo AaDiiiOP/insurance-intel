@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.6.1** (see `frontend/package.json` — the one version number
+**Version: 0.7.2** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Phase 1 status:** Phase 0, Phase 1A safety and Phase 1B are accepted.
@@ -9,7 +9,7 @@ Phase 1A extraction *quality* is being improved — the v0.6.0 code changes
 has not been measured with real Qwen yet. Last measured results: Phase 0
 100% accuracy with 0 silent guesses; Phase 1A (`model_reachable: true`) 0
 silent wrong facts, 67.5% recall; Phase 1B 13/13 deterministic comparison
-cases; regression suite now 45/45. A 3-company quick check of v0.6.0 gave 100% recall but 4 silently wrong risk-factor facts (hard gate FAILED); v0.6.1 fixed it: the same 3-company quick check now shows 0 silent wrong, 100% recall and 100% evidence verified. The full 20-company run is PENDING (running overnight 2026-09-30); until it finishes, treat 3/20 as a partial result, not an accepted Phase 1A. See `Results.md`
+cases; regression suite now 55/55. The first FULL 20-company run of v0.7.0 (2026-10-01) gave 100% recall on every fact type but FAILED the hard gate with 2 silently wrong facts (fixed in v0.7.1, not yet re-measured). A 3-company quick check of v0.6.0 gave 100% recall but 4 silently wrong risk-factor facts (hard gate FAILED); v0.6.1 fixed it: the same 3-company quick check now shows 0 silent wrong, 100% recall and 100% evidence verified. The full 20-company run is PENDING (running overnight 2026-09-30); until it finishes, treat 3/20 as a partial result, not an accepted Phase 1A. See `Results.md`
 for the full run-by-run detail.
 
 *(Previously "Insurance Intelligence" — renamed, same codebase, same
@@ -482,6 +482,78 @@ unchanged. Known remaining issues from that run: occupancy paraphrases from
 the risk survey and one `coverage_limit` "n1,650,000,000" from an endorsement
 (both flagged as contradictions, not silent), and one endorsement snippet that
 did not verify (98.4% verified).
+
+**v0.7.0 — false-extraction investigation (3-company loop; full 20 NOT rerun).**
+The v0.6.1 quick check (0 silent wrong, 100% recall, 9.7% false extraction: 3
+`policy.coverage_limit` + 3 `property.occupancy`) was analysed fact by fact
+against the source PDFs:
+
+- **`n1,650,000,000` (AUR-SYN-003 coverage_limit) is NOT a legitimate revised
+  value.** It appears in none of that company's documents (the endorsement says
+  n150,000,000 and n500,000,000). Root cause: the snippet check only proves the
+  *quote* is real, not that the extracted *number* is what the quote says.
+  Fix: a numeric value must be stated in its source document, or be the sum of
+  2-3 stated figures (so a legitimately combined n500M + n100M = n600M limit is
+  still accepted). Otherwise it is dropped (`dropped_numeric_not_in_source`).
+  The other two coverage_limit "false" values of the latest run are not in the
+  console output; the result file now classifies every false fact itself.
+- **The occupancy "false" facts** (e.g. "precision components" from the risk
+  survey) ARE in their source documents: they are shorter restatements of the
+  occupancy the policy describes in full. The Knowledge Core compares singleton
+  text exactly, so it flags them as a contradiction. Correct safe behaviour
+  (nothing silent), but noisy; a semantic equivalence check is a separate,
+  later decision and was not added.
+- **"Duplicate" singleton facts (e.g. sum_insured 14 extracted) are a counting
+  artefact, not duplicate rows.** `reconcile_fact` already attaches a repeated
+  value to the ONE existing fact as extra evidence (covered by a new test). The
+  extractor just returns that fact once per occurrence. Results now also report
+  `unique_persisted_facts` next to `fact_occurrences`. The existing metrics are
+  unchanged.
+- **Result files now classify every false extraction** as UNSUPPORTED /
+  CONTRADICTORY_FACT / LEGITIMATE_ADDITIONAL_FACT (`false_extraction_breakdown`).
+  This is reporting only; what counts as false or silently wrong is unchanged.
+
+Status: code + 53 tests done, NOT yet measured with real Qwen. Next command:
+`docker-compose exec backend python3 eval_property_policy.py /app/benchmark_data --limit 3`.
+The 20-company benchmark has NOT been rerun in this iteration.
+
+**First full 20-company run (v0.7.0, 2026-10-01, real qwen2.5:7b) — HARD GATE FAILED.**
+`backend/evaluations/phase1a/latest.json` is this run. Recall 100% on all 10 fact
+types (every one 20/20 or 40/40), false-extraction 6.7%, evidence snippet-verified
+99.8%, page accuracy 100%, **silent wrong 2** (both in AUR-SYN-014). The two
+facts were policy CONDITIONS from `01_property_policy.pdf` ("Fire protection
+systems must be maintained.", "Material changes in occupancy or operations must
+be notified.") labelled `policy.endorsement`. All 20 policies carry that same
+Conditions line and the model got it right in 19. Phase 1A is therefore NOT
+accepted. Other findings of that run: 25 of 27 false extractions are
+CONTRADICTORY_FACT (13 occupancy restatements from risk surveys; 8 coverage
+limits that are really "Revised machinery declared value" figures from
+endorsements; 4 sum-insured values from coverage schedules that genuinely differ
+from the policy, e.g. 370M vs 350M — correctly flagged). The other 2 are the
+silent ones above. One snippet did not verify (AUR-SYN-009 coverage).
+
+**v0.7.1 fix (not re-measured):** a `policy.endorsement` is dropped unless its
+source document mentions an endorsement, change or amendment (none of the 20
+policy documents does); the prompt now says conditions are not endorsements and
+that a revised single-item value is not a coverage limit. New flag
+`--only AUR-SYN-014` scores named companies only (partial run, never
+`latest.json`). Caveat of the classifier: LEGITIMATE_ADDITIONAL_FACT only means
+the VALUE is in the source — it does not check the fact TYPE, which is why the 2
+silent facts carried that label.
+
+**AUR-SYN-014 re-check on v0.7.1 (2026-10-01, `--only AUR-SYN-014`, real qwen2.5:7b) —
+PASSED.** Silent wrong 0 (was 2), recall 100% on all 10 fact types, evidence
+snippet-verified / traceable / page accuracy 100%, false-extraction 5.0% (1
+coverage_limit, a CONTRADICTORY_FACT). Diagnostics: 22 facts returned, 2
+rating/protection risk factors dropped. Note: the new endorsement-text rule did
+not fire in this run — the model labelled the conditions correctly this time —
+so the rule's effect is covered by its unit tests, not by this run.
+
+**Current Phase 1A status, stated precisely:** the full 20-company run (v0.7.0)
+gave 100% recall, 19 of 20 companies clean and 2 silent wrong facts in one
+company (AUR-SYN-014). That company was fixed in v0.7.1 and re-verified on its
+own with 0 silent wrong. A full 20-company run on v0.7.1 has NOT been done;
+`phase1a/latest.json` is still the v0.7.0 full run. 55/55 regression tests pass.
 
 Do not read any of this as an improvement yet: the last measured real-Qwen
 numbers are still 0 silent wrong, 67.5% recall, 1.7% false extraction. Run
