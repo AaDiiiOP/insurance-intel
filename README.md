@@ -1,16 +1,19 @@
 # Aurevia BrokerOS
 
-**Version: 0.8.1** (see `frontend/package.json` — the one version number
+**Version: 0.8.2** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
-**Phase 1 status:** Phase 0, Phase 1A safety and Phase 1B are accepted.
-Phase 1A extraction *quality* is being improved — the v0.6.0 code changes
-(see "Phase 1A extraction-improvement loop" below) are in, but their effect
-has not been measured with real Qwen yet. Last measured results: Phase 0
-100% accuracy with 0 silent guesses; Phase 1A (`model_reachable: true`) 0
-silent wrong facts, 67.5% recall; Phase 1B 13/13 deterministic comparison
-cases; regression suite now 88/88 (v0.8.1). The first FULL 20-company run of v0.7.0 (2026-10-01) gave 100% recall on every fact type but FAILED the hard gate with 2 silently wrong facts (fixed in v0.7.1, not yet re-measured). A 3-company quick check of v0.6.0 gave 100% recall but 4 silently wrong risk-factor facts (hard gate FAILED); v0.6.1 fixed it: the same 3-company quick check now shows 0 silent wrong, 100% recall and 100% evidence verified. The full 20-company run is PENDING (running overnight 2026-09-30); until it finishes, treat 3/20 as a partial result, not an accepted Phase 1A. See `Results.md`
-for the full run-by-run detail.
+**Status (stated precisely, 2026-10-02):**
+
+| Part | Status |
+|---|---|
+| Phase 0 — Document Intelligence | Frozen. 100% accuracy, 0 silent guesses. |
+| Phase 1A — property/policy extraction | Safety hardening done; extraction quality still in a development loop. Full 20-company run of v0.7.0: 100% recall, 19/20 companies clean, 2 silent wrong (AUR-SYN-014 endorsements). Fixed in v0.7.1 and re-checked on that company only (0 silent wrong). **No full 20-company run exists on the fixed code; it is due at the end of the Knowledge Core phase.** |
+| Phase 1B — Knowledge Core | Implemented and hardening: entities, facts, evidence, relationships, versioning, temporal facts, conflicts, review, tenant scoping, 13/13 deterministic comparison cases. |
+| v0.8.1 — policy-period extraction | Code and tests done (88/88; parser reads 20/20 benchmark policy PDFs). **Not yet run with real Qwen** — a `--limit 3` check is the next step. |
+
+Tenant isolation is application-level (not PostgreSQL RLS); revisit before production.
+See `Results.md` for run-by-run detail.
 
 *(Previously "Insurance Intelligence" — renamed, same codebase, same
 principles: everything below still applies.)*
@@ -896,3 +899,16 @@ since `docker compose up` alone reuses an already-built image.
 **Ports clash with another project** -- everything's remapped off the common
 defaults (5183 / 8100 / 5442 / 8101 instead of 5173 / 8000 / 5432 / 8001)
 specifically so this can run alongside something else.
+
+## v0.8.2 — deterministic entity normalization (2026-10-02)
+
+`knowledge/entities.py` now normalizes names (case, punctuation, "&"/"and",
+legal suffixes such as Pvt Ltd / Private Limited / LLP / Inc) before matching.
+`get_or_create_entity`: exact name wins; otherwise exactly one normalized
+match (name or recorded alias) is reused and the new spelling is stored in
+`attributes.aliases`; two or more matches are ambiguous, so a new entity is
+created rather than guessing. Never merges across entity types or tenants.
+`find_possible_duplicates` lists look-alike pairs (token overlap >= 0.6) for
+human review; nothing is merged automatically. No fuzzy auto-merge, no schema
+change. Tests: 93/93 (5 new). Not run against real Qwen; it does not touch
+extraction or scoring.

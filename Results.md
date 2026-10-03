@@ -1152,3 +1152,6 @@ effective_to to period-bound facts of the document that states it. Verified on t
 real benchmark PDFs: found in 20/20 policy documents, none in schedules,
 endorsements, surveys or loss runs. 15 new tests (suite 88/88). Extraction logic for
 facts is unchanged; a --limit 3 real-Qwen check is still to be run.
+
+## v0.8.2 (2026-10-02)
+Entity normalization/aliases added; 93/93 tests. Deterministic, no model involved. v0.8.1 policy-period `--limit 3` real-Qwen check still pending.
