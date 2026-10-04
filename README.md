@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.8.2** (see `frontend/package.json` — the one version number
+**Version: 0.9.0** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Status (stated precisely, 2026-10-02):**
@@ -10,7 +10,10 @@ for the whole project; bump it there on every release)
 | Phase 0 — Document Intelligence | Frozen. 100% accuracy, 0 silent guesses. |
 | Phase 1A — property/policy extraction | Safety hardening done; extraction quality still in a development loop. Full 20-company run of v0.7.0: 100% recall, 19/20 companies clean, 2 silent wrong (AUR-SYN-014 endorsements). Fixed in v0.7.1 and re-checked on that company only (0 silent wrong). **No full 20-company run exists on the fixed code; it is due at the end of the Knowledge Core phase.** |
 | Phase 1B — Knowledge Core | Implemented and hardening: entities, facts, evidence, relationships, versioning, temporal facts, conflicts, review, tenant scoping, 13/13 deterministic comparison cases. |
-| v0.8.1 — policy-period extraction | Code and tests done (88/88; parser reads 20/20 benchmark policy PDFs). **Not yet run with real Qwen** — a `--limit 3` check is the next step. |
+| v0.8.1 — policy-period extraction | Real-Qwen `--limit 3` (2026-10-02): recall 100%, evidence 100%, period read on 3/3 policies, but **hard gate FAILED: 2 silent wrong** — `policy.coverage` 'Plant and machinery' read from the endorsement's valuation note (AUR-SYN-002, -003). Not caused by the period code. |
+| v0.8.3 — coverage validity rule | Fix for the above. Checked deterministically on all 20 companies: 40/40 ground-truth coverages kept, the valuation note rejected in 20/20 endorsements. 98/98 tests. Real-Qwen re-check on AUR-SYN-002/003: silent wrong 0 (reported by developer). Full 20-company run due at phase end. |
+
+| v0.9.0 — Knowledge explorer UI | Entity → relationships → facts (Current / Historical / Needs review / Verified / Contradiction / Superseded) → evidence → source page, "in force on" date, Verify/Reject, duplicate-name review. Backend: two read endpoints; extraction and scoring untouched. 100/100 tests; screens checked in a browser. |
 
 Tenant isolation is application-level (not PostgreSQL RLS); revisit before production.
 See `Results.md` for run-by-run detail.
@@ -912,3 +915,41 @@ created rather than guessing. Never merges across entity types or tenants.
 human review; nothing is merged automatically. No fuzzy auto-merge, no schema
 change. Tests: 93/93 (5 new). Not run against real Qwen; it does not touch
 extraction or scoring.
+
+## v0.8.3 — coverage must be named as cover (2026-10-02)
+
+The v0.8.1 real-Qwen `--limit 3` check failed the hard gate with 2 silently
+wrong facts: in AUR-SYN-002 and AUR-SYN-003 the model read the endorsement line
+"Plant and machinery values reviewed. Revised machinery declared value: ..." as
+a `policy.coverage`. Every benchmark endorsement has this line, so the risk is
+in all 20 companies. New rule `coverage_named_as_cover`: a coverage whose value
+appears in the source but never on a line (or the line after) mentioning
+cover / peril / section / sum insured / limit of indemnity is dropped
+(`dropped_coverage_not_named_as_cover`). Deterministic check on the benchmark:
+40/40 ground-truth coverages kept, the note rejected in 20/20 endorsements.
+Scoring unchanged. Tests 98/98 (5 new).
+
+## v0.9.0 — Knowledge explorer (2026-10-02)
+
+On the Knowledge Core screen, below the analysis panel (opens on the analysed
+business automatically):
+
+- pick any entity (filter by type); click a relationship chip to move to the
+  linked entity (business → policy → back);
+- facts grouped by type, each with one label: Current, Historical, Needs
+  review, Verified, Contradiction, Superseded; its stated policy period; and
+  its evidence (document · page · quote);
+- "View page" loads the document's real page text with the quoted line
+  highlighted;
+- "In force on" date: what applied on that day; undated facts are listed as
+  not assumed in force;
+- Verify / Reject with a reviewer name (backend rules unchanged: no verify
+  without evidence, contradictions are settled by Correct, rejected facts are
+  kept for audit);
+- possible duplicate names, collapsed, review only, never merged.
+
+Backend: `GET /knowledge/entities?entity_type=`, `GET /knowledge/possible-duplicates`;
+historical facts in `/knowledge/entities/{id}/knowledge` now carry evidence.
+`find_possible_duplicates` narrowed to "one name is the start of the other" after
+word-overlap flagged every baseline/renewal pair in the comparison benchmark.
+No extraction or scoring change, so no new Qwen run is needed for this release.

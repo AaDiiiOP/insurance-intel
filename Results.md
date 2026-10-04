@@ -1155,3 +1155,13 @@ facts is unchanged; a --limit 3 real-Qwen check is still to be run.
 
 ## v0.8.2 (2026-10-02)
 Entity normalization/aliases added; 93/93 tests. Deterministic, no model involved. v0.8.1 policy-period `--limit 3` real-Qwen check still pending.
+
+## v0.8.1 real-Qwen --limit 3 (2026-10-02) — HARD GATE FAILED
+qwen2.5:7b, model_reachable true. Recall 100%, false extraction 6.7%, evidence verified 100%, page accuracy 100%, policy period found 3/3 policies. Silent wrong 2: AUR-SYN-002 and AUR-SYN-003 `policy.coverage` 'Plant and machinery' from 03_endorsement.pdf p1 (valuation note). Flagged (not silent): AUR-SYN-001 coverage_limit 180,000,000 (endorsement), AUR-SYN-003 occupancy 'logistics and warehousing' (risk survey).
+Result file: result-20261002T124058.056404+0000.json (user's machine).
+
+## v0.8.3 (2026-10-02)
+Coverage validity rule added for the failure above. Deterministic benchmark check: 40/40 GT coverages kept, note rejected in 20/20. 98/98 tests. Real-Qwen re-check `--only AUR-SYN-002,AUR-SYN-003` (2026-10-02): silent wrong 0, as reported by the developer (console closed before the output was saved here; the timestamped result file is on his machine). No full 20-company run on v0.8.3 yet.
+
+## v0.9.0 (2026-10-02)
+Knowledge explorer UI + 2 read endpoints. 100/100 tests. UI checked in headless Chromium (desktop and 390px), including Verify and history. No extraction/scoring change.

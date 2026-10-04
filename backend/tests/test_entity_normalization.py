@@ -44,5 +44,27 @@ def test_similar_but_different_names_are_flagged_not_merged(conn, test_org):
     ent.create_entity(conn, organization_id=test_org, entity_type="business", name="Sunrise Textile Mills")
     ent.create_entity(conn, organization_id=test_org, entity_type="business", name="Sunrise Textile Mills Unit 2")
     pairs = ent.find_possible_duplicates(conn, organization_id=test_org, entity_type="business")
-    assert len(pairs) == 1 and pairs[0]["similarity"] >= 0.6
+    assert len(pairs) == 1 and pairs[0]["similarity"] >= 0.4
     assert len(ent.list_entities(conn, test_org, "business")) == 2
+
+
+def test_list_and_duplicate_endpoints(conn, test_org):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from api import knowledge as api_knowledge
+
+    ent.create_entity(conn, organization_id=test_org, entity_type="business", name="Orion Foods Mills")
+    ent.create_entity(conn, organization_id=test_org, entity_type="business", name="Orion Foods Mills Unit 2")
+    conn.commit()
+    app = FastAPI(); app.include_router(api_knowledge.router)
+    c = TestClient(app); h = {"X-Organization-Id": test_org}
+    r = c.get("/knowledge/entities?entity_type=business", headers=h)
+    assert r.status_code == 200 and len(r.json()["entities"]) == 2
+    d = c.get("/knowledge/possible-duplicates", headers=h)
+    assert d.status_code == 200 and len(d.json()["pairs"]) == 1
+
+
+def test_baseline_and_renewal_are_not_flagged(conn, test_org):
+    ent.create_entity(conn, organization_id=test_org, entity_type="policy", name="increased_sum_insured baseline 90e2a712 — policy")
+    ent.create_entity(conn, organization_id=test_org, entity_type="policy", name="increased_sum_insured renewal 90e2a712 — policy")
+    assert ent.find_possible_duplicates(conn, organization_id=test_org) == []

@@ -446,3 +446,29 @@ export function analyzePropertyPolicy(submissionId) {
     method: 'POST',
   })
 }
+
+// ---- Knowledge explorer (v0.9.0) -------------------------------------------
+
+export function listKnowledgeEntities(entityType) {
+  const q = entityType ? `?entity_type=${encodeURIComponent(entityType)}` : ''
+  return request(`/knowledge/entities${q}`)
+}
+
+/** Everything known about one entity; asOf (YYYY-MM-DD) adds "in force on". */
+export function getEntityKnowledge(entityId, asOf) {
+  const q = asOf ? `?as_of=${encodeURIComponent(asOf)}` : ''
+  return request(`/knowledge/entities/${entityId}/knowledge${q}`)
+}
+
+export function reviewKnowledgeFact(factId, action, reviewedBy) {
+  return request(`/knowledge/facts/${factId}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, reviewed_by: reviewedBy }),
+  })
+}
+
+export function listPossibleDuplicates(entityType) {
+  const q = entityType ? `?entity_type=${encodeURIComponent(entityType)}` : ''
+  return request(`/knowledge/possible-duplicates${q}`)
+}

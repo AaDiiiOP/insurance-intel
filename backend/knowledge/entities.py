@@ -66,22 +66,29 @@ def find_matching_entities(conn, *, organization_id: str, entity_type: str,
 
 
 def find_possible_duplicates(conn, *, organization_id: str, entity_type: str | None = None,
-                              threshold: float = 0.6) -> list[dict]:
+                              threshold: float = 0.4) -> list[dict]:
     """
-    Pairs of same-type entities that look alike but do not normalize equal
-    (token overlap (Jaccard) >= threshold). For human review only; nothing is merged.
+    Pairs of same-type entities where one normalized name is the start of the
+    other ("Sunrise Textile Mills" / "Sunrise Textile Mills Unit 2") but they
+    do not normalize equal. For human review only; nothing is merged.
+
+    Word-overlap scoring was tried first and flagged every "X baseline — policy"
+    / "X renewal — policy" pair in the comparison benchmark (different things
+    that share most words), so the rule is deliberately narrow.
+    `similarity` = shorter name's word count / longer name's.
     """
     ents = db.list_entities(conn, organization_id, entity_type)
     pairs = []
     for i, a in enumerate(ents):
-        ta = set(normalize_name(a["name"]).split())
+        ta = normalize_name(a["name"]).split()
         for b in ents[i + 1:]:
             if a["entity_type"] != b["entity_type"]:
                 continue
-            tb = set(normalize_name(b["name"]).split())
-            if not ta or not tb or normalize_name(a["name"]) == normalize_name(b["name"]):
+            tb = normalize_name(b["name"]).split()
+            short, long_ = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+            if not short or short == long_ or long_[:len(short)] != short:
                 continue
-            score = len(ta & tb) / len(ta | tb)
+            score = len(short) / len(long_)
             if score >= threshold:
                 pairs.append({"a": a["id"], "a_name": a["name"], "b": b["id"],
                               "b_name": b["name"], "similarity": round(score, 2)})

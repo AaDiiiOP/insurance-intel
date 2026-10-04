@@ -54,6 +54,12 @@ def get_entity(conn, entity_id: str, organization_id: str) -> dict | None:
     return _entities.get_entity(conn, entity_id, organization_id)
 
 
+def find_possible_duplicates(conn, *, organization_id: str, entity_type: str | None = None) -> list[dict]:
+    """Look-alike entity pairs for human review (never merged automatically)."""
+    return _entities.find_possible_duplicates(conn, organization_id=organization_id,
+                                              entity_type=entity_type)
+
+
 def list_entities(conn, organization_id: str, entity_type: str | None = None) -> list[dict]:
     return _entities.list_entities(conn, organization_id, entity_type)
 
@@ -481,6 +487,7 @@ def get_entity_knowledge(conn, entity_id: str, organization_id: str, as_of=None)
             f["evidence"] = db.get_evidence_for_fact(conn, str(f["id"]), organization_id)
             current.append(f)
         else:
+            f["evidence"] = db.get_evidence_for_fact(conn, str(f["id"]), organization_id)
             historical.append(f)
 
     conflicts = []

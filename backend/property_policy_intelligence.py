@@ -194,6 +194,30 @@ def _parse_date(token: str) -> date | None:
         return None
 
 
+# v0.8.3 — a coverage must be NAMED AS COVER somewhere. The v0.8.1 3-company
+# check had the model read "Plant and machinery values reviewed. Revised
+# machinery declared value: ..." (an endorsement's valuation note, present in
+# all 20 benchmark endorsements) as a policy.coverage — 2 silently wrong facts.
+# Rule: if the value appears in the source text but NO line it appears on (or
+# the line before, for wrapped lists) mentions cover/peril/section/sum insured/
+# limit of indemnity, it is a mention, not a coverage, and is dropped. A value
+# not found verbatim is left to the normal evidence checks (no guessing).
+_COVER_CUE_RE = re.compile(
+    r"cover|peril|insuring|\bsection\b|sum\s+insured|limit\s+of\s+(?:indemnity|liability)", re.I)
+
+
+def coverage_named_as_cover(value: str, source_text: str) -> bool:
+    needle = " ".join((value or "").lower().split())
+    if not needle:
+        return False
+    lines = [" ".join(l.lower().split()) for l in (source_text or "").splitlines()]
+    hits = [i for i, l in enumerate(lines) if needle in l]
+    if not hits:
+        return True
+    return any(_COVER_CUE_RE.search(lines[i]) or (i > 0 and _COVER_CUE_RE.search(lines[i - 1]))
+               for i in hits)
+
+
 def extract_policy_period(text: str) -> tuple[date, date] | None:
     """(start, end) of the policy period stated in `text`, or None."""
     found = set()
@@ -445,6 +469,9 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
             # model label two policy CONDITIONS ("Fire protection systems must
             # be maintained...") as endorsements (2 silently wrong facts).
             EXTRACTION_DIAGNOSTICS["dropped_endorsement_without_endorsement_text"] += 1
+            continue
+        if fact_type == "policy.coverage" and not coverage_named_as_cover(value, verification_text):
+            EXTRACTION_DIAGNOSTICS["dropped_coverage_not_named_as_cover"] += 1
             continue
         if fact_type == "property.risk_factors" and is_non_hazard_risk_factor(value):
             EXTRACTION_DIAGNOSTICS["dropped_non_hazard_risk_factor"] += 1

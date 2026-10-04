@@ -1645,3 +1645,35 @@ button.suggestion:hover { border-color: var(--accent-line); color: var(--accent-
 .extracted-fact-block.is-contradiction {
   border-left-color: var(--bad);
 }
+
+
+/* ---- Knowledge explorer (v0.9.0) ---------------------------------------- */
+.kx-controls { flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.kx-small { padding: 3px 9px; font-size: 12px; margin-left: 8px; }
+.kx-entity { margin: 14px 0 8px; }
+.kx-entity-name { font-size: 18px; font-weight: 600; color: var(--ink); }
+.kx-meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; }
+.kx-rels { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
+.kx-rel { background: var(--sunken); border: 1px solid var(--line); border-radius: 999px;
+  padding: 4px 11px; font-size: 12.5px; color: var(--ink); cursor: pointer; }
+.kx-rel:hover { border-color: var(--line-firm); background: var(--raised); }
+.kx-block { margin-top: 18px; }
+.kx-block h3 { font-size: 14px; margin: 0 0 8px; color: var(--ink); }
+.kx-type { margin-bottom: 12px; }
+.kx-type-name { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px;
+  color: var(--ink-soft); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+.kx-fact { background: var(--raised); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 8px; }
+.kx-fact.is-contradiction { border-left: 3px solid var(--bad); }
+.kx-fact-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.kx-value { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.kx-actions { margin-top: 8px; }
+.kx-actions .kx-small:first-child { margin-left: 0; }
+.kx-page { white-space: pre-wrap; font-size: 12px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: 10px; max-height: 320px;
+  overflow: auto; margin-top: 6px; color: var(--ink-soft); }
+.kx-hit { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+.kx-dupes summary { cursor: pointer; }
+.kx-dupes ul { margin: 8px 0 0; padding-left: 18px; }
+.kx-link { background: none; border: 0; padding: 0; color: var(--accent-deep);
+  text-decoration: underline; cursor: pointer; font: inherit; }

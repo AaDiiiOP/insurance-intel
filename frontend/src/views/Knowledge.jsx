@@ -5,6 +5,7 @@ import {
   correctKnowledgeFact,
   listSubmissions,
 } from '../api'
+import KnowledgeExplorer from './KnowledgeExplorer'
 
 /**
  * Knowledge Core — Property Policy Intelligence.
@@ -342,6 +343,8 @@ export default function Knowledge() {
           />
         </>
       )}
+
+      <KnowledgeExplorer initialEntityId={result?.business?.entity_id} />
 
       <div className="setup-note">
         This is a vertical slice on top of the Knowledge Core, not the

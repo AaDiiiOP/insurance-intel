@@ -110,6 +110,25 @@ def create_entity(body: CreateEntityBody, x_organization_id: str | None = Header
     return _entity_response(row)
 
 
+@router.get("/knowledge/entities")
+def list_entities(entity_type: str | None = None, x_organization_id: str | None = Header(None)):
+    """Entities in the caller's organization (optionally one type), newest first."""
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        rows = kc.list_entities(conn, organization_id, entity_type)
+    return {"entities": [_entity_response(r) for r in rows]}
+
+
+@router.get("/knowledge/possible-duplicates")
+def possible_duplicates(entity_type: str | None = None, x_organization_id: str | None = Header(None)):
+    """Look-alike entity pairs for a human to review. Nothing is merged."""
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        pairs = kc.find_possible_duplicates(conn, organization_id=organization_id,
+                                            entity_type=entity_type)
+    return {"pairs": _json_safe(pairs)}
+
+
 @router.get("/knowledge/entities/{entity_id}")
 def get_entity(entity_id: str, x_organization_id: str | None = Header(None)):
     entity_id = _validate_uuid(entity_id, "entity id")
