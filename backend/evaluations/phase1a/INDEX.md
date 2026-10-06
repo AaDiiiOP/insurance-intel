@@ -1,0 +1,25 @@
+# Phase 1A results — what each file is
+
+Nothing here is ever deleted or overwritten; failures stay on record.
+`latest.json` = the most recent FULL (20-company) run with the model reachable.
+It changes only when a full run happens, so between phase-acceptance runs it
+deliberately shows an older version.
+
+| File | Code version | Type | Companies | Recall | Silent wrong | Status |
+|---|---|---|---|---|---|---|
+| result-20260929T181141 | before v0.6.0 | full, real Qwen | 20 | 67.5% | 0 | historical baseline |
+| result-20260930T155314 | v0.6.0 | quick, real Qwen | 3 | 100% | 4 (risk factors) | historical failure, fixed in v0.6.1 |
+| result-20261001T090702 (= latest.json) | v0.7.0 | full, real Qwen | 20 | 100% | 2 (AUR-SYN-014 endorsements) | historical failure, fixed in v0.7.1 |
+| result-20261002T124058 * | v0.8.1 | quick, real Qwen | 3 | 100% | 2 ("Plant and machinery" coverage) | historical failure, fixed in v0.8.3 |
+| result-20261002T…(AUR-SYN-002,003) * | v0.8.3 | targeted, real Qwen | 2 | — | 0 (reported) | current-code re-check |
+| result-20261006T162353 * | v0.10.0 | development + query check, real Qwen | 4 | 98.1% | 1 (endorsement label); query: 1 wrong, 6 abstained | historical failure, fixed in v0.10.1 |
+| result-20261006T… (v0.10.1 re-run) * | v0.10.1 | development + query check, real Qwen | 4 | see file | 0; query: 0 wrong (reported) | current-code result |
+| (phase end) full 20-company run | end of Phase 1B | acceptance, real Qwen | 20 | | | **pending — not run yet** |
+
+\* produced on the developer's machine; commit them from `backend/evaluations/phase1a/`.
+
+Categories:
+- **historical** — an older code version; kept so failures and fixes stay traceable.
+- **current** — run on the code version currently in the repo.
+- **phase acceptance** — the full 20-company run that closes a phase. None exists yet for the current code.
+- Deterministic results (no model): `../phase1b/` (policy comparison, 13/13) and the pytest suite.

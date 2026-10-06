@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.9.0** (see `frontend/package.json` — the one version number
+**Version: 0.10.1** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Status (stated precisely, 2026-10-02):**
@@ -14,6 +14,11 @@ for the whole project; bump it there on every release)
 | v0.8.3 — coverage validity rule | Fix for the above. Checked deterministically on all 20 companies: 40/40 ground-truth coverages kept, the valuation note rejected in 20/20 endorsements. 98/98 tests. Real-Qwen re-check on AUR-SYN-002/003: silent wrong 0 (reported by developer). Full 20-company run due at phase end. |
 
 | v0.9.0 — Knowledge explorer UI | Entity → relationships → facts (Current / Historical / Needs review / Verified / Contradiction / Superseded) → evidence → source page, "in force on" date, Verify/Reject, duplicate-name review. Backend: two read endpoints; extraction and scoring untouched. 100/100 tests; screens checked in a browser. |
+
+| v0.10.0 — Knowledge query layer (Phase 1B.5) | `POST /knowledge/query`: deterministic answers from facts + evidence + periods + relationships; previous/change/as-of questions; abstains on contradiction, ambiguity, missing period or no evidence; keyword retrieval + quote-verified local-model answer only when no fact type applies. Policy comparison now carries evidence, % change and an assessment. 125/125 tests; 13/13 comparison; ground-truth simulation 40/40. **Real-Qwen 4-company `--query-check` run pending.** |
+
+| v0.10.0 real-Qwen 4-company `--query-check` (2026-10-06) | Recall 98.1%, evidence 100% verified / 100% page accuracy; **silent wrong 1** (AUR-SYN-002 endorsement written as "Endorsement SYN-END-0002-01: …" — a string not in the document); query check 40 questions: 33 correct, 6 abstained (coverage-limit contradictions in 4/4 companies from the machinery valuation note; 1 occupancy; 1 sum insured), **1 wrong** (same endorsement). Gate FAILED. |
+| v0.10.1 — fixes for that run | Endorsement header labels stripped from values; a limit / sum insured must be stated on a limit / sum-insured line. Deterministic check on all 20 companies: 60/60 ground-truth limits & sums kept, machinery decoys rejected 40/40, endorsement cleanup 40/40. 128/128 tests, 13/13 comparison. Real-Qwen re-run of the same 4 companies (2026-10-06): 0 silent wrong, 0 wrong answers (reported by the developer; result file in `backend/evaluations/phase1a/`). Full 20-company acceptance still pending. |
 
 Tenant isolation is application-level (not PostgreSQL RLS); revisit before production.
 See `Results.md` for run-by-run detail.
@@ -953,3 +958,89 @@ historical facts in `/knowledge/entities/{id}/knowledge` now carry evidence.
 `find_possible_duplicates` narrowed to "one name is the start of the other" after
 word-overlap flagged every baseline/renewal pair in the comparison benchmark.
 No extraction or scoring change, so no new Qwen run is needed for this release.
+
+## v0.10.0 — Knowledge query layer (Phase 1B.5, 2026-10-06)
+
+**Audit first (what existed):** vector search covers only CARRIER wordings
+(Chroma, `vectorstore.py` / `chat.py`); client/submission documents are not
+embedded. Policy comparison diffed current facts but returned no evidence and
+no percentage. Nothing answered questions from the Knowledge Core.
+
+**New: `knowledge/query.py` + `POST /knowledge/query`**
+(`{question, entity_id?, as_of?, use_llm?}`).
+
+1. *Interpret* (no model): fact type from the wording ("coverage limit",
+   "deductible"/"excess", "exclusions", …), mode (current / as of a date named
+   in the question / previous / change at renewal / policy period).
+2. *Entity*: `entity_id`, or a business whose name or alias is in the question;
+   two matches -> abstain with candidates. Follows `owns` / `has_policy` to the
+   asset or policy that holds the fact.
+3. *Answer deterministically*: a stated period covering the day wins; periods
+   stated but none covering the day -> abstain (an expired policy is not
+   "current"); undated facts answer a current question but are never assumed
+   to apply on a date the question names; contradictions, or two different
+   current values -> abstain and show both with evidence; facts without
+   evidence are never used; rejected facts are never used.
+4. *Change / previous*: compares the last two stated periods: old -> new,
+   absolute and % change (singletons), added/removed (multi-valued), evidence
+   for both sides.
+5. *Fallback, only when no fact type applies*: keyword retrieval over this
+   tenant's documents for the entity; optional local-model answer accepted only
+   if its quote is in the cited passage AND every number in the answer and the
+   quote is in that passage; otherwise abstain. Such answers are always
+   marked unverified.
+
+Response: `answer, answer_type, values, facts_used, entities_used,
+relationships_used, evidence, source_documents, source_pages,
+effective_period, review_status, authoritative, confidence, contradictions,
+needs_review, reason, change, retrieved_passages, candidates`.
+`authoritative` is true only for verified facts (and deterministic policy periods).
+
+**Policy comparison:** each compared value now carries evidence; numeric
+changes carry `absolute_change` / `percent_change`; `assessment` =
+evidenced / contradictory / unknown / no_evidence. `change` is unchanged, so
+the 13/13 benchmark is unaffected.
+
+**Knowledge explorer:** an "Ask the Knowledge Core" box on the entity view.
+
+**Real-Qwen check:** `eval_property_policy.py ... --query-check` asks one
+question per ground-truth fact type against the facts the real model just
+extracted and grades answers: correct / abstained / wrong (wrong must be 0).
+Fact scoring is unchanged.
+
+**Measured so far (no model):** 125/125 tests (25 new, covering the reviewer's
+20 cases plus expiry, policy period, API, grading); comparison 13/13;
+ground-truth simulation on AUR-SYN-001–004 40/40 answers correct with
+evidence. **Not yet measured:** the same check on real Qwen extraction.
+
+**Known limits:** question interpretation is phrase-based (English, insurance
+wording above); multi-period comparison uses the last two stated periods;
+retrieval fallback is keyword-only over client documents (carrier wordings
+stay on the existing vector `/chat`); tenant isolation remains application-level.
+See `backend/evaluations/phase1a/INDEX.md` for which result is historical,
+current or pending.
+
+## v0.10.1 — fixes from the first real-Qwen query check (2026-10-06)
+
+Run: `--only AUR-SYN-001,AUR-SYN-002,AUR-SYN-003,AUR-SYN-004 --query-check`
+(result-20261006T162353 on the developer's machine). The query layer
+interpreted 40/40 questions correctly and attached evidence to every answer;
+the failures came from extraction:
+
+1. **1 silent-wrong fact + 1 wrong answer (AUR-SYN-002):** the model wrote an
+   endorsement as "Endorsement SYN-END-0002-01: Additional named insured …",
+   gluing the header line onto the change text — a string that exists nowhere
+   in the document. Fix: `clean_endorsement_value` strips leading
+   "Endorsement <ref>:" / "Change N:" labels (diagnostic `endorsement_label_stripped`).
+2. **Coverage limit abstained in 4/4 companies** (safe, but useless): the
+   model read "Revised machinery declared value: 90,000,000" (endorsement) or
+   a schedule's per-category declared value as `policy.coverage_limit` /
+   `property.sum_insured`, which the Knowledge Core flagged as a contradiction.
+   Fix: `numeric_on_limit_line` — if the number is in the source, a line it is
+   on (or the line before) must mention sum insured / limit / indemnity /
+   cover / insured value (diagnostic `dropped_number_not_stated_as_limit`).
+
+Checked without the model on all 20 companies (app parser): 60/60
+ground-truth limits & sums insured kept, machinery value rejected in 40/40
+places, endorsement cleanup 40/40. Scoring unchanged. The occupancy restatement
+from risk surveys still abstains as a contradiction (known, safe).

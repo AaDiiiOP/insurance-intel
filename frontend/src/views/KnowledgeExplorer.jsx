@@ -5,6 +5,7 @@ import {
   getEntityKnowledge,
   listKnowledgeEntities,
   listPossibleDuplicates,
+  queryKnowledge,
   reviewKnowledgeFact,
 } from '../api'
 
@@ -161,6 +162,80 @@ function groupByType(facts) {
   return Object.entries(out).sort(([a], [b]) => a.localeCompare(b))
 }
 
+function AskPanel({ entityId, asOf, onOpenEntity }) {
+  const [q, setQ] = useState('')
+  const [res, setRes] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+
+  async function run(e) {
+    e.preventDefault()
+    if (!q.trim()) return
+    setBusy(true)
+    setErr(null)
+    try {
+      setRes(await queryKnowledge(q.trim(), { entityId, asOf }))
+    } catch (x) {
+      setErr(x.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const ans = res?.answer
+  const shown = Array.isArray(ans) ? ans.join('; ') : ans
+  return (
+    <div className="kx-block kx-ask">
+      <h3>Ask the Knowledge Core</h3>
+      <form className="scope-row kx-controls" onSubmit={run}>
+        <input className="kx-ask-input" placeholder="e.g. What is the coverage limit? How did the deductible change at renewal?"
+          value={q} onChange={(e) => setQ(e.target.value)} />
+        <button className="btn-primary" disabled={busy}>{busy ? 'Asking…' : 'Ask'}</button>
+      </form>
+      {err && <div className="banner bad">{err}</div>}
+      {res && (
+        <div className={`kx-fact ${res.review_status === 'contradiction' ? 'is-contradiction' : ''}`}>
+          <div className="kx-fact-head">
+            <span className="kx-value">{shown ?? 'No answer — needs review'}</span>
+            <span className={`pill ${res.authoritative ? 'ok' : res.review_status === 'contradiction' ? 'bad' : 'gold'}`}>
+              {res.authoritative ? 'Verified' : res.review_status === 'contradiction' ? 'Contradiction'
+                : ans == null ? 'Abstained' : res.answer_type === 'llm_synthesis' ? 'Model answer, unverified' : 'Unverified'}
+            </span>
+          </div>
+          <div className="kx-meta">
+            {res.interpretation?.fact_type || res.interpretation?.intent} · {res.interpretation?.mode}
+            {res.effective_period ? ` · period ${res.effective_period.from} → ${res.effective_period.to}` : ''}
+          </div>
+          {res.change && (
+            <div className="kx-meta">
+              {res.change.old_value !== undefined
+                ? `${res.change.old_value} → ${res.change.new_value}`
+                : `added: ${(res.change.added || []).join(', ') || '—'} · removed: ${(res.change.removed || []).join(', ') || '—'}`}
+              {res.change.percent_change != null ? ` (${res.change.percent_change > 0 ? '+' : ''}${res.change.percent_change}%)` : ''}
+            </div>
+          )}
+          {res.reason && <div className="kx-meta">{res.reason}</div>}
+          {(res.contradictions || []).length > 0 && (
+            <div className="kx-meta">Conflicting values: {(res.values || []).join(' | ')}</div>
+          )}
+          {(res.evidence || []).map((ev, i) => (
+            <div className="evidence-block" key={i}>
+              <div className="evidence-source">{[ev.document_filename, ev.page ? `Page ${ev.page}` : null].filter(Boolean).join(' · ')}</div>
+              {ev.snippet && <blockquote className="evidence-snippet">"{ev.snippet}"</blockquote>}
+            </div>
+          ))}
+          {(res.retrieved_passages || []).length > 0 && ans == null && (
+            <div className="kx-meta">Passages found for a person to read: {res.retrieved_passages.map((p) => `${p.document_filename} p${p.page}`).join(', ')}</div>
+          )}
+          {(res.candidates || []).filter((c) => c.entity_type).map((c) => (
+            <button key={c.entity_id} className="kx-rel" onClick={() => onOpenEntity(c.entity_id)}>{c.entity_type}: {c.name}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function KnowledgeExplorer({ initialEntityId }) {
   const [entityType, setEntityType] = useState('')
   const [entities, setEntities] = useState([])
@@ -283,6 +358,8 @@ export default function KnowledgeExplorer({ initialEntityId }) {
               {aliases.length > 0 ? ` · also known as: ${aliases.join(', ')}` : ''}
             </div>
           </div>
+
+          <AskPanel entityId={entityId} asOf={asOf} onOpenEntity={open} />
 
           <div className="kx-rels">
             {data.relationships.outgoing.map((r) => (

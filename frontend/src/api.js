@@ -472,3 +472,12 @@ export function listPossibleDuplicates(entityType) {
   const q = entityType ? `?entity_type=${encodeURIComponent(entityType)}` : ''
   return request(`/knowledge/possible-duplicates${q}`)
 }
+
+/** v0.10.0: answer a question from the Knowledge Core (deterministic first). */
+export function queryKnowledge(question, { entityId, asOf, useLlm = true } = {}) {
+  return request('/knowledge/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, entity_id: entityId || null, as_of: asOf || null, use_llm: useLlm }),
+  })
+}

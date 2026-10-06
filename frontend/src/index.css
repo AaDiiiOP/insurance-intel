@@ -1677,3 +1677,6 @@ button.suggestion:hover { border-color: var(--accent-line); color: var(--accent-
 .kx-dupes ul { margin: 8px 0 0; padding-left: 18px; }
 .kx-link { background: none; border: 0; padding: 0; color: var(--accent-deep);
   text-decoration: underline; cursor: pointer; font: inherit; }
+.kx-ask { margin-bottom: 14px; }
+.kx-ask-input { flex: 1 1 260px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--raised); color: var(--ink); font: inherit; }

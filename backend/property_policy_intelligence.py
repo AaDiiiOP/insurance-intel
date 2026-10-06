@@ -218,6 +218,55 @@ def coverage_named_as_cover(value: str, source_text: str) -> bool:
                for i in hits)
 
 
+# v0.10.1 — two rules from the v0.10.0 real-Qwen 4-company run.
+#
+# (a) Endorsement values: the model prefixed a change with the document's
+#     header label ("Endorsement SYN-END-0002-01: Additional named insured
+#     ...") — a string that exists nowhere in the document (the label is on its
+#     own line), so it matched no ground truth and was 1 silently wrong fact.
+#     The reference number identifies the endorsement; it is not what the
+#     endorsement does. Leading "Endorsement <ref>:" / "Change N:" labels are
+#     stripped from the value (never from the middle of it).
+_ENDORSEMENT_LABEL_RE = re.compile(
+    r"^\s*(?:endorsement\s+(?:no\.?|number|ref(?:erence)?\.?)?\s*[#:]?\s*[A-Za-z0-9/._-]*\d[A-Za-z0-9/._-]*"
+    r"|change\s+\d+)\s*[:\-\u2013\u2014]\s*", re.I)
+
+
+def clean_endorsement_value(value: str) -> str:
+    out = value or ""
+    for _ in range(3):
+        new = _ENDORSEMENT_LABEL_RE.sub("", out, count=1)
+        if new == out:
+            break
+        out = new
+    return out.strip() or (value or "").strip()
+
+
+# (b) Limits and sums insured must be stated AS a limit / sum insured. In all 4
+#     companies the model read "Revised machinery declared value: 90,000,000"
+#     (an endorsement's valuation note) or a schedule's per-category declared
+#     value as policy.coverage_limit / property.sum_insured. These were flagged
+#     as contradictions (not silent), but they made every coverage-limit answer
+#     abstain. Rule: if the number appears in the source, at least one line it
+#     appears on (or the previous non-empty line) must mention sum insured /
+#     limit / indemnity / cover / insured value. A number not found verbatim
+#     (e.g. a sum of two stated figures) is left to numeric grounding.
+_LIMIT_CUE_RE = re.compile(r"sum\s+insured|limit|indemnity|cover|insured\s+value|total\s+insured", re.I)
+LIMIT_CUE_FACT_TYPES = frozenset({"policy.coverage_limit", "property.sum_insured"})
+
+
+def numeric_on_limit_line(value: str, source_text: str) -> bool:
+    target = _numeric(value)
+    if target is None:
+        return True
+    lines = [l for l in (source_text or "").splitlines() if l.strip()]
+    hits = [i for i, l in enumerate(lines) if any(abs(f - target) < 0.5 for f in _figures(l))]
+    if not hits:
+        return True
+    return any(_LIMIT_CUE_RE.search(lines[i]) or (i > 0 and _LIMIT_CUE_RE.search(lines[i - 1]))
+               for i in hits)
+
+
 def extract_policy_period(text: str) -> tuple[date, date] | None:
     """(start, end) of the policy period stated in `text`, or None."""
     found = set()
@@ -458,6 +507,14 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
             continue
         if only_types and fact_type not in only_types:
             EXTRACTION_DIAGNOSTICS["dropped_out_of_scope_type"] += 1
+            continue
+        if fact_type == "policy.endorsement":
+            cleaned = clean_endorsement_value(value)
+            if cleaned != value:
+                EXTRACTION_DIAGNOSTICS["endorsement_label_stripped"] += 1
+                value = cleaned
+        if fact_type in LIMIT_CUE_FACT_TYPES and not numeric_on_limit_line(value, verification_text):
+            EXTRACTION_DIAGNOSTICS["dropped_number_not_stated_as_limit"] += 1
             continue
         if fact_type in NUMERIC_FACT_TYPES and not numeric_value_grounded(value, verification_text):
             EXTRACTION_DIAGNOSTICS["dropped_numeric_not_in_source"] += 1

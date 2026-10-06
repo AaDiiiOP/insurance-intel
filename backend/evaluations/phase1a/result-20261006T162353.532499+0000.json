@@ -1,0 +1,2580 @@
+{
+  "run": {
+    "model": "qwen2.5:7b",
+    "model_reachable": true,
+    "ollama_host": "http://host.docker.internal:11434",
+    "dataset_path": "/app/benchmark_data",
+    "timestamp_utc": "2026-10-06T16:23:53.532499+00:00",
+    "git_commit": null,
+    "company_limit": 4
+  },
+  "summary": {
+    "companies_total": 4,
+    "companies_scored": 4,
+    "companies_with_no_ground_truth": [],
+    "hard_gates": {
+      "zero_silent_wrong_facts": false,
+      "silent_wrong_fact_count": 1
+    },
+    "statistical_thresholds": {
+      "fact_recall_pct": 98.1,
+      "false_extraction_rate_pct": 5.1,
+      "avg_evidence_snippet_verified_pct": 100.0,
+      "avg_fact_recall_pct_per_company": 98.1,
+      "evidence_traceable_pct": 100.0,
+      "evidence_page_accuracy_pct": 100.0
+    },
+    "by_fact_type": {
+      "policy.coverage": {
+        "ground_truth": 8,
+        "recalled": 8,
+        "extracted": 8,
+        "false": 0,
+        "recall_pct": 100.0
+      },
+      "policy.coverage_limit": {
+        "ground_truth": 4,
+        "recalled": 4,
+        "extracted": 10,
+        "false": 1,
+        "recall_pct": 100.0
+      },
+      "policy.deductible": {
+        "ground_truth": 4,
+        "recalled": 4,
+        "extracted": 8,
+        "false": 0,
+        "recall_pct": 100.0
+      },
+      "policy.endorsement": {
+        "ground_truth": 8,
+        "recalled": 7,
+        "extracted": 8,
+        "false": 1,
+        "recall_pct": 87.5
+      },
+      "policy.exclusion": {
+        "ground_truth": 8,
+        "recalled": 8,
+        "extracted": 8,
+        "false": 0,
+        "recall_pct": 100.0
+      },
+      "property.construction": {
+        "ground_truth": 4,
+        "recalled": 4,
+        "extracted": 4,
+        "false": 0,
+        "recall_pct": 100.0
+      },
+      "property.location": {
+        "ground_truth": 4,
+        "recalled": 4,
+        "extracted": 8,
+        "false": 0,
+        "recall_pct": 100.0
+      },
+      "property.occupancy": {
+        "ground_truth": 4,
+        "recalled": 4,
+        "extracted": 5,
+        "false": 1,
+        "recall_pct": 100.0
+      },
+      "property.risk_factors": {
+        "ground_truth": 4,
+        "recalled": 4,
+        "extracted": 4,
+        "false": 0,
+        "recall_pct": 100.0
+      },
+      "property.sum_insured": {
+        "ground_truth": 4,
+        "recalled": 4,
+        "extracted": 15,
+        "false": 1,
+        "recall_pct": 100.0
+      }
+    },
+    "false_extraction_breakdown": {
+      "CONTRADICTORY_FACT": 3,
+      "UNSUPPORTED": 1
+    },
+    "unique_persisted_facts": 60,
+    "fact_occurrences": 78,
+    "note": "hard_gates must read exactly as required (zero_silent_wrong_facts=True) before Phase 1A is considered accepted. statistical_thresholds are reported, not graded here \u2014 decide the acceptable bar for each and track it run over run, per this script's module docstring."
+  },
+  "extraction_diagnostics": {
+    "counters": {
+      "model_facts_returned": 95,
+      "dropped_endorsement_without_endorsement_text": 6,
+      "policy_period_found": 4,
+      "policy_period_not_found": 16,
+      "dropped_non_hazard_risk_factor": 7,
+      "dropped_empty_value": 1,
+      "dropped_coverage_not_named_as_cover": 3
+    },
+    "dropped_fact_type_names": {}
+  },
+  "companies": [
+    {
+      "company_id": "AUR-SYN-001",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 13,
+      "extracted_fact_count": 20,
+      "recalled_fact_count": 13,
+      "fact_recall_pct": 100.0,
+      "false_extraction_count": 1,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": 100.0,
+      "evidence_traceable_count": 20,
+      "evidence_page_checked": 18,
+      "evidence_page_correct_count": 18,
+      "by_fact_type": {
+        "property.sum_insured": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 4,
+          "false": 0
+        },
+        "policy.coverage_limit": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 3,
+          "false": 1
+        },
+        "policy.deductible": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "property.location": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "property.occupancy": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "property.construction": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "property.risk_factors": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "policy.coverage": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.exclusion": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.endorsement": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        }
+      },
+      "unique_fact_count": 15,
+      "false_extraction_breakdown": {
+        "CONTRADICTORY_FACT": 1
+      },
+      "contradictions_flagged": 2,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "932 Technology Park, Pune, Maharashtra",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "23bb003f-d607-4c03-b17e-3cfe8a2957f8",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Precision component manufacturing facility with machine shop and assembly floor",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ceb84ebd-9e2d-4aab-9402-bbad78807988",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure, class A construction, fire-rated compartment walls",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "4b3be6b4-eee7-4b4f-9fe3-687bbf111843",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "0e9ddd25-ec26-4e81-b9de-65a39895e6b5",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n720,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ae5033be-f113-4cdd-bc74-d8551d7af749",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "3ff6963d-d5bc-4ee7-a0aa-65ce151a25a1",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage",
+          "value": "Property Damage",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "db298496-12e2-4008-bcd5-f0d3a38db94b",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage",
+          "value": "Business Interruption",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "42ce39b3-4f9a-4422-8603-0ea80782cb96",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.risk_factors",
+          "value": "Machine shop operations with metalworking fluids present",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "91e6f8de-093e-454a-a79d-d736c8321c0e",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "f6da4b1c-d3a3-459d-b06f-21ef16693610",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Machinery breakdown arising from normal wear and tear",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "e7d028ce-8b72-4c2e-9245-ab3bb37cb2e8",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "0e9ddd25-ec26-4e81-b9de-65a39895e6b5",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n600,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "c8a6feee-10b6-46a0-92d4-c7927be4d81b",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "02_coverage_schedule.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "3ff6963d-d5bc-4ee7-a0aa-65ce151a25a1",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "0e9ddd25-ec26-4e81-b9de-65a39895e6b5",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n180,000,000",
+          "status": "contradiction_flagged",
+          "correct": false,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": "CONTRADICTORY_FACT",
+          "fact_id": "5ac35569-6128-4bf0-b908-9f16cbd4906c",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Plant and machinery values reviewed. Revised machinery declared value: n180,000,000.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "c77937c6-5045-4fb7-a842-4fb947242a02",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Additional named insured endorsement: Apex Precision Components Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "c469821e-ac53-4083-9989-edd2002af478",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.location",
+          "value": "932 Technology Park, Pune, Maharashtra",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "23bb003f-d607-4c03-b17e-3cfe8a2957f8",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "0e9ddd25-ec26-4e81-b9de-65a39895e6b5",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-002",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 13,
+      "extracted_fact_count": 21,
+      "recalled_fact_count": 12,
+      "fact_recall_pct": 92.3,
+      "false_extraction_count": 1,
+      "silent_wrong_fact_count": 1,
+      "evidence_snippet_verified_pct": 100.0,
+      "evidence_traceable_count": 21,
+      "evidence_page_checked": 18,
+      "evidence_page_correct_count": 18,
+      "by_fact_type": {
+        "property.sum_insured": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 5,
+          "false": 0
+        },
+        "policy.coverage_limit": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 3,
+          "false": 0
+        },
+        "policy.deductible": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "property.location": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "property.occupancy": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "property.construction": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "property.risk_factors": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "policy.coverage": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.exclusion": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.endorsement": {
+          "ground_truth": 2,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 1
+        }
+      },
+      "unique_fact_count": 15,
+      "false_extraction_breakdown": {
+        "UNSUPPORTED": 1
+      },
+      "contradictions_flagged": 2,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "750 Logistics Hub, Ahmedabad, Gujarat",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "29c4ecd4-c4dc-42d8-96f4-dc2edc6ae596",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Pharmaceutical formulation and packaging facility with clean-room areas",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ff9d7e7e-0be3-4e77-bd31-140c8730eb77",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame structure with clean-room panel partitions, class A construction",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "fc5b1242-53f9-44a7-948b-971496f82804",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ba16aee3-7425-47f7-a413-9d6edc312ceb",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n360,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "88291727-a146-4ece-8b85-f7309853fa96",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "83aef66e-8ba0-4ffd-a65f-0e0725c05eff",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage",
+          "value": "Property Damage",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "81e29e62-24e3-455a-acc7-d87906d5106a",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage",
+          "value": "Business Interruption",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "7043ceb3-2a9b-41e3-8408-c3ca1d568558",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.risk_factors",
+          "value": "Clean-room HVAC dependency and solvent storage",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "0933f80a-22b6-4312-8d02-87d387d8c8a6",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "a76b93b7-9574-4d46-91e5-c691dd805f55",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Product recall costs and contamination not caused by an insured peril",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "27241778-b568-4300-92a2-f25944451cea",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ba16aee3-7425-47f7-a413-9d6edc312ceb",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n300,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "166e7cf9-f22f-478e-948a-a3997a2e62be",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "02_coverage_schedule.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "83aef66e-8ba0-4ffd-a65f-0e0725c05eff",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n300,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "45fbff94-6ff7-4b60-b7f0-b0599ac65270",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ba16aee3-7425-47f7-a413-9d6edc312ceb",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Endorsement SYN-END-0002-01: Plant and machinery values reviewed. Revised machinery declared value: n90,000,000.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "22ca4357-c1f6-4a61-91c7-e0886ff7cade",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Endorsement SYN-END-0002-01: Additional named insured endorsement: Northstar Pharma Systems Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy.",
+          "status": "needs_review",
+          "correct": false,
+          "silently_wrong": true,
+          "has_ground_truth_for_type": true,
+          "false_classification": "UNSUPPORTED",
+          "fact_id": "0d4de3c1-6c26-4ddf-b7c7-b08259c174f5",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "property.location",
+          "value": "750 Logistics Hub, Ahmedabad, Gujarat",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "29c4ecd4-c4dc-42d8-96f4-dc2edc6ae596",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ba16aee3-7425-47f7-a413-9d6edc312ceb",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n300,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ba16aee3-7425-47f7-a413-9d6edc312ceb",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-003",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 13,
+      "extracted_fact_count": 19,
+      "recalled_fact_count": 13,
+      "fact_recall_pct": 100.0,
+      "false_extraction_count": 1,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": 100.0,
+      "evidence_traceable_count": 19,
+      "evidence_page_checked": 17,
+      "evidence_page_correct_count": 17,
+      "by_fact_type": {
+        "property.sum_insured": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 3,
+          "false": 0
+        },
+        "policy.coverage_limit": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.deductible": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "property.location": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "property.occupancy": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 1
+        },
+        "property.construction": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "property.risk_factors": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "policy.coverage": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.exclusion": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.endorsement": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        }
+      },
+      "unique_fact_count": 15,
+      "false_extraction_breakdown": {
+        "CONTRADICTORY_FACT": 1
+      },
+      "contradictions_flagged": 2,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "267 Technology Park, Gurugram, Haryana",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "8b20c407-9410-4f95-86d5-854bfb64e004",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Third-party logistics warehousing and cross-docking facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "78e8a355-2d6c-47fb-96af-51f170416928",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "Pre-engineered steel building, class B construction, high-bay racking",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "ab0cbba7-4ffd-4eaa-ae23-c5a30956e1f0",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n500,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "e63423be-3795-4d75-80e4-f95895fe8421",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n600,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "74c16ec2-cd3b-45ad-b985-f6de4a1a1725",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "74086fff-d3f9-438e-852d-55bb549b3e6a",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage",
+          "value": "Property Damage",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "a8a3c350-d2f0-4930-a3d5-590cc9540074",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage",
+          "value": "Business Interruption",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "8e80ba3e-b654-4eb2-b561-b2600b2c0620",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.risk_factors",
+          "value": "High-density pallet racking and forklift traffic",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "2cda43d6-d036-4d83-968a-477d9782aae0",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "54ee0822-9f18-47d1-8225-924de7507336",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Goods in transit beyond the insured premises",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "29963f7b-cd64-45d6-8e85-f49f4efc3c1f",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n500,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "e63423be-3795-4d75-80e4-f95895fe8421",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "74086fff-d3f9-438e-852d-55bb549b3e6a",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n500,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "fc0f492b-71f7-4ac1-bf91-8cfee0dd5a44",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Plant and machinery values reviewed. Revised machinery declared value: n150,000,000.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "a144c9a7-cd16-47f7-9758-961412a84dad",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Additional named insured endorsement: BluePeak Logistics Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "7753b619-49cb-4617-9bcc-f8f4a3a4795d",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.location",
+          "value": "267 Technology Park, Gurugram, Haryana",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "8b20c407-9410-4f95-86d5-854bfb64e004",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "logistics and warehousing",
+          "status": "contradiction_flagged",
+          "correct": false,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": "CONTRADICTORY_FACT",
+          "fact_id": "1f117812-7478-4e68-b209-2fb0f9da05c3",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "04_risk_survey.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n500,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "e63423be-3795-4d75-80e4-f95895fe8421",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-004",
+      "documents_ingested": 5,
+      "parse_errors": [],
+      "ground_truth_fact_count": 13,
+      "extracted_fact_count": 18,
+      "recalled_fact_count": 13,
+      "fact_recall_pct": 100.0,
+      "false_extraction_count": 1,
+      "silent_wrong_fact_count": 0,
+      "evidence_snippet_verified_pct": 100.0,
+      "evidence_traceable_count": 18,
+      "evidence_page_checked": 16,
+      "evidence_page_correct_count": 16,
+      "by_fact_type": {
+        "property.sum_insured": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 3,
+          "false": 1
+        },
+        "policy.coverage_limit": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.deductible": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "property.location": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 2,
+          "false": 0
+        },
+        "property.occupancy": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "property.construction": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "property.risk_factors": {
+          "ground_truth": 1,
+          "recalled": 1,
+          "extracted": 1,
+          "false": 0
+        },
+        "policy.coverage": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.exclusion": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        },
+        "policy.endorsement": {
+          "ground_truth": 2,
+          "recalled": 2,
+          "extracted": 2,
+          "false": 0
+        }
+      },
+      "unique_fact_count": 15,
+      "false_extraction_breakdown": {
+        "CONTRADICTORY_FACT": 1
+      },
+      "contradictions_flagged": 2,
+      "fact_scores": [
+        {
+          "fact_type": "property.location",
+          "value": "464 Industrial Estate, Indore, Madhya Pradesh",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "47850a48-3e67-4880-b2aa-1b29abf9e459",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.occupancy",
+          "value": "Food processing and cold storage facility",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "4265da76-13a7-4cb1-b7f7-450c80a519ad",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.construction",
+          "value": "RCC frame with insulated cold-storage panels, class B construction",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "95df60be-e43d-4a63-8556-6510091f0098",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "e8bad803-d3a3-4d7a-b03a-f18aa61ed424",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n420,000,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "8686b43a-b919-478d-b104-67ffe26a67e0",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "00d9adfb-677c-47d4-a90f-31f0b8f4b219",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage",
+          "value": "Property Damage",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "9d3e50ef-6861-4ce7-855c-7568394ed65a",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage",
+          "value": "Business Interruption",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "61ff3929-c3d2-440c-8160-5d006fa5b534",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.risk_factors",
+          "value": "Refrigeration ammonia system and cold-chain dependency",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "cb275d18-7803-4bee-a21a-7b6d63431d10",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "War, terrorism and nuclear risks",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "66bd79a0-c844-4469-b988-e618b0fc7d99",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "value": "Spoilage of stock following a power interruption under 24 hours",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "a7240f2a-8368-4ec9-bb05-c974857de2a2",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n370,000,000",
+          "status": "contradiction_flagged",
+          "correct": false,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": "CONTRADICTORY_FACT",
+          "fact_id": "f5c32b92-a53d-4e37-8052-5542f5dd2804",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "02_coverage_schedule.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "policy.deductible",
+          "value": "n1,500,000",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "00d9adfb-677c-47d4-a90f-31f0b8f4b219",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "value": "n350,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "5b7d4af2-0bb9-4469-b77b-27fc843117e3",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": null
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Plant and machinery values reviewed. Revised machinery declared value: n105,000,000.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "0786277b-132e-4cee-aafb-4385b14f075c",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "value": "Additional named insured endorsement: Crestline Foods Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy.",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "a1f2765b-2e27-4855-b24a-4c5079c8f200",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "03_endorsement.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.location",
+          "value": "464 Industrial Estate, Indore, Madhya Pradesh",
+          "status": "needs_review",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "47850a48-3e67-4880-b2aa-1b29abf9e459",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "value": "n350,000,000",
+          "status": "contradiction_flagged",
+          "correct": true,
+          "silently_wrong": false,
+          "has_ground_truth_for_type": true,
+          "false_classification": null,
+          "fact_id": "e8bad803-d3a3-4d7a-b03a-f18aa61ed424",
+          "evidence_exists": true,
+          "evidence_has_document": true,
+          "snippet_present": true,
+          "snippet_verified": true,
+          "evidence_page": 1,
+          "evidence_document": "01_property_policy.pdf",
+          "evidence_page_correct": true
+        }
+      ]
+    }
+  ],
+  "query_check": {
+    "summary": {
+      "questions": 40,
+      "correct": 33,
+      "abstained": 6,
+      "wrong": 1,
+      "interpretation_ok_pct": 100.0,
+      "answered_with_evidence_pct": 100.0,
+      "hard_gate_zero_wrong_answers": false
+    },
+    "companies": [
+      {
+        "company_id": "AUR-SYN-001",
+        "as_of": "2026-04-08",
+        "questions": [
+          {
+            "fact_type": "policy.coverage",
+            "question": "What coverage does the policy have?",
+            "interpreted_ok": true,
+            "answer": [
+              "Property Damage",
+              "Business Interruption"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.coverage_limit",
+            "question": "What is the coverage limit?",
+            "interpreted_ok": true,
+            "answer": null,
+            "verdict": "abstained",
+            "reason": "Sources disagree on this value; a person must correct one side first.",
+            "review_status": "contradiction",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.deductible",
+            "question": "What is the deductible?",
+            "interpreted_ok": true,
+            "answer": "n1,500,000",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "02_coverage_schedule.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.endorsement",
+            "question": "What are the endorsements?",
+            "interpreted_ok": true,
+            "answer": [
+              "Plant and machinery values reviewed. Revised machinery declared value: n180,000,000.",
+              "Additional named insured endorsement: Apex Precision Components Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy."
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "03_endorsement.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.exclusion",
+            "question": "What are the exclusions?",
+            "interpreted_ok": true,
+            "answer": [
+              "War, terrorism and nuclear risks",
+              "Machinery breakdown arising from normal wear and tear"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.construction",
+            "question": "What is the construction?",
+            "interpreted_ok": true,
+            "answer": "RCC frame structure, class A construction, fire-rated compartment walls",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.location",
+            "question": "What is the location of the property?",
+            "interpreted_ok": true,
+            "answer": "932 Technology Park, Pune, Maharashtra",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "04_risk_survey.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.occupancy",
+            "question": "What is the occupancy?",
+            "interpreted_ok": true,
+            "answer": "Precision component manufacturing facility with machine shop and assembly floor",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.risk_factors",
+            "question": "What are the risk factors?",
+            "interpreted_ok": true,
+            "answer": [
+              "Machine shop operations with metalworking fluids present"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.sum_insured",
+            "question": "What is the sum insured?",
+            "interpreted_ok": true,
+            "answer": "n600,000,000",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 4,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "02_coverage_schedule.pdf",
+                "page": 1
+              },
+              {
+                "document": "03_endorsement.pdf",
+                "page": 1
+              },
+              {
+                "document": "05_claim_loss_run.pdf",
+                "page": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "company_id": "AUR-SYN-002",
+        "as_of": "2026-04-15",
+        "questions": [
+          {
+            "fact_type": "policy.coverage",
+            "question": "What coverage does the policy have?",
+            "interpreted_ok": true,
+            "answer": [
+              "Property Damage",
+              "Business Interruption"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.coverage_limit",
+            "question": "What is the coverage limit?",
+            "interpreted_ok": true,
+            "answer": null,
+            "verdict": "abstained",
+            "reason": "Sources disagree on this value; a person must correct one side first.",
+            "review_status": "contradiction",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.deductible",
+            "question": "What is the deductible?",
+            "interpreted_ok": true,
+            "answer": "n500,000",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "02_coverage_schedule.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.endorsement",
+            "question": "What are the endorsements?",
+            "interpreted_ok": true,
+            "answer": [
+              "Endorsement SYN-END-0002-01: Plant and machinery values reviewed. Revised machinery declared value: n90,000,000.",
+              "Endorsement SYN-END-0002-01: Additional named insured endorsement: Northstar Pharma Systems Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy."
+            ],
+            "verdict": "wrong",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "03_endorsement.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.exclusion",
+            "question": "What are the exclusions?",
+            "interpreted_ok": true,
+            "answer": [
+              "War, terrorism and nuclear risks",
+              "Product recall costs and contamination not caused by an insured peril"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.construction",
+            "question": "What is the construction?",
+            "interpreted_ok": true,
+            "answer": "RCC frame structure with clean-room panel partitions, class A construction",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.location",
+            "question": "What is the location of the property?",
+            "interpreted_ok": true,
+            "answer": "750 Logistics Hub, Ahmedabad, Gujarat",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "04_risk_survey.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.occupancy",
+            "question": "What is the occupancy?",
+            "interpreted_ok": true,
+            "answer": "Pharmaceutical formulation and packaging facility with clean-room areas",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.risk_factors",
+            "question": "What are the risk factors?",
+            "interpreted_ok": true,
+            "answer": [
+              "Clean-room HVAC dependency and solvent storage"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.sum_insured",
+            "question": "What is the sum insured?",
+            "interpreted_ok": true,
+            "answer": "n300,000,000",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 5,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "02_coverage_schedule.pdf",
+                "page": 1
+              },
+              {
+                "document": "03_endorsement.pdf",
+                "page": 1
+              },
+              {
+                "document": "04_risk_survey.pdf",
+                "page": 1
+              },
+              {
+                "document": "05_claim_loss_run.pdf",
+                "page": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "company_id": "AUR-SYN-003",
+        "as_of": "2026-04-22",
+        "questions": [
+          {
+            "fact_type": "policy.coverage",
+            "question": "What coverage does the policy have?",
+            "interpreted_ok": true,
+            "answer": [
+              "Property Damage",
+              "Business Interruption"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.coverage_limit",
+            "question": "What is the coverage limit?",
+            "interpreted_ok": true,
+            "answer": null,
+            "verdict": "abstained",
+            "reason": "Sources disagree on this value; a person must correct one side first.",
+            "review_status": "contradiction",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.deductible",
+            "question": "What is the deductible?",
+            "interpreted_ok": true,
+            "answer": "n1,000,000",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "02_coverage_schedule.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.endorsement",
+            "question": "What are the endorsements?",
+            "interpreted_ok": true,
+            "answer": [
+              "Plant and machinery values reviewed. Revised machinery declared value: n150,000,000.",
+              "Additional named insured endorsement: BluePeak Logistics Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy."
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "03_endorsement.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.exclusion",
+            "question": "What are the exclusions?",
+            "interpreted_ok": true,
+            "answer": [
+              "War, terrorism and nuclear risks",
+              "Goods in transit beyond the insured premises"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.construction",
+            "question": "What is the construction?",
+            "interpreted_ok": true,
+            "answer": "Pre-engineered steel building, class B construction, high-bay racking",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.location",
+            "question": "What is the location of the property?",
+            "interpreted_ok": true,
+            "answer": "267 Technology Park, Gurugram, Haryana",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "04_risk_survey.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.occupancy",
+            "question": "What is the occupancy?",
+            "interpreted_ok": true,
+            "answer": null,
+            "verdict": "abstained",
+            "reason": "Sources disagree on this value; a person must correct one side first.",
+            "review_status": "contradiction",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "04_risk_survey.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.risk_factors",
+            "question": "What are the risk factors?",
+            "interpreted_ok": true,
+            "answer": [
+              "High-density pallet racking and forklift traffic"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.sum_insured",
+            "question": "What is the sum insured?",
+            "interpreted_ok": true,
+            "answer": "n500,000,000",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 3,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "02_coverage_schedule.pdf",
+                "page": 1
+              },
+              {
+                "document": "05_claim_loss_run.pdf",
+                "page": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "company_id": "AUR-SYN-004",
+        "as_of": "2026-04-29",
+        "questions": [
+          {
+            "fact_type": "policy.coverage",
+            "question": "What coverage does the policy have?",
+            "interpreted_ok": true,
+            "answer": [
+              "Property Damage",
+              "Business Interruption"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.coverage_limit",
+            "question": "What is the coverage limit?",
+            "interpreted_ok": true,
+            "answer": null,
+            "verdict": "abstained",
+            "reason": "Sources disagree on this value; a person must correct one side first.",
+            "review_status": "contradiction",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.deductible",
+            "question": "What is the deductible?",
+            "interpreted_ok": true,
+            "answer": "n1,500,000",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "02_coverage_schedule.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.endorsement",
+            "question": "What are the endorsements?",
+            "interpreted_ok": true,
+            "answer": [
+              "Plant and machinery values reviewed. Revised machinery declared value: n105,000,000.",
+              "Additional named insured endorsement: Crestline Foods Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy."
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "03_endorsement.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "policy.exclusion",
+            "question": "What are the exclusions?",
+            "interpreted_ok": true,
+            "answer": [
+              "War, terrorism and nuclear risks",
+              "Spoilage of stock following a power interruption under 24 hours"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.construction",
+            "question": "What is the construction?",
+            "interpreted_ok": true,
+            "answer": "RCC frame with insulated cold-storage panels, class B construction",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.location",
+            "question": "What is the location of the property?",
+            "interpreted_ok": true,
+            "answer": "464 Industrial Estate, Indore, Madhya Pradesh",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "04_risk_survey.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.occupancy",
+            "question": "What is the occupancy?",
+            "interpreted_ok": true,
+            "answer": "Food processing and cold storage facility",
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.risk_factors",
+            "question": "What are the risk factors?",
+            "interpreted_ok": true,
+            "answer": [
+              "Refrigeration ammonia system and cold-chain dependency"
+            ],
+            "verdict": "correct",
+            "reason": null,
+            "review_status": "unverified",
+            "evidence_count": 1,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              }
+            ]
+          },
+          {
+            "fact_type": "property.sum_insured",
+            "question": "What is the sum insured?",
+            "interpreted_ok": true,
+            "answer": null,
+            "verdict": "abstained",
+            "reason": "Sources disagree on this value; a person must correct one side first.",
+            "review_status": "contradiction",
+            "evidence_count": 2,
+            "source_pages": [
+              {
+                "document": "01_property_policy.pdf",
+                "page": 1
+              },
+              {
+                "document": "05_claim_loss_run.pdf",
+                "page": 1
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

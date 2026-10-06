@@ -206,6 +206,7 @@ def compare_entities(conn, *, organization_id: str, left_entity_id: str,
         else:
             comparisons.append(_compare_multi(fact_type, left_facts, right_facts))
 
+    _attach_evidence_and_assessment(conn, organization_id, comparisons)
     changed = [c for c in comparisons if c["change"] not in ("unchanged", "absent_both")]
 
     return {
@@ -218,6 +219,48 @@ def compare_entities(conn, *, organization_id: str, left_entity_id: str,
             "changed_fact_types": [c["fact_type"] for c in changed],
         },
     }
+
+
+def _attach_evidence_and_assessment(conn, organization_id: str, comparisons: list[dict]) -> None:
+    """v0.10.0 — additive only (the 13 benchmark cases still read `change`):
+    every compared value carries its evidence (document, page, quote), numeric
+    singleton changes carry absolute and percentage change, and `assessment`
+    says whether the change can be relied on:
+      contradictory  either side has an unresolved conflict — do not act on it
+      unknown        neither side states this fact
+      no_evidence    a compared value has no evidence row
+      evidenced      every compared value is backed by evidence
+    """
+    def ev(summary):
+        if summary is None:
+            return None
+        rows = db.get_evidence_for_fact(conn, summary["fact_id"], organization_id)
+        summary["evidence"] = [{"document_id": str(e["document_id"]),
+                                "document_filename": e.get("document_filename"),
+                                "page": e.get("page"), "snippet": e.get("snippet")} for e in rows]
+        return summary["evidence"]
+
+    for c in comparisons:
+        if c["cardinality"] == "singleton":
+            evs = [ev(c["left"]), ev(c["right"])]
+            if c["left"] and c["right"] and c["left"]["normalized_value"] is not None \
+                    and c["right"]["normalized_value"] is not None:
+                a, b = c["left"]["normalized_value"], c["right"]["normalized_value"]
+                c["absolute_change"] = b - a
+                c["percent_change"] = round((b - a) / a * 100, 1) if a else None
+            unresolved = c["left_unresolved_conflict"] or c["right_unresolved_conflict"]
+        else:
+            evs = [ev(x) for key in ("kept", "added", "removed") for x in c[key]]
+            unresolved = False
+        present = [e for e in evs if e is not None]
+        if unresolved:
+            c["assessment"] = "contradictory"
+        elif c["change"] == "absent_both":
+            c["assessment"] = "unknown"
+        elif any(len(e) == 0 for e in present):
+            c["assessment"] = "no_evidence"
+        else:
+            c["assessment"] = "evidenced"
 
 
 def compare_submissions(conn, *, organization_id: str, left_submission_id: str,

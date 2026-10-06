@@ -655,6 +655,80 @@ def _print_by_fact_type_table(summary: dict, diagnostics: dict) -> None:
               json.dumps(diagnostics["dropped_fact_type_names"], sort_keys=True))
 
 
+# ---------------------------------------------------------------------------
+# v0.10.0 — `--query-check`: ask the Knowledge query layer one question per
+# ground-truth fact type, against the facts this run just extracted with the
+# real model, and grade the ANSWERS. Separate from (and never changing) the
+# Phase 1A fact scoring above.
+#   correct    answer matches ground truth (same matcher as fact scoring)
+#   abstained  answer is null (contradiction, no fact, ambiguous) — safe
+#   wrong      answer given but does not match ground truth — hard gate, must be 0
+# ---------------------------------------------------------------------------
+QUERY_QUESTIONS = {
+    "property.sum_insured": "What is the sum insured?",
+    "property.location": "What is the location of the property?",
+    "property.occupancy": "What is the occupancy?",
+    "property.construction": "What is the construction?",
+    "property.risk_factors": "What are the risk factors?",
+    "policy.coverage": "What coverage does the policy have?",
+    "policy.coverage_limit": "What is the coverage limit?",
+    "policy.deductible": "What is the deductible?",
+    "policy.exclusion": "What are the exclusions?",
+    "policy.endorsement": "What are the endorsements?",
+}
+
+
+def query_check_company(conn, organization_id: str, company_dir: Path, ingest_result: dict) -> dict:
+    from datetime import date as _date
+    from knowledge import query as kq
+
+    gt = load_ground_truth_facts(company_dir)
+    analysis = ingest_result["analysis"]
+    business_id = str(analysis["business"]["id"])
+    periods = [d.get("policy_period") for d in analysis.get("documents_processed", []) if d.get("policy_period")]
+    as_of = periods[0][0] if periods else _date.today().isoformat()
+    rows = []
+    for fact_type in sorted({g["fact_type"] for g in gt}):
+        question = QUERY_QUESTIONS.get(fact_type)
+        if not question:
+            continue
+        expected = [g for g in gt if g["fact_type"] == fact_type]
+        r = kq.query(conn, organization_id=organization_id, question=question,
+                     entity_id=business_id, as_of=as_of, use_llm=False)
+        interpreted_ok = r["interpretation"].get("fact_type") == fact_type
+        answer = r["answer"]
+        if answer is None:
+            verdict = "abstained"
+        else:
+            values = answer if isinstance(answer, list) else [answer]
+            facts_by_value = {f["value"]: f for f in r["facts_used"]}
+            ok = all(any(values_match(fact_type, v, (facts_by_value.get(v) or {}).get("normalized_value"), g)
+                         for g in expected) for v in values)
+            verdict = "correct" if ok else "wrong"
+        rows.append({
+            "fact_type": fact_type, "question": question, "interpreted_ok": interpreted_ok,
+            "answer": answer, "verdict": verdict, "reason": r["reason"],
+            "review_status": r["review_status"], "evidence_count": len(r["evidence"]),
+            "source_pages": r["source_pages"],
+        })
+    return {"company_id": company_dir.name, "as_of": as_of, "questions": rows}
+
+
+def summarise_query_check(results: list[dict]) -> dict:
+    qs = [q for r in results for q in r["questions"]]
+    answered = [q for q in qs if q["answer"] is not None]
+    return {
+        "questions": len(qs),
+        "correct": sum(q["verdict"] == "correct" for q in qs),
+        "abstained": sum(q["verdict"] == "abstained" for q in qs),
+        "wrong": sum(q["verdict"] == "wrong" for q in qs),
+        "interpretation_ok_pct": round(100 * sum(q["interpreted_ok"] for q in qs) / len(qs), 1) if qs else None,
+        "answered_with_evidence_pct": (round(100 * sum(q["evidence_count"] > 0 for q in answered) / len(answered), 1)
+                                       if answered else None),
+        "hard_gate_zero_wrong_answers": all(q["verdict"] != "wrong" for q in qs),
+    }
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 eval_property_policy.py /path/to/Aurevia_Synthetic_Insurance_World_v1")
@@ -720,12 +794,16 @@ def main():
 
         ppi.reset_extraction_diagnostics()
         company_results = []
+        query_results = []
+        query_check = "--query-check" in sys.argv
         for company_dir in company_dirs:
             print(f"  {company_dir.name}...", end=" ", flush=True)
             ingest_result = ingest_company(conn, organization_id, company_dir)
             result = score_company(company_dir, ingest_result, conn=conn,
                                     organization_id=organization_id)
             company_results.append(result)
+            if query_check:
+                query_results.append(query_check_company(conn, organization_id, company_dir, ingest_result))
             print(
                 f"recall={result['fact_recall_pct']}%  "
                 f"extracted={result['extracted_fact_count']}  "
@@ -742,6 +820,8 @@ def main():
     diagnostics = ppi.snapshot_extraction_diagnostics()
     output = {"run": run_metadata, "summary": summary,
               "extraction_diagnostics": diagnostics, "companies": company_results}
+    if query_check:
+        output["query_check"] = {"summary": summarise_query_check(query_results), "companies": query_results}
     # Timestamped, not overwritten in place — each run is kept as its own
     # historical record (evaluations/phase1a/README.md explains the layout)
     # rather than every run silently erasing the last one, which is exactly
@@ -758,6 +838,17 @@ def main():
     print(f"\nFull results written to {out_path}")
     print(json.dumps({"run": run_metadata, "summary": summary}, indent=2))
     _print_by_fact_type_table(summary, diagnostics)
+    if query_check:
+        qs = output["query_check"]["summary"]
+        print(f"\nquery check: {qs['questions']} questions  correct {qs['correct']}  "
+              f"abstained {qs['abstained']}  WRONG {qs['wrong']}  "
+              f"interpretation ok {qs['interpretation_ok_pct']}%  "
+              f"answered with evidence {qs['answered_with_evidence_pct']}%")
+        for r in query_results:
+            for q in r["questions"]:
+                if q["verdict"] != "correct":
+                    print(f"  {r['company_id']} {q['fact_type']}: {q['verdict']} — "
+                          f"answer={q['answer']!r} reason={q['reason']!r}")
 
     # latest.json only ever reflects a run where the model was genuinely
     # reachable — a smoke-test run (model unreachable) is still saved above
@@ -784,6 +875,10 @@ def main():
             "actually running and reachable before treating this result as "
             "Phase 1A evidence."
         )
+        sys.exit(1)
+
+    if query_check and not output["query_check"]["summary"]["hard_gate_zero_wrong_answers"]:
+        print(f"\nQUERY HARD GATE FAILED: {output['query_check']['summary']['wrong']} wrong answer(s).")
         sys.exit(1)
 
     if not summary["hard_gates"]["zero_silent_wrong_facts"]:

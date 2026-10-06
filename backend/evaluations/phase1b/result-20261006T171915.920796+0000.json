@@ -1,0 +1,224 @@
+{
+  "run": {
+    "benchmark": "phase1b_policy_comparison",
+    "model_dependent": false,
+    "timestamp_utc": "2026-10-06T17:19:15.920796+00:00",
+    "git_commit": "3fd9874",
+    "test_case_count": 13
+  },
+  "summary": {
+    "total_cases": 13,
+    "passed": 13,
+    "failed": 0,
+    "all_passed": true,
+    "failed_case_ids": []
+  },
+  "cases": [
+    {
+      "id": "increased_sum_insured",
+      "description": "property.sum_insured goes up between baseline and renewal.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "property.sum_insured.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "decreased_sum_insured",
+      "description": "property.sum_insured goes down between baseline and renewal.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "property.sum_insured.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "increased_deductible",
+      "description": "policy.deductible goes up.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "policy.deductible.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "decreased_deductible",
+      "description": "policy.deductible goes down.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "policy.deductible.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "unchanged_coverage_limit",
+      "description": "policy.coverage_limit stays the same (within tolerance) \u2014 must NOT be reported as changed.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "policy.coverage_limit.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "unchanged_within_tolerance",
+      "description": "A trivial rounding difference (<1%) must still read unchanged, matching reconcile_fact()'s own tolerance.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "policy.coverage_limit.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "added_sum_insured",
+      "description": "No baseline value, renewal states one \u2014 must read 'added', not 'increased' (nothing to compare against).",
+      "passed": true,
+      "checks": [
+        {
+          "check": "property.sum_insured.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "removed_sum_insured",
+      "description": "Baseline states a value, renewal states none \u2014 must read 'removed'.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "property.sum_insured.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "exclusion_added_removed_kept",
+      "description": "Multi-valued fact type: one exclusion kept, one removed, one newly added.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "policy.exclusion.kept",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "policy.exclusion.added",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "policy.exclusion.removed",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "endorsement_added_removed",
+      "description": "Multi-valued: an endorsement present in both (A, C) is kept, B is removed, D is added.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "policy.endorsement.kept",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "policy.endorsement.added",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "policy.endorsement.removed",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "fully_unchanged_policy",
+      "description": "Every fact type identical between baseline and renewal \u2014 nothing should be reported as changed.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "policy.deductible.change",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "policy.coverage_limit.change",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "policy.exclusion.kept",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "policy.exclusion.added",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "policy.exclusion.removed",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "missing_fact_both_sides",
+      "description": "A fact type stated on neither side must read absent_both, not added/removed/changed.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "property.risk_factors.change",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "id": "cross_org_isolation",
+      "description": "Org B must not be able to read or compare Org A's entities by passing Org A's entity_id with Org B's organization_id.",
+      "passed": true,
+      "checks": [
+        {
+          "check": "org_b_cannot_read_org_a_entity",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "org_b_cannot_read_org_a_entity_reversed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "check": "org_a_can_compare_its_own_entities",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    }
+  ]
+}

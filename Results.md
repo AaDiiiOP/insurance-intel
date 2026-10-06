@@ -1165,3 +1165,19 @@ Coverage validity rule added for the failure above. Deterministic benchmark chec
 
 ## v0.9.0 (2026-10-02)
 Knowledge explorer UI + 2 read endpoints. 100/100 tests. UI checked in headless Chromium (desktop and 390px), including Verify and history. No extraction/scoring change.
+
+## v0.10.0 (2026-10-06) — Knowledge query layer
+Deterministic: 125/125 tests; policy comparison 13/13 (result-20261006T153520 in phase1b/);
+ground-truth simulation (perfect facts loaded for AUR-SYN-001–004, query layer graded): 40/40 correct, 0 wrong, 100% with evidence.
+Real Qwen: NOT yet run. Pending: `--only AUR-SYN-001,AUR-SYN-002,AUR-SYN-003,AUR-SYN-004 --query-check`.
+Phase 1B acceptance (full 20) not run; not claimed.
+
+## v0.10.0 real Qwen, 4 companies + query check (2026-10-06) — GATE FAILED
+qwen2.5:7b reachable. Recall 98.1% (endorsement 87.5%), false extraction 5.1%, evidence verified 100%, page accuracy 100%, policy period found 4/4.
+Silent wrong 1: AUR-SYN-002 endorsement "Endorsement SYN-END-0002-01: Additional named insured endorsement: …" (header label glued on; UNSUPPORTED).
+Query check: 40 questions, 33 correct, 6 abstained (coverage_limit contradiction x4, occupancy x1 AUR-SYN-003, sum_insured x1 AUR-SYN-004), 1 wrong (same endorsement). Interpretation 100%, answered with evidence 100%.
+Result file: result-20261006T162353.532499+0000.json (developer's machine).
+
+## v0.10.1 (2026-10-06)
+Fixes for the above (endorsement label cleanup; limit/sum-insured line rule). Deterministic 20-company check: 60/60 GT kept, decoys 40/40 rejected, cleanup 40/40. 128/128 tests, 13/13 comparison.
+Real-Qwen re-run `--only AUR-SYN-001,AUR-SYN-002,AUR-SYN-003,AUR-SYN-004 --query-check` (2026-10-06): 0 silent wrong, 0 wrong answers — as reported by the developer; recall/abstention figures are in the result file on his machine. Phase 1B full 20-company acceptance: not run.

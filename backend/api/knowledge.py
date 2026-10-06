@@ -406,6 +406,36 @@ def analyze_property_policy(submission_id: str, x_organization_id: str | None = 
     }
 
 
+class KnowledgeQueryBody(BaseModel):
+    question: str
+    entity_id: str | None = None
+    as_of: str | None = None
+    use_llm: bool = True
+
+
+@router.post("/knowledge/query")
+def knowledge_query(body: KnowledgeQueryBody, x_organization_id: str | None = Header(None)):
+    """Answer a question from the Knowledge Core first (facts + evidence +
+    periods + relationships), falling back to keyword retrieval and an
+    evidence-validated local-model answer only when no fact type applies.
+    Never returns an un-evidenced answer: unknown, ambiguous or contradictory
+    cases come back with answer=null and needs_review=true."""
+    if not body.question or not body.question.strip():
+        raise HTTPException(status_code=400, detail="question is required.")
+    entity_id = _validate_uuid(body.entity_id, "entity id") if body.entity_id else None
+    if body.as_of is not None:
+        try:
+            datetime.date.fromisoformat(body.as_of)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="as_of must be YYYY-MM-DD.")
+    from knowledge import query as kq
+    with db.get_connection() as conn:
+        organization_id = _resolve_organization(conn, x_organization_id)
+        result = kq.query(conn, organization_id=organization_id, question=body.question.strip(),
+                          entity_id=entity_id, as_of=body.as_of, use_llm=body.use_llm)
+    return _json_safe(result)
+
+
 @router.get("/knowledge/compare-submissions")
 def compare_submissions(left_submission_id: str, right_submission_id: str,
                          x_organization_id: str | None = Header(None)):
