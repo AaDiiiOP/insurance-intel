@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.10.1** (see `frontend/package.json` — the one version number
+**Version: 0.10.3** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Status (stated precisely, 2026-10-02):**
@@ -19,6 +19,11 @@ for the whole project; bump it there on every release)
 
 | v0.10.0 real-Qwen 4-company `--query-check` (2026-10-06) | Recall 98.1%, evidence 100% verified / 100% page accuracy; **silent wrong 1** (AUR-SYN-002 endorsement written as "Endorsement SYN-END-0002-01: …" — a string not in the document); query check 40 questions: 33 correct, 6 abstained (coverage-limit contradictions in 4/4 companies from the machinery valuation note; 1 occupancy; 1 sum insured), **1 wrong** (same endorsement). Gate FAILED. |
 | v0.10.1 — fixes for that run | Endorsement header labels stripped from values; a limit / sum insured must be stated on a limit / sum-insured line. Deterministic check on all 20 companies: 60/60 ground-truth limits & sums kept, machinery decoys rejected 40/40, endorsement cleanup 40/40. 128/128 tests, 13/13 comparison. Real-Qwen re-run of the same 4 companies (2026-10-06): 0 silent wrong, 0 wrong answers (reported by the developer; result file in `backend/evaluations/phase1a/`). Full 20-company acceptance still pending. |
+
+| v0.10.2 — Phase 1B audit & hardening | Full audit against the code (see `PHASE_1B_STATUS.md`). Fixed: corrections of last year's value came back as current; human corrections were ignored by the query layer (silent-wrong path); an already-replaced value could be re-corrected; misleading questions ("time limit", "insurer address", "when built") got stored facts; peril-specific questions got the policy-wide value. Tenant-isolation audit over every endpoint (reads and writes): no leaks. 145/145 tests, 13/13 comparison, simulation 40/40 + 28/28 probes. **Real-Qwen 4-company `--query-check` (now with 7 safety probes per company) pending.** |
+
+| v0.10.2 real-Qwen 4-company `--query-check` (2026-10-07) | Silent wrong **0**, wrong answers **0**, evidence 100% / page 100%, recall 96.2% (one Ollama HTTP 500 on AUR-SYN-001; clean re-run of 001: recall 100%, 7/7 probes). 1 of 28 safety probes failed: an undated limit was given for a date before the policy began. |
+| v0.10.3 — fix | Undated period-bound values are never given outside the known policy periods; reproduced and tested (146/146). `recheck_query.py` re-grades stored facts without the model. Recheck on Run 1's stored facts (2026-10-07): 40 questions, 34 correct, 6 abstained, **0 wrong**, **28/28 probes**. **Phase 1B: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.** |
 
 Tenant isolation is application-level (not PostgreSQL RLS); revisit before production.
 See `Results.md` for run-by-run detail.
@@ -1044,3 +1049,40 @@ Checked without the model on all 20 companies (app parser): 60/60
 ground-truth limits & sums insured kept, machinery value rejected in 40/40
 places, endorsement cleanup 40/40. Scoring unchanged. The occupancy restatement
 from risk surveys still abstains as a contradiction (known, safe).
+
+## v0.10.2 — Phase 1B audit and hardening (2026-10-06)
+
+Audit, fixes, test counts, security findings and the open validation step are
+in **`PHASE_1B_STATUS.md`**. In short:
+
+- Corrections: correcting a historical (last-year) value stays historical; a
+  correction carries the corrected fact's evidence (`source=reviewer_correction`),
+  so the query layer uses the corrected value instead of falling back to the
+  corrected-away one; re-correcting an already replaced value is refused.
+- Query routing: no bare "limit"/"built"; property location is not used for
+  insurer/broker/agent/office questions; "what X were added" lists X instead of
+  diffing periods; a qualifier ("deductible for flood") makes a singleton
+  question abstain with the policy-wide value as a candidate, and turns a
+  multi-valued question into a yes-with-evidence / "not among the recorded
+  values" check. Questions are capped at 1,000 characters.
+- `--query-check` adds 7 safety probes per company on real extracted facts
+  (policy period, date before any period, previous with one period,
+  peril-specific deductible, not-listed coverage, misleading "time limit",
+  cross-tenant query). A failed probe fails the hard gate.
+- Tenant isolation: every Knowledge Core / query / comparison / document
+  endpoint tested from another organization (reads and writes) — no leaks.
+  Application-level, not PostgreSQL RLS.
+
+Phase status: **NOT READY until the v0.10.2 real-Qwen 4-company run passes**;
+the 20-company acceptance is deliberately deferred.
+
+## v0.10.3 — last Phase 1B fix (2026-10-07)
+
+The v0.10.2 real-Qwen run (AUR-SYN-001–004) had 0 silent-wrong facts and 0
+wrong answers but 1 failed safety probe: after an Ollama HTTP 500 cut short
+AUR-SYN-001's policy extraction, the coverage limit existed only undated (from
+the schedule) and was given for a date before the policy began. Fix: an undated
+value of a period-bound fact type is never given for a day outside every policy
+period known for the entity. New `recheck_query.py <dataset> <organization_id>`
+re-grades the query layer and safety probes on facts already stored by a run —
+no model, seconds. Recheck on 2026-10-07: 0 wrong answers, 28/28 probes passed. **Phase 1B status: READY FOR PHASE 1B ACCEPTANCE (4-company development benchmark; 20-company acceptance deferred).** Details: `PHASE_1B_STATUS.md`.

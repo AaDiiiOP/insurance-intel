@@ -90,7 +90,7 @@ function EvidenceRow({ ev, onError }) {
     <div className="evidence-block">
       <div className="evidence-source">
         {[ev.document_filename, ev.page ? `Page ${ev.page}` : null, ev.section,
-          ev.source === 'ocr' ? 'read via OCR' : 'text layer']
+          ev.source === 'ocr' ? 'read via OCR' : ev.source === 'reviewer_correction' ? 'source of a reviewer correction' : 'text layer']
           .filter(Boolean)
           .join(' · ')}
         <button className="btn-ghost kx-small" onClick={toggle} disabled={loading}>

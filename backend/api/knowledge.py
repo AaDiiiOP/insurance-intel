@@ -422,6 +422,8 @@ def knowledge_query(body: KnowledgeQueryBody, x_organization_id: str | None = He
     cases come back with answer=null and needs_review=true."""
     if not body.question or not body.question.strip():
         raise HTTPException(status_code=400, detail="question is required.")
+    if len(body.question) > 1000:
+        raise HTTPException(status_code=400, detail="question must be at most 1000 characters.")
     entity_id = _validate_uuid(body.entity_id, "entity id") if body.entity_id else None
     if body.as_of is not None:
         try:

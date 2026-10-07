@@ -1181,3 +1181,18 @@ Result file: result-20261006T162353.532499+0000.json (developer's machine).
 ## v0.10.1 (2026-10-06)
 Fixes for the above (endorsement label cleanup; limit/sum-insured line rule). Deterministic 20-company check: 60/60 GT kept, decoys 40/40 rejected, cleanup 40/40. 128/128 tests, 13/13 comparison.
 Real-Qwen re-run `--only AUR-SYN-001,AUR-SYN-002,AUR-SYN-003,AUR-SYN-004 --query-check` (2026-10-06): 0 silent wrong, 0 wrong answers — as reported by the developer; recall/abstention figures are in the result file on his machine. Phase 1B full 20-company acceptance: not run.
+
+## v0.10.2 (2026-10-06) — Phase 1B audit and hardening
+Baseline v0.10.1: 128/128 tests. After: 145/145 tests (17 new), policy comparison 13/13 (run in a scratch copy),
+ground-truth simulation AUR-SYN-001–004: 40/40 answers correct, 28/28 safety probes passed.
+Real Qwen: NOT yet run on v0.10.2. Pending: `--only AUR-SYN-001,AUR-SYN-002,AUR-SYN-003,AUR-SYN-004 --query-check`.
+Details: PHASE_1B_STATUS.md.
+
+## v0.10.2 real Qwen, AUR-SYN-001–004 + query check + probes (2026-10-07)
+Run 1 (07:07 UTC, result-20261007T070750): silent wrong 0; recall 96.2%; false extraction 2.9% (2 contradictory, flagged); evidence verified 100%, page accuracy 100%;
+query 40: 34 correct, 6 abstained, 0 wrong; probes 28, 1 failed (AUR-SYN-001 date_before_any_policy_period answered 600,000,000). One Ollama HTTP 500 on AUR-SYN-001.
+Run 2 (07:44 UTC, AUR-SYN-001 only, result-20261007T074446): recall 100%, false 0%, silent wrong 0, evidence/page 100%; query 9 correct, 1 abstained, 0 wrong; probes 7/7.
+
+## v0.10.3 (2026-10-07)
+Fix for the failed probe (undated period-bound values not given outside known periods). Reproduced: old code fails the probe with 600,000,000, new code abstains. 146/146 tests.
+Final confirmation (2026-10-07 12:11 UTC, query-recheck-20261007T121100.json, no model, Run 1's stored facts): 40 questions, 34 correct, 6 abstained, 0 wrong; interpretation 100%; answered with evidence 100%; probes 28/28. Phase 1B: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.

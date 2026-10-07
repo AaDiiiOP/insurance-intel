@@ -711,11 +711,54 @@ def query_check_company(conn, organization_id: str, company_dir: Path, ingest_re
             "review_status": r["review_status"], "evidence_count": len(r["evidence"]),
             "source_pages": r["source_pages"],
         })
-    return {"company_id": company_dir.name, "as_of": as_of, "questions": rows}
+    return {"company_id": company_dir.name, "as_of": as_of, "questions": rows,
+            "probes": _safety_probes(conn, organization_id, business_id, periods, gt, kq)}
+
+
+def _safety_probes(conn, organization_id, business_id, periods, gt, kq) -> list[dict]:
+    """v0.10.2: behaviour checks on the facts the real model just extracted.
+    Each probe states what a SAFE system must do; a probe that fails counts as
+    a wrong answer (same hard gate)."""
+    from datetime import date as _date, timedelta
+    probes = []
+
+    def probe(name, expect, ok, r):
+        probes.append({"probe": name, "expect": expect, "passed": bool(ok),
+                       "answer": r["answer"], "reason": r["reason"]})
+
+    def ask(q, as_of=None, org=organization_id, entity=business_id):
+        return kq.query(conn, organization_id=org, question=q, entity_id=entity,
+                        as_of=as_of, use_llm=False)
+
+    if periods:
+        start, end = periods[0]
+        r = ask("What is the policy period?", as_of=start)
+        probe("policy_period", f"{start} to {end}", r["answer"] == f"{start} to {end}", r)
+        known = [v["from"] for v in (r.get("values") or []) if isinstance(v, dict) and v.get("from")]
+        earliest = min(known) if known else start
+        before = (_date.fromisoformat(earliest) - timedelta(days=1)).isoformat()
+        r = ask("What is the coverage limit?", as_of=before)
+        probe("date_before_any_policy_period", "abstain", r["answer"] is None, r)
+        if len(known) <= 1:
+            r = ask("What was the previous coverage limit?", as_of=start)
+            probe("previous_with_one_period", "abstain", r["answer"] is None, r)
+    r = ask("What is the deductible for flood?", as_of=periods[0][0] if periods else None)
+    probe("peril_specific_deductible", "abstain", r["answer"] is None, r)
+    covers = " ".join(str(g.get("value", "")).lower() for g in gt if g["fact_type"] == "policy.coverage")
+    if "cyber" not in covers:
+        r = ask("Does the policy cover cyber attack?", as_of=periods[0][0] if periods else None)
+        probe("not_listed_coverage", "abstain", r["answer"] is None, r)
+    r = ask("What is the time limit for notifying a claim?")
+    probe("misleading_limit_question", "not answered from a stored fact", r["answer_type"] != "deterministic", r)
+    other = str(db.create_organization(conn, f"phase1b-probe-{uuid.uuid4().hex[:8]}")["id"])
+    r = ask("What is the coverage limit?", org=other)
+    probe("cross_tenant_query", "abstain, no facts", r["answer"] is None and not r["facts_used"], r)
+    return probes
 
 
 def summarise_query_check(results: list[dict]) -> dict:
     qs = [q for r in results for q in r["questions"]]
+    probes = [p for r in results for p in r.get("probes", [])]
     answered = [q for q in qs if q["answer"] is not None]
     return {
         "questions": len(qs),
@@ -725,7 +768,10 @@ def summarise_query_check(results: list[dict]) -> dict:
         "interpretation_ok_pct": round(100 * sum(q["interpreted_ok"] for q in qs) / len(qs), 1) if qs else None,
         "answered_with_evidence_pct": (round(100 * sum(q["evidence_count"] > 0 for q in answered) / len(answered), 1)
                                        if answered else None),
-        "hard_gate_zero_wrong_answers": all(q["verdict"] != "wrong" for q in qs),
+        "probes": len(probes),
+        "probes_failed": sum(not p["passed"] for p in probes),
+        "hard_gate_zero_wrong_answers": (all(q["verdict"] != "wrong" for q in qs)
+                                         and all(p["passed"] for p in probes)),
     }
 
 
@@ -849,6 +895,12 @@ def main():
                 if q["verdict"] != "correct":
                     print(f"  {r['company_id']} {q['fact_type']}: {q['verdict']} — "
                           f"answer={q['answer']!r} reason={q['reason']!r}")
+        print(f"safety probes: {qs['probes']}  failed {qs['probes_failed']}")
+        for r in query_results:
+            for p in r.get("probes", []):
+                if not p["passed"]:
+                    print(f"  PROBE FAILED {r['company_id']} {p['probe']}: expected {p['expect']} — "
+                          f"answer={p['answer']!r} reason={p['reason']!r}")
 
     # latest.json only ever reflects a run where the model was genuinely
     # reachable — a smoke-test run (model unreachable) is still saved above
@@ -878,7 +930,8 @@ def main():
         sys.exit(1)
 
     if query_check and not output["query_check"]["summary"]["hard_gate_zero_wrong_answers"]:
-        print(f"\nQUERY HARD GATE FAILED: {output['query_check']['summary']['wrong']} wrong answer(s).")
+        print(f"\nQUERY HARD GATE FAILED: {output['query_check']['summary']['wrong']} wrong answer(s), "
+              f"{output['query_check']['summary']['probes_failed']} failed safety probe(s).")
         sys.exit(1)
 
     if not summary["hard_gates"]["zero_silent_wrong_facts"]:

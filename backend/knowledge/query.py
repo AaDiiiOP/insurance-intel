@@ -43,20 +43,33 @@ from .fact_types import FACT_DEFINITIONS, target_entity_kind
 # Most specific phrases first: "coverage limit" must win over "coverage".
 _FACT_TYPE_PHRASES = [
     ("property.sum_insured", ("sum insured", "insured value", "declared value", "total insured")),
-    ("policy.coverage_limit", ("coverage limit", "limit of indemnity", "limit of liability", "cover limit", "limit")),
+    # v0.10.2: no bare "limit" — "time limit for notifying a claim" and "age
+    # limit of the building" were being answered with the coverage limit.
+    ("policy.coverage_limit", ("coverage limit", "limit of indemnity", "limit of liability", "cover limit",
+                               "policy limit", "overall limit", "maximum limit")),
     ("policy.deductible", ("deductible", "excess")),
     ("policy.exclusion", ("exclusion", "excluded", "not covered")),
     ("policy.endorsement", ("endorsement",)),
     ("property.risk_factors", ("risk factor", "hazard")),
     ("property.occupancy", ("occupancy", "used for", "use of the premises", "business activity")),
-    ("property.construction", ("construction", "built", "building material")),
+    # v0.10.2: no bare "built" — "when was the building built" asks for a year.
+    ("property.construction", ("construction", "building material", "built of", "made of")),
     ("property.location", ("location", "address", "situated", "where is")),
     ("policy.coverage", ("coverage", "covered", "cover", "perils", "insured against")),
 ]
 _PERIOD_PHRASES = ("policy period", "period of insurance", "policy term", "valid until",
                    "valid from", "expiry", "expire", "when does the policy", "renewal date")
-_CHANGE_PHRASES = ("change", "changed", "difference", "differ", "compare", "increase",
-                   "decrease", "went up", "went down", "added", "removed", "dropped")
+# v0.10.2: bare "added"/"removed" no longer mean "compare periods" — "what
+# endorsements were added" asks for the list; "added at renewal" compares.
+_CHANGE_PHRASES = ("change", "changed", "difference", "differ", "compare", "compared", "increase",
+                   "decrease", "went up", "went down", "at renewal", "on renewal", "since renewal",
+                   "since last year", "versus")
+# A fact type is not meant when the question is about someone else's details:
+# "the insurer's address" is not the insured property's location.
+_NOT_FOR = {
+    "property.location": ("insurer", "carrier", "broker", "agent", "surveyor", "contact",
+                          "office", "underwriter", "claimant"),
+}
 _PREVIOUS_PHRASES = ("previous", "prior", "last year", "before renewal", "earlier policy",
                      "expiring", "old policy")
 
@@ -77,6 +90,8 @@ def interpret(question: str) -> dict:
     fact_type = None
     for ft, phrases in _FACT_TYPE_PHRASES:
         if any(_contains_phrase(q, p) for p in phrases):
+            if any(_contains_phrase(q, w) for w in _NOT_FOR.get(ft, ())):
+                continue
             fact_type = ft
             break
 
@@ -143,6 +158,99 @@ def _targets(conn, organization_id: str, entity: dict, kind: str):
                           "from_entity_id": str(entity["id"]), "to_entity_id": str(other["id"]),
                           "to_name": other["name"]})
     return targets, edges
+
+
+# ---------------------------------------------------------------------------
+# 2b. Qualifiers (v0.10.2). "What is the deductible FOR FLOOD?" is not "what is
+# the deductible?" — the Knowledge Core holds one policy-wide deductible and
+# must not present it as the flood deductible. Words left over after removing
+# the fact-type phrase, the entity's name, dates, mode words and generic words
+# are a qualifier:
+#   singleton fact type  -> abstain; the policy-wide value goes in candidates
+#   multi-valued type    -> membership: values containing the qualifier, or
+#                           abstain ("not among the recorded ...")
+# ---------------------------------------------------------------------------
+_GENERIC = set("""
+what which who whom whose is are was were be been being am do does did done has have had having
+the a an of for to in on at by with from into about as and or not no any all each this that these
+those there here it its it's they them their our my your me we us i you he she his her
+how much many tell show list give get please recorded stated listed noted mentioned found identified
+current currently now today present existing total overall standard general main
+policy policies insured insurance property premises client company business firm
+value values amount amounts figure apply applies applicable applied under per
+document documents schedule survey report record records file
+previous prior last year years before earlier expiring old renewal change changed changes
+difference differ compare compared increase increased decrease decreased went up down since versus
+date on as of still ever yet also just only exactly specifically
+pvt ltd private limited llp llc inc co corp
+""".split())
+_MONTH_WORDS = {"january", "february", "march", "april", "may", "june", "july", "august", "september",
+                "october", "november", "december", "jan", "feb", "mar", "apr", "jun", "jul", "aug",
+                "sep", "sept", "oct", "nov", "dec"}
+
+
+def _phrase_words() -> set:
+    words = set()
+    for _, phrases in _FACT_TYPE_PHRASES:
+        for p in phrases:
+            words.update(_norm(p).split())
+    for p in _PERIOD_PHRASES + _CHANGE_PHRASES + _PREVIOUS_PHRASES:
+        words.update(_norm(p).split())
+    # inflections of the fact-type words that commonly appear in questions
+    words.update({"covers", "covering", "covered", "excludes", "exclusions", "excluded", "endorsements",
+                  "deductibles", "limits", "located", "factors", "hazards", "risks", "risk", "occupied",
+                  "constructed", "insures", "insured", "perils", "peril"})
+    return words
+
+
+def _qualifier_terms(question: str, entity: dict) -> list[str]:
+    names = [entity["name"], *((entity.get("attributes") or {}).get("aliases") or [])]
+    entity_words = set()
+    for n in names:
+        entity_words.update(_norm(n).split())
+    skip = _GENERIC | _phrase_words() | entity_words | _MONTH_WORDS
+    out = []
+    for w in _norm(question).split():
+        if w in skip or w.isdigit() or re.fullmatch(r"\d+(st|nd|rd|th)", w) or len(w) < 3:
+            continue
+        if w.endswith("s") and w[:-1] in skip:
+            continue
+        out.append(w)
+    return out
+
+
+def _apply_qualifier(result: dict, fact_type: str, terms: list[str]) -> dict:
+    singleton = FACT_DEFINITIONS[fact_type].is_singleton
+    phrase = " ".join(terms)
+    if singleton:
+        if result["facts_used"]:
+            result["candidates"] = result["facts_used"]
+        result.update(answer=None, answer_type="none", authoritative=False, needs_review=True,
+                      facts_used=[], evidence=[], source_documents=[], source_pages=[],
+                      reason=(f"The question asks about a specific '{phrase}'; only a policy-wide "
+                              f"{fact_type} is recorded, so it is not presented as the answer."))
+        return result
+    if result["answer"] is None:
+        return result
+    keep = [f for f in result["facts_used"]
+            if all(t in _norm(f["value"]) or t.rstrip("s") in _norm(f["value"]) for t in terms)]
+    if not keep:
+        label = fact_type.split(".")[1].replace("_", " ")
+        result["candidates"] = result["facts_used"]
+        result.update(answer=None, answer_type="none", authoritative=False, needs_review=True,
+                      facts_used=[], evidence=[], source_documents=[], source_pages=[], values=[],
+                      reason=(f"'{phrase}' is not among the recorded {label} values; absence from the "
+                              "record does not prove the opposite."))
+        return result
+    ids = {f["fact_id"] for f in keep}
+    result["facts_used"] = keep
+    result["evidence"] = [e for e in result["evidence"] if e["fact_id"] in ids]
+    result["values"] = [f["value"] for f in keep]
+    result["answer"] = result["values"]
+    docs = {e["document_filename"] for e in result["evidence"]}
+    result["source_documents"] = sorted(d for d in docs if d)
+    result["source_pages"] = [p for p in result["source_pages"] if p["document"] in docs]
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +390,26 @@ def _conflicts(conn, organization_id: str, targets: list[dict], fact_type: str) 
     return out
 
 
+_PERIOD_BOUND = ("policy.coverage", "policy.coverage_limit", "policy.deductible",
+                 "policy.exclusion", "policy.endorsement", "property.sum_insured")
+
+
+def _outside_known_periods(conn, organization_id, targets, fact_type, day: date) -> bool:
+    """v0.10.2 (found by the real-Qwen safety probe): an UNDATED value of a
+    period-bound fact type (limit, deductible, sum insured, …) must not be
+    given for a day outside every policy period known for this entity — e.g.
+    when the policy document's limit was missed and only a schedule's undated
+    figure exists, asking about a date before the policy began must abstain."""
+    if fact_type not in _PERIOD_BOUND:
+        return False
+    known = set()
+    for ft in _PERIOD_BOUND:
+        for f in _load_facts(conn, organization_id, targets, ft):
+            if f.get("effective_from") and f.get("effective_to"):
+                known.add(_period_key(f))
+    return bool(known) and not any(_covers(k, day) for k in known)
+
+
 def _answer_fact(conn, organization_id, result, targets, fact_type, mode, day: date):
     singleton = FACT_DEFINITIONS[fact_type].is_singleton
     facts = _load_facts(conn, organization_id, targets, fact_type)
@@ -358,7 +486,8 @@ def _answer_fact(conn, organization_id, result, targets, fact_type, mode, day: d
                             f"(known periods: {', '.join(f'{_iso(k[0])} to {_iso(k[1])}' for k in dated)}).")
         result["candidates"] = [_fact_out(r) for k in dated for r in periods[k]]
         return result
-    elif undated_open and mode != "as_of":
+    elif undated_open and mode != "as_of" and not _outside_known_periods(
+            conn, organization_id, targets, fact_type, day):
         rows, period = undated_open, None
     else:
         result["reason"] = (f"No stated policy period covers {day.isoformat()}; undated facts are "
@@ -539,8 +668,13 @@ def query(conn, *, organization_id: str, question: str, entity_id: str | None = 
             return result
         if interp["intent"] == "policy_period":
             return _answer_period(conn, organization_id, result, targets, day)
-        return _answer_fact(conn, organization_id, result, targets, interp["fact_type"],
-                            interp["mode"], day)
+        result = _answer_fact(conn, organization_id, result, targets, interp["fact_type"],
+                              interp["mode"], day)
+        terms = _qualifier_terms(question, entity)
+        interp["qualifier"] = terms
+        if terms and interp["mode"] in ("current", "as_of", "previous"):
+            result = _apply_qualifier(result, interp["fact_type"], terms)
+        return result
 
     # Unknown question type: the Knowledge Core has no fact type for it.
     doc_ids = _documents_for(conn, organization_id, entity)

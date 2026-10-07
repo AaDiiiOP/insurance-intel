@@ -1,0 +1,974 @@
+{
+  "organization_id": "021b22eb-5b30-48e7-9bc8-7916b4649bf0",
+  "summary": {
+    "questions": 40,
+    "correct": 34,
+    "abstained": 6,
+    "wrong": 0,
+    "interpretation_ok_pct": 100.0,
+    "answered_with_evidence_pct": 100.0,
+    "probes": 28,
+    "probes_failed": 0,
+    "hard_gate_zero_wrong_answers": true
+  },
+  "companies": [
+    {
+      "company_id": "AUR-SYN-001",
+      "as_of": "2026-04-08",
+      "questions": [
+        {
+          "fact_type": "policy.coverage",
+          "question": "What coverage does the policy have?",
+          "interpreted_ok": true,
+          "answer": [
+            "Property Damage",
+            "Business Interruption"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": null
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "question": "What is the coverage limit?",
+          "interpreted_ok": true,
+          "answer": "n600,000,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "02_coverage_schedule.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.deductible",
+          "question": "What is the deductible?",
+          "interpreted_ok": true,
+          "answer": "n1,500,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "02_coverage_schedule.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "question": "What are the endorsements?",
+          "interpreted_ok": true,
+          "answer": [
+            "Plant and machinery values reviewed. Revised machinery declared value: n180,000,000.",
+            "Additional named insured endorsement: Apex Precision Components Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy."
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "03_endorsement.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "question": "What are the exclusions?",
+          "interpreted_ok": true,
+          "answer": [
+            "War, terrorism and nuclear risks",
+            "Machinery breakdown arising from normal wear and tear"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": null
+            }
+          ]
+        },
+        {
+          "fact_type": "property.construction",
+          "question": "What is the construction?",
+          "interpreted_ok": true,
+          "answer": null,
+          "verdict": "abstained",
+          "reason": "No evidenced property.construction fact is recorded for this entity.",
+          "review_status": null,
+          "evidence_count": 0,
+          "source_pages": []
+        },
+        {
+          "fact_type": "property.location",
+          "question": "What is the location of the property?",
+          "interpreted_ok": true,
+          "answer": "932 Technology Park, Pune, Maharashtra",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "04_risk_survey.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.occupancy",
+          "question": "What is the occupancy?",
+          "interpreted_ok": true,
+          "answer": null,
+          "verdict": "abstained",
+          "reason": "No evidenced property.occupancy fact is recorded for this entity.",
+          "review_status": null,
+          "evidence_count": 0,
+          "source_pages": []
+        },
+        {
+          "fact_type": "property.risk_factors",
+          "question": "What are the risk factors?",
+          "interpreted_ok": true,
+          "answer": [
+            "Machine shop operations with metalworking fluids present"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": null
+            }
+          ]
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "question": "What is the sum insured?",
+          "interpreted_ok": true,
+          "answer": "n600,000,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 3,
+          "source_pages": [
+            {
+              "document": "02_coverage_schedule.pdf",
+              "page": 1
+            },
+            {
+              "document": "03_endorsement.pdf",
+              "page": 1
+            },
+            {
+              "document": "05_claim_loss_run.pdf",
+              "page": 1
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "probe": "policy_period",
+          "expect": "2026-04-08 to 2027-03-31",
+          "passed": true,
+          "answer": "2026-04-08 to 2027-03-31",
+          "reason": null
+        },
+        {
+          "probe": "date_before_any_policy_period",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "No stated policy period covers 2026-04-07; undated facts are not assumed to have applied on that date."
+        },
+        {
+          "probe": "previous_with_one_period",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "Only one stated policy period is known for this fact, so there is no previous value to report."
+        },
+        {
+          "probe": "peril_specific_deductible",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "The question asks about a specific 'flood'; only a policy-wide policy.deductible is recorded, so it is not presented as the answer."
+        },
+        {
+          "probe": "not_listed_coverage",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "'cyber attack' is not among the recorded coverage values; absence from the record does not prove the opposite."
+        },
+        {
+          "probe": "misleading_limit_question",
+          "expect": "not answered from a stored fact",
+          "passed": true,
+          "answer": null,
+          "reason": "The Knowledge Core has no fact for this and no passage matched."
+        },
+        {
+          "probe": "cross_tenant_query",
+          "expect": "abstain, no facts",
+          "passed": true,
+          "answer": null,
+          "reason": "No entity named in the question was found; pass entity_id."
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-002",
+      "as_of": "2026-04-15",
+      "questions": [
+        {
+          "fact_type": "policy.coverage",
+          "question": "What coverage does the policy have?",
+          "interpreted_ok": true,
+          "answer": [
+            "Property Damage",
+            "Business Interruption"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "question": "What is the coverage limit?",
+          "interpreted_ok": true,
+          "answer": null,
+          "verdict": "abstained",
+          "reason": "Sources disagree on this value; a person must correct one side first.",
+          "review_status": "contradiction",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.deductible",
+          "question": "What is the deductible?",
+          "interpreted_ok": true,
+          "answer": "n500,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "02_coverage_schedule.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "question": "What are the endorsements?",
+          "interpreted_ok": true,
+          "answer": [
+            "Plant and machinery values reviewed. Revised machinery declared value: n90,000,000.",
+            "Additional named insured endorsement: Northstar Pharma Systems Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy."
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "03_endorsement.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "question": "What are the exclusions?",
+          "interpreted_ok": true,
+          "answer": [
+            "War, terrorism and nuclear risks",
+            "Product recall costs and contamination not caused by an insured peril"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.construction",
+          "question": "What is the construction?",
+          "interpreted_ok": true,
+          "answer": "RCC frame structure with clean-room panel partitions, class A construction",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.location",
+          "question": "What is the location of the property?",
+          "interpreted_ok": true,
+          "answer": "750 Logistics Hub, Ahmedabad, Gujarat",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "04_risk_survey.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.occupancy",
+          "question": "What is the occupancy?",
+          "interpreted_ok": true,
+          "answer": "Pharmaceutical formulation and packaging facility with clean-room areas",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.risk_factors",
+          "question": "What are the risk factors?",
+          "interpreted_ok": true,
+          "answer": [
+            "Clean-room HVAC dependency and solvent storage"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "question": "What is the sum insured?",
+          "interpreted_ok": true,
+          "answer": "n300,000,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 4,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "02_coverage_schedule.pdf",
+              "page": 1
+            },
+            {
+              "document": "03_endorsement.pdf",
+              "page": 1
+            },
+            {
+              "document": "05_claim_loss_run.pdf",
+              "page": 1
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "probe": "policy_period",
+          "expect": "2026-04-15 to 2027-03-31",
+          "passed": true,
+          "answer": "2026-04-15 to 2027-03-31",
+          "reason": null
+        },
+        {
+          "probe": "date_before_any_policy_period",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "No stated policy period covers 2026-04-14 (known periods: 2026-04-15 to 2027-03-31)."
+        },
+        {
+          "probe": "previous_with_one_period",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "Only one stated policy period is known for this fact, so there is no previous value to report."
+        },
+        {
+          "probe": "peril_specific_deductible",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "The question asks about a specific 'flood'; only a policy-wide policy.deductible is recorded, so it is not presented as the answer."
+        },
+        {
+          "probe": "not_listed_coverage",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "'cyber attack' is not among the recorded coverage values; absence from the record does not prove the opposite."
+        },
+        {
+          "probe": "misleading_limit_question",
+          "expect": "not answered from a stored fact",
+          "passed": true,
+          "answer": null,
+          "reason": "The Knowledge Core has no fact for this and no passage matched."
+        },
+        {
+          "probe": "cross_tenant_query",
+          "expect": "abstain, no facts",
+          "passed": true,
+          "answer": null,
+          "reason": "No entity named in the question was found; pass entity_id."
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-003",
+      "as_of": "2026-04-22",
+      "questions": [
+        {
+          "fact_type": "policy.coverage",
+          "question": "What coverage does the policy have?",
+          "interpreted_ok": true,
+          "answer": [
+            "Property Damage",
+            "Business Interruption"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "question": "What is the coverage limit?",
+          "interpreted_ok": true,
+          "answer": null,
+          "verdict": "abstained",
+          "reason": "Sources disagree on this value; a person must correct one side first.",
+          "review_status": "contradiction",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.deductible",
+          "question": "What is the deductible?",
+          "interpreted_ok": true,
+          "answer": "n1,000,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "02_coverage_schedule.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "question": "What are the endorsements?",
+          "interpreted_ok": true,
+          "answer": [
+            "Plant and machinery values reviewed. Revised machinery declared value: n150,000,000.",
+            "Additional named insured endorsement: BluePeak Logistics Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy."
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "03_endorsement.pdf",
+              "page": null
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "question": "What are the exclusions?",
+          "interpreted_ok": true,
+          "answer": [
+            "War, terrorism and nuclear risks",
+            "Goods in transit beyond the insured premises"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.construction",
+          "question": "What is the construction?",
+          "interpreted_ok": true,
+          "answer": "Pre-engineered steel building, class B construction, high-bay racking",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.location",
+          "question": "What is the location of the property?",
+          "interpreted_ok": true,
+          "answer": "267 Technology Park, Gurugram, Haryana",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "04_risk_survey.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.occupancy",
+          "question": "What is the occupancy?",
+          "interpreted_ok": true,
+          "answer": null,
+          "verdict": "abstained",
+          "reason": "Sources disagree on this value; a person must correct one side first.",
+          "review_status": "contradiction",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "04_risk_survey.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.risk_factors",
+          "question": "What are the risk factors?",
+          "interpreted_ok": true,
+          "answer": [
+            "High-density pallet racking and forklift traffic"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "question": "What is the sum insured?",
+          "interpreted_ok": true,
+          "answer": "n500,000,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 3,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "02_coverage_schedule.pdf",
+              "page": 1
+            },
+            {
+              "document": "05_claim_loss_run.pdf",
+              "page": 1
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "probe": "policy_period",
+          "expect": "2026-04-22 to 2027-03-31",
+          "passed": true,
+          "answer": "2026-04-22 to 2027-03-31",
+          "reason": null
+        },
+        {
+          "probe": "date_before_any_policy_period",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "No stated policy period covers 2026-04-21 (known periods: 2026-04-22 to 2027-03-31)."
+        },
+        {
+          "probe": "previous_with_one_period",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "Only one stated policy period is known for this fact, so there is no previous value to report."
+        },
+        {
+          "probe": "peril_specific_deductible",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "The question asks about a specific 'flood'; only a policy-wide policy.deductible is recorded, so it is not presented as the answer."
+        },
+        {
+          "probe": "not_listed_coverage",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "'cyber attack' is not among the recorded coverage values; absence from the record does not prove the opposite."
+        },
+        {
+          "probe": "misleading_limit_question",
+          "expect": "not answered from a stored fact",
+          "passed": true,
+          "answer": null,
+          "reason": "The Knowledge Core has no fact for this and no passage matched."
+        },
+        {
+          "probe": "cross_tenant_query",
+          "expect": "abstain, no facts",
+          "passed": true,
+          "answer": null,
+          "reason": "No entity named in the question was found; pass entity_id."
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-004",
+      "as_of": "2026-04-29",
+      "questions": [
+        {
+          "fact_type": "policy.coverage",
+          "question": "What coverage does the policy have?",
+          "interpreted_ok": true,
+          "answer": [
+            "Property Damage",
+            "Business Interruption"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.coverage_limit",
+          "question": "What is the coverage limit?",
+          "interpreted_ok": true,
+          "answer": "n420,000,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.deductible",
+          "question": "What is the deductible?",
+          "interpreted_ok": true,
+          "answer": "n1,500,000",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "02_coverage_schedule.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.endorsement",
+          "question": "What are the endorsements?",
+          "interpreted_ok": true,
+          "answer": [
+            "Plant and machinery values reviewed. Revised machinery declared value: n105,000,000.",
+            "Additional named insured endorsement: Crestline Foods Pvt. Ltd.'s facility manager added as a notice-of-loss contact for this policy."
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "03_endorsement.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "policy.exclusion",
+          "question": "What are the exclusions?",
+          "interpreted_ok": true,
+          "answer": [
+            "War, terrorism and nuclear risks",
+            "Spoilage of stock following a power interruption under 24 hours"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.construction",
+          "question": "What is the construction?",
+          "interpreted_ok": true,
+          "answer": "RCC frame with insulated cold-storage panels, class B construction",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.location",
+          "question": "What is the location of the property?",
+          "interpreted_ok": true,
+          "answer": "464 Industrial Estate, Indore, Madhya Pradesh",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 2,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            },
+            {
+              "document": "04_risk_survey.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.occupancy",
+          "question": "What is the occupancy?",
+          "interpreted_ok": true,
+          "answer": "Food processing and cold storage facility",
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.risk_factors",
+          "question": "What are the risk factors?",
+          "interpreted_ok": true,
+          "answer": [
+            "Refrigeration ammonia system and cold-chain dependency"
+          ],
+          "verdict": "correct",
+          "reason": null,
+          "review_status": "unverified",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        },
+        {
+          "fact_type": "property.sum_insured",
+          "question": "What is the sum insured?",
+          "interpreted_ok": true,
+          "answer": null,
+          "verdict": "abstained",
+          "reason": "Sources disagree on this value; a person must correct one side first.",
+          "review_status": "contradiction",
+          "evidence_count": 1,
+          "source_pages": [
+            {
+              "document": "01_property_policy.pdf",
+              "page": 1
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "probe": "policy_period",
+          "expect": "2026-04-29 to 2027-03-31",
+          "passed": true,
+          "answer": "2026-04-29 to 2027-03-31",
+          "reason": null
+        },
+        {
+          "probe": "date_before_any_policy_period",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "No stated policy period covers 2026-04-28 (known periods: 2026-04-29 to 2027-03-31)."
+        },
+        {
+          "probe": "previous_with_one_period",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "Only one stated policy period is known for this fact, so there is no previous value to report."
+        },
+        {
+          "probe": "peril_specific_deductible",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "The question asks about a specific 'flood'; only a policy-wide policy.deductible is recorded, so it is not presented as the answer."
+        },
+        {
+          "probe": "not_listed_coverage",
+          "expect": "abstain",
+          "passed": true,
+          "answer": null,
+          "reason": "'cyber attack' is not among the recorded coverage values; absence from the record does not prove the opposite."
+        },
+        {
+          "probe": "misleading_limit_question",
+          "expect": "not answered from a stored fact",
+          "passed": true,
+          "answer": null,
+          "reason": "The Knowledge Core has no fact for this and no passage matched."
+        },
+        {
+          "probe": "cross_tenant_query",
+          "expect": "abstain, no facts",
+          "passed": true,
+          "answer": null,
+          "reason": "No entity named in the question was found; pass entity_id."
+        }
+      ]
+    }
+  ]
+}

@@ -110,9 +110,23 @@ def supersede_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
         raise ValueError("Fact not found.")
 
     now = _now()
-    db.close_fact_validity(conn, fact_id, organization_id, now)
+    historical = old.get("valid_to") is not None
+    if historical:
+        # v0.10.2: a value that a LATER version of the same fact (same
+        # entity, type and stated period) already replaced cannot be
+        # corrected again — the reviewer must correct the latest version,
+        # otherwise an old correction could silently override a newer one.
+        for other in db.list_facts_for_entity(conn, str(old["entity_id"]), organization_id,
+                                              old["fact_type"], False):
+            if (str(other["id"]) != str(old["id"]) and other["status"] != "superseded"
+                    and other.get("effective_from") == old.get("effective_from")
+                    and other.get("effective_to") == old.get("effective_to")
+                    and other["valid_from"] > old["valid_from"]):
+                raise ValueError("This value was already replaced by a later version; correct the latest version instead.")
+    else:
+        db.close_fact_validity(conn, fact_id, organization_id, now)
 
-    return db.create_fact(
+    new = db.create_fact(
         conn,
         organization_id=organization_id,
         entity_id=old["entity_id"],
@@ -124,10 +138,23 @@ def supersede_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
         status=status,
         produced_by=produced_by,
         valid_from=now,
-        valid_to=None,
+        # v0.10.2: correcting a HISTORICAL value (e.g. last year's policy,
+        # already closed when this year's period arrived) must not bring it
+        # back as "current" — the correction is itself historical.
+        valid_to=now if historical else None,
         effective_from=old.get("effective_from"),
         effective_to=old.get("effective_to"),
     )
+    # v0.10.2: the correction was made against the old fact's source, so it
+    # carries that evidence (marked as a reviewer correction). Without it the
+    # corrected value had no evidence and evidence-only readers (the query
+    # layer) fell back to the corrected-AWAY value — a silent wrong.
+    for e in db.get_evidence_for_fact(conn, fact_id, organization_id):
+        db.create_evidence(conn, organization_id=organization_id, fact_id=str(new["id"]),
+                           document_id=str(e["document_id"]), page=e.get("page"),
+                           section=e.get("section"), snippet=e.get("snippet"),
+                           source="reviewer_correction")
+    return new
 
 
 def set_fact_status(conn, fact_id: str, organization_id: str, status: str,
