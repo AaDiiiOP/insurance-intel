@@ -1,6 +1,8 @@
 # Phase 1D — Business Risk Intelligence & Business Risk Graph: status (v0.12.0, 2026-10-08)
 
-Status: **READY FOR PHASE 1D ACCEPTANCE** (2026-10-08).
+Status: **DEVELOPMENT COMPLETE · ACCEPTANCE PASSED · FROZEN** (2026-10-09).
+**Phase 1D accepted using 4-company validation** (AUR-SYN-001–004, real qwen2.5:7b). 20-company acceptance is NOT claimed (deferred).
+**PHASE 1D ACCEPTANCE PASSED — READY FOR PHASE 1E.** No further Phase 1D work.
 Phase 1D validated on the 3–4 company development benchmark (AUR-SYN-001–004,
 real qwen2.5:7b): 0 silent wrong, 0 wrong answers in every gate, business
 check 53/53 correct, all probes passed (Phase 1B 28/28, Phase 1C 24/24,
@@ -174,3 +176,77 @@ authentication/RBAC (out of scope).
 - Values are read from labelled lines; anything written another way is
   reported as "not documented" (safe, less complete).
 - 20-company acceptance deferred. Phase 1E not started.
+
+## L. Final 4-company acceptance gate (v0.12.1, 2026-10-09)
+
+Scope: AUR-SYN-001–004 only; real qwen2.5:7b; no 20-company run; no new
+Phase 1D features.
+
+**Pre-test inspection**
+- Implementation files unchanged since the real-Qwen run (checksums of
+  `business_structure.py`, `business_intelligence.py`,
+  `property_policy_intelligence.py`, `knowledge/query.py`, `api/businesses.py`,
+  `eval_property_policy.py` identical before and after this gate).
+- Phase 1D tests: `tests/test_business_intelligence.py` (11). Phase 1D eval:
+  `eval_property_policy.py --query-check` (4th gate) + `recheck_query.py`.
+- Data: 4 companies × 5 documents + `benchmark_phase1d/` supplement (5 PDFs,
+  4 ground-truth files). Qwen: available on the developer's machine only
+  (not in the build sandbox).
+
+**Baseline (before anything else)**
+- Full suite: 177 tests — 177 passed, 0 failed, 0 skipped.
+- Phase 1D tests: 11 passed. Policy comparison 13/13.
+
+**Real-Qwen run (2026-10-08 16:50 UTC, `result-20261008T165020`, organization
+`cabeb69a-9bb6-4fc6-bde1-e6ba66545efc`)** — all four gates passed: Phase 1A
+silent wrong 0 (recall 100%, evidence 100%, page 100%); Phase 1B 0 wrong,
+probes 28/28; Phase 1C 28/28, probes 24/24; Phase 1D 53/53, 0 wrong,
+probes 24/24.
+
+**Gap found in the evaluation (not the implementation):** the existing gates
+answer questions but did not audit every *persisted* business fact. Items the
+gate requires that were not measured: evidence verification and page
+accuracy of business facts; "nothing invented" across all controls / claims /
+assets / locations / exposures; relationship validity; Graph / Change / Risk
+APIs over HTTP for both tenants; no risk score. Added
+**`phase1d_acceptance_audit.py`** — read-only, no model, audits the stored
+state of the real-Qwen run against independent expectations (company profile,
+ground truth, Phase 1 ground truth, supplement ground truth). Sections A–H,
+198 checks over 4 companies.
+
+**Evaluator issue found and fixed (classified: evaluator):** a first audit
+version compared AUR-SYN-004's schedule asset values with the schedule's
+printed total. The document's own items add to 350,000,000 but it prints
+370,000,000 (a deliberate benchmark inconsistency already handled as a
+contradiction in Phase 1B). The stored values equal the document's lines, so
+the check now compares with the schedule's item lines. No implementation
+change.
+
+**Audit self-test:** injecting an invented "Flood risk" and "Flood zone"
+exposure (rolled back) makes the audit fail exactly those two checks.
+
+**Dry audit (sandbox, deterministic model stub — NOT the acceptance result):**
+198 checks, 198 passed; business facts evidence-verified 100%, page accuracy
+100%.
+
+**Acceptance result on the real-Qwen data — PASSED (2026-10-09 00:42 IST / 2026-10-08 19:12 UTC, `phase1d-acceptance-20261008T191206`):**
+
+    docker-compose exec backend python3 phase1d_acceptance_audit.py /app/benchmark_data cabeb69a-9bb6-4fc6-bde1-e6ba66545efc
+
+| Field | Value |
+|---|---|
+| Acceptance date | 2026-10-09 (IST) |
+| Companies | AUR-SYN-001, 002, 003, 004 |
+| Model | qwen2.5:7b (Ollama) |
+| Total checks / passed / failed | audit 198 / 198 / 0 (A 12, B 53, C 20, D 10, E 6, F 29, G 28, H 40); plus real-Qwen gates: Phase 1D 53/53 + 24/24 probes, Phase 1C 28/28 + 24/24, Phase 1B 0 wrong + 28/28 |
+| Silent wrong | **0** |
+| Wrong business answers | **0** |
+| Unsupported risks / controls / claims / assets / locations / exposures | **0** (only the one explicitly stated risk, AUR-SYN-004; 0 exposures; no risk score anywhere) |
+| Evidence verification (80 business facts) | **100%** |
+| Page accuracy | **100%** |
+| Contradiction results | 100%: exactly the expected set (AUR-SYN-004 workforce 282 vs 290), both values kept, never answered |
+| Change detection | 100%: every expected added / changed / unchanged / conflicting correct; 0 unexpected; never "removed"; not-re-observed never reported as change |
+| Tenant isolation | 100%: every /businesses endpoint 404 with no data for another tenant; list excludes business; query API and query layer return nothing |
+| Regression tests | 177/177 (0 failed, 0 skipped) |
+| Final status | **PASS — Phase 1D accepted using 4-company validation; frozen** |
+

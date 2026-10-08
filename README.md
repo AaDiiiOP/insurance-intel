@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.12.0** (see `frontend/package.json` — the one version number
+**Version: 0.12.1** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Status (stated precisely, 2026-10-02):**
@@ -26,7 +26,7 @@ for the whole project; bump it there on every release)
 | v0.10.3 — fix | Undated period-bound values are never given outside the known policy periods; reproduced and tested (146/146). `recheck_query.py` re-grades stored facts without the model. Recheck on Run 1's stored facts (2026-10-07): 40 questions, 34 correct, 6 abstained, **0 wrong**, **28/28 probes**. **Phase 1B: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.** |
 
 | v0.11.0 — Phase 1C Policy Intelligence | Policy number, insurer, conditions, definitions, sub-limits, per-coverage limits, endorsement ids/dates and document roles read deterministically from labelled lines; policy view / history / conflicts / typed comparison with both-side evidence (`/policies/*`); new policy questions; Policy panel in the explorer. 166/166 tests, 13/13 comparison, structure reader 20/20 companies, Real Qwen AUR-SYN-001–004 (2026-10-08): silent wrong 0, recall 100%, query 0 wrong + 28/28 probes, **policy check 28/28 correct + 24/24 probes**. **Phase 1C: READY FOR ACCEPTANCE (4-company development benchmark; 20-company deferred).** See `PHASE_1C_STATUS.md`. |
-| v0.12.0 — Phase 1D Business Risk Intelligence | Business risk graph in the existing Knowledge Core (no graph database): locations, operations, assets, controls, losses, risk factors, risks, exposures, workforce, surveyor rating — read deterministically from labelled lines, each with document + page, dated by the document's own date. Time-aware profile (`?as_of=`), change intelligence (added / changed / unchanged / conflicting; never "removed" from absence), business conflicts, graph view (`/businesses/*`), business questions, Business panel in the explorer. 177/177 tests; dry run (model off) AUR-SYN-001–004: Phase 1B 28/28 probes, Phase 1C 28/28 + 24/24, **Phase 1D 53/53 + 24/24**. Real Qwen AUR-SYN-001–004 (2026-10-08): silent wrong 0, query 0 wrong + 28/28 probes, policy 28/28 + 24/24, **business check 53/53 correct + 24/24 probes**. **Phase 1D: READY FOR ACCEPTANCE (4-company development benchmark; 20-company deferred).** See `PHASE_1D_STATUS.md`. |
+| v0.12.0 — Phase 1D Business Risk Intelligence | Business risk graph in the existing Knowledge Core (no graph database): locations, operations, assets, controls, losses, risk factors, risks, exposures, workforce, surveyor rating — read deterministically from labelled lines, each with document + page, dated by the document's own date. Time-aware profile (`?as_of=`), change intelligence (added / changed / unchanged / conflicting; never "removed" from absence), business conflicts, graph view (`/businesses/*`), business questions, Business panel in the explorer. 177/177 tests; dry run (model off) AUR-SYN-001–004: Phase 1B 28/28 probes, Phase 1C 28/28 + 24/24, **Phase 1D 53/53 + 24/24**. Real Qwen AUR-SYN-001–004 (2026-10-08): silent wrong 0, query 0 wrong + 28/28 probes, policy 28/28 + 24/24, **business check 53/53 correct + 24/24 probes**. **Phase 1D: ACCEPTANCE PASSED, FROZEN (4-company validation, 2026-10-09: audit 198/198, evidence 100%, page 100%; 20-company deferred).** See `PHASE_1D_STATUS.md`. |
 
 Tenant isolation is application-level (not PostgreSQL RLS); revisit before production.
 See `Results.md` for run-by-run detail.
@@ -1148,4 +1148,20 @@ validation and limits: **`PHASE_1D_STATUS.md`**.
 Phase 1D validated on the 3–4 company development benchmark (real Qwen,
 2026-10-08: 0 silent wrong, 0 wrong answers, business check 53/53, all probes
 passed); 20-company acceptance deferred.
+
+## v0.12.1 — Phase 1D final acceptance audit (2026-10-09)
+
+No implementation change. Adds `backend/phase1d_acceptance_audit.py`: a
+read-only, no-model audit of the real-Qwen run's stored business data —
+evidence and page of every business fact, nothing invented (risks, exposures,
+controls, claims, assets, locations), relationships and graph, as-of history,
+contradictions, change detection, every `/businesses` API for the owner and
+another tenant, no risk score, unsupported-question abstention. 198 checks on
+AUR-SYN-001–004.
+
+    docker-compose exec backend python3 phase1d_acceptance_audit.py /app/benchmark_data <organization_id of the real-Qwen run>
+
+Result (2026-10-09, real-Qwen run's data): **198/198 passed**, 80 business facts
+evidence-verified 100%, page accuracy 100%. **Phase 1D accepted using 4-company
+validation — frozen. Ready for Phase 1E.**
 

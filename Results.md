@@ -1211,3 +1211,7 @@ Dry run (model off) on AUR-SYN-001–004 real documents + Phase 1D supplement: P
 Regression found and fixed during the dry run: "What changed during renewal?" with one policy period had started answering with business changes (4 Phase 1C probes failed) — now abstains again; regression test added.
 Real Qwen (2026-10-08 16:50 UTC, result-20261008T165020, AUR-SYN-001–004): Phase 1A recall 100%, false 4.1% (3, all flagged contradictions), silent wrong 0, evidence/page 100%; Phase 1B query 34 correct / 6 abstained / 0 wrong, probes 28/28; Phase 1C 28/28, probes 24/24; Phase 1D business check 53/53 correct, 0 wrong, probes 24/24. Phase 1D: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.
 
+## v0.12.1 (2026-10-09) — Phase 1D final acceptance gate
+Baseline 177/177 (0 failed, 0 skipped); Phase 1D tests 11/11. Implementation unchanged.
+New read-only `phase1d_acceptance_audit.py` (198 checks). Sandbox dry audit (model stub, not the acceptance result): 198/198, evidence 100%, page 100%. One evaluator assumption fixed (AUR-SYN-004 schedule total ≠ its items — benchmark inconsistency). Audit on the real-Qwen run's data (2026-10-08 19:12 UTC, phase1d-acceptance-20261008T191206, org cabeb69a…): 198/198 passed, 0 failed; 80 business facts, evidence verified 100%, page accuracy 100%; 0 unsupported risks/controls/claims; contradictions, change detection, tenant isolation 100%. **Phase 1D accepted using 4-company validation — FROZEN. Ready for Phase 1E.** 20-company acceptance not claimed.
+

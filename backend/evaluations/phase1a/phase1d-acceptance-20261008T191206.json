@@ -1,0 +1,1522 @@
+{
+  "summary": {
+    "organization_id": "cabeb69a-9bb6-4fc6-bde1-e6ba66545efc",
+    "companies": [
+      "AUR-SYN-001",
+      "AUR-SYN-002",
+      "AUR-SYN-003",
+      "AUR-SYN-004"
+    ],
+    "checks": 198,
+    "passed": 198,
+    "failed": 0,
+    "business_facts_audited": 80,
+    "evidence_verified_pct": 100.0,
+    "page_accuracy_pct": 100.0,
+    "by_section": {
+      "A": {
+        "checks": 12,
+        "passed": 12
+      },
+      "B": {
+        "checks": 53,
+        "passed": 53
+      },
+      "C": {
+        "checks": 20,
+        "passed": 20
+      },
+      "D": {
+        "checks": 10,
+        "passed": 10
+      },
+      "E": {
+        "checks": 6,
+        "passed": 6
+      },
+      "F": {
+        "checks": 29,
+        "passed": 29
+      },
+      "G": {
+        "checks": 28,
+        "passed": 28
+      },
+      "H": {
+        "checks": 40,
+        "passed": 40
+      }
+    },
+    "gate_passed": true
+  },
+  "companies": [
+    {
+      "company_id": "AUR-SYN-001",
+      "facts_audited": 21,
+      "evidence_verified": 21,
+      "page_checked": 21,
+      "page_correct": 21,
+      "items": [
+        {
+          "section": "A",
+          "check": "facts_have_verified_evidence",
+          "passed": true,
+          "detail": "21/21"
+        },
+        {
+          "section": "A",
+          "check": "evidence_on_stated_page",
+          "passed": true,
+          "detail": "21/21"
+        },
+        {
+          "section": "A",
+          "check": "value_stated_in_evidence",
+          "passed": true,
+          "detail": "21/21"
+        },
+        {
+          "section": "B",
+          "check": "legal_name",
+          "passed": true,
+          "detail": "Apex Precision Components Pvt. Ltd."
+        },
+        {
+          "section": "B",
+          "check": "locations_exact",
+          "passed": true,
+          "detail": [
+            "41 industrial estate, chakan, maharashtra",
+            "932 technology park, pune, maharashtra"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "operations_exact",
+          "passed": true,
+          "detail": [
+            "precision components"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "controls_exact_no_invented",
+          "passed": true,
+          "detail": [
+            "fire protection"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "risk_factors_only_stated",
+          "passed": true,
+          "detail": [
+            "machine shop operations with metalworking fluids present"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "risks_only_explicit_none_inferred",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "B",
+          "check": "no_exposures_invented",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "B",
+          "check": "assets_three_declared",
+          "passed": true,
+          "detail": [
+            "Buildings and Civil Works",
+            "Plant and Machinery",
+            "Stock"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "declared_values_equal_schedule_lines",
+          "passed": true,
+          "detail": {
+            "persisted": {
+              "buildings and civil works": "330000000",
+              "plant and machinery": "180000000",
+              "stock": "90000000"
+            },
+            "schedule": {
+              "buildings and civil works": "330000000",
+              "plant and machinery": "180000000",
+              "stock": "90000000"
+            }
+          }
+        },
+        {
+          "section": "B",
+          "check": "one_loss_record_no_invented_claims",
+          "passed": true,
+          "detail": 1
+        },
+        {
+          "section": "B",
+          "check": "loss_total_incurred",
+          "passed": true,
+          "detail": "1,250,000"
+        },
+        {
+          "section": "B",
+          "check": "workforce",
+          "passed": true,
+          "detail": "812"
+        },
+        {
+          "section": "B",
+          "check": "surveyor_rating",
+          "passed": true,
+          "detail": "Moderate"
+        },
+        {
+          "section": "C",
+          "check": "graph_edges_allowed_and_typed",
+          "passed": true,
+          "detail": "16 edges, bad []"
+        },
+        {
+          "section": "C",
+          "check": "graph_no_document_nodes",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "C",
+          "check": "graph_no_inferred_mitigated_by",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "C",
+          "check": "business_relationships_present",
+          "passed": true,
+          "detail": [
+            [
+              "asset",
+              "owns"
+            ],
+            [
+              "claim",
+              "has_claim"
+            ],
+            [
+              "control",
+              "has_control"
+            ],
+            [
+              "location",
+              "has_location"
+            ],
+            [
+              "operation",
+              "performs_operation"
+            ],
+            [
+              "policy",
+              "has_policy"
+            ],
+            [
+              "risk_factor",
+              "has_risk_factor"
+            ]
+          ]
+        },
+        {
+          "section": "C",
+          "check": "graph_facts_all_evidenced",
+          "passed": true,
+          "detail": 34
+        },
+        {
+          "section": "D",
+          "check": "as_of_before_after:business.workforce",
+          "passed": true,
+          "detail": [
+            "786",
+            "812"
+          ]
+        },
+        {
+          "section": "D",
+          "check": "as_of_before_after:asset:Plant and Machinery",
+          "passed": true,
+          "detail": [
+            "180,000,000",
+            "210,000,000"
+          ]
+        },
+        {
+          "section": "D",
+          "check": "added_location_absent_before",
+          "passed": true,
+          "detail": [
+            1,
+            2
+          ]
+        },
+        {
+          "section": "D",
+          "check": "history_keeps_old_and_new_values",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "E",
+          "check": "contradictions_exact",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "F",
+          "check": "change:business.workforce",
+          "passed": true,
+          "detail": "changed"
+        },
+        {
+          "section": "F",
+          "check": "change:control:Fire Protection",
+          "passed": true,
+          "detail": "changed"
+        },
+        {
+          "section": "F",
+          "check": "change:location:41 Industrial Estate, Chakan, Maharashtra",
+          "passed": true,
+          "detail": "added"
+        },
+        {
+          "section": "F",
+          "check": "change:asset:Plant and Machinery",
+          "passed": true,
+          "detail": "changed"
+        },
+        {
+          "section": "F",
+          "check": "change:business.survey_risk_rating",
+          "passed": true,
+          "detail": "unchanged"
+        },
+        {
+          "section": "F",
+          "check": "change:operation:precision components",
+          "passed": true,
+          "detail": "unchanged"
+        },
+        {
+          "section": "F",
+          "check": "no_unexpected_material_change",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "F",
+          "check": "never_removed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "F",
+          "check": "not_reobserved_not_reported_as_change",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "owner_all_endpoints_200",
+          "passed": true,
+          "detail": {}
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_all_endpoints_404_no_data",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_list_excludes_business",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "bad_date_400",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "risk_api_matches_explicit_risks",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "no_risk_score_anywhere",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_query_api_nothing",
+          "passed": true,
+          "detail": 200
+        },
+        {
+          "section": "H",
+          "check": "abstains:Does this company have flood risk?",
+          "passed": true,
+          "detail": "No documented evidence of flood risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there earthquake risk?",
+          "passed": true,
+          "detail": "No documented evidence of earthquake risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a theft risk?",
+          "passed": true,
+          "detail": "No documented evidence of theft risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a cyber risk?",
+          "passed": true,
+          "detail": "No documented evidence of cyber risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a product contamination risk?",
+          "passed": true,
+          "detail": "No documented evidence of product contamination risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:no stated exposure",
+          "passed": true,
+          "detail": "No exposure is documented in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "risks_answer_only_explicit",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "no_risk_score_answer",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "unstated_control_not_confirmed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "other_tenant_query_nothing",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-002",
+      "facts_audited": 23,
+      "evidence_verified": 23,
+      "page_checked": 23,
+      "page_correct": 23,
+      "items": [
+        {
+          "section": "A",
+          "check": "facts_have_verified_evidence",
+          "passed": true,
+          "detail": "23/23"
+        },
+        {
+          "section": "A",
+          "check": "evidence_on_stated_page",
+          "passed": true,
+          "detail": "23/23"
+        },
+        {
+          "section": "A",
+          "check": "value_stated_in_evidence",
+          "passed": true,
+          "detail": "23/23"
+        },
+        {
+          "section": "B",
+          "check": "legal_name",
+          "passed": true,
+          "detail": "Northstar Pharma Systems Pvt. Ltd."
+        },
+        {
+          "section": "B",
+          "check": "locations_exact",
+          "passed": true,
+          "detail": [
+            "750 logistics hub, ahmedabad, gujarat"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "operations_exact",
+          "passed": true,
+          "detail": [
+            "pharmaceutical formulations"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "controls_exact_no_invented",
+          "passed": true,
+          "detail": [
+            "fire protection",
+            "security"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "risk_factors_only_stated",
+          "passed": true,
+          "detail": [
+            "clean-room hvac dependency and solvent storage"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "risks_only_explicit_none_inferred",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "B",
+          "check": "no_exposures_invented",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "B",
+          "check": "assets_three_declared",
+          "passed": true,
+          "detail": [
+            "Buildings and Civil Works",
+            "Plant and Machinery",
+            "Stock"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "declared_values_equal_schedule_lines",
+          "passed": true,
+          "detail": {
+            "persisted": {
+              "buildings and civil works": "165000000",
+              "plant and machinery": "90000000",
+              "stock": "45000000"
+            },
+            "schedule": {
+              "buildings and civil works": "165000000",
+              "plant and machinery": "90000000",
+              "stock": "45000000"
+            }
+          }
+        },
+        {
+          "section": "B",
+          "check": "one_loss_record_no_invented_claims",
+          "passed": true,
+          "detail": 1
+        },
+        {
+          "section": "B",
+          "check": "loss_total_incurred",
+          "passed": true,
+          "detail": "2,750,000"
+        },
+        {
+          "section": "B",
+          "check": "loss_claims_count",
+          "passed": true,
+          "detail": "2"
+        },
+        {
+          "section": "B",
+          "check": "workforce",
+          "passed": true,
+          "detail": "508"
+        },
+        {
+          "section": "B",
+          "check": "surveyor_rating",
+          "passed": true,
+          "detail": "Elevated"
+        },
+        {
+          "section": "C",
+          "check": "graph_edges_allowed_and_typed",
+          "passed": true,
+          "detail": "17 edges, bad []"
+        },
+        {
+          "section": "C",
+          "check": "graph_no_document_nodes",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "C",
+          "check": "graph_no_inferred_mitigated_by",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "C",
+          "check": "business_relationships_present",
+          "passed": true,
+          "detail": [
+            [
+              "asset",
+              "owns"
+            ],
+            [
+              "claim",
+              "has_claim"
+            ],
+            [
+              "control",
+              "has_control"
+            ],
+            [
+              "location",
+              "has_location"
+            ],
+            [
+              "operation",
+              "performs_operation"
+            ],
+            [
+              "policy",
+              "has_policy"
+            ],
+            [
+              "risk_factor",
+              "has_risk_factor"
+            ]
+          ]
+        },
+        {
+          "section": "C",
+          "check": "graph_facts_all_evidenced",
+          "passed": true,
+          "detail": 34
+        },
+        {
+          "section": "D",
+          "check": "as_of_before_after:business.survey_risk_rating",
+          "passed": true,
+          "detail": [
+            "Low",
+            "Elevated"
+          ]
+        },
+        {
+          "section": "D",
+          "check": "as_of_before_after:loss.claims_count",
+          "passed": true,
+          "detail": [
+            "1",
+            "2"
+          ]
+        },
+        {
+          "section": "D",
+          "check": "as_of_before_after:loss.total_incurred",
+          "passed": true,
+          "detail": [
+            "450,000",
+            "2,750,000"
+          ]
+        },
+        {
+          "section": "D",
+          "check": "history_keeps_old_and_new_values",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "E",
+          "check": "contradictions_exact",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "F",
+          "check": "change:business.survey_risk_rating",
+          "passed": true,
+          "detail": "changed"
+        },
+        {
+          "section": "F",
+          "check": "change:control:Security",
+          "passed": true,
+          "detail": "added"
+        },
+        {
+          "section": "F",
+          "check": "change:control:Fire Protection",
+          "passed": true,
+          "detail": "unchanged"
+        },
+        {
+          "section": "F",
+          "check": "change:loss.claims_count",
+          "passed": true,
+          "detail": "changed"
+        },
+        {
+          "section": "F",
+          "check": "change:loss.total_incurred",
+          "passed": true,
+          "detail": "changed"
+        },
+        {
+          "section": "F",
+          "check": "change:business.workforce",
+          "passed": true,
+          "detail": "unchanged"
+        },
+        {
+          "section": "F",
+          "check": "no_unexpected_material_change",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "F",
+          "check": "never_removed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "F",
+          "check": "not_reobserved_not_reported_as_change",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "owner_all_endpoints_200",
+          "passed": true,
+          "detail": {}
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_all_endpoints_404_no_data",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_list_excludes_business",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "bad_date_400",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "risk_api_matches_explicit_risks",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "no_risk_score_anywhere",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_query_api_nothing",
+          "passed": true,
+          "detail": 200
+        },
+        {
+          "section": "H",
+          "check": "abstains:Does this company have flood risk?",
+          "passed": true,
+          "detail": "No documented evidence of flood risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there earthquake risk?",
+          "passed": true,
+          "detail": "No documented evidence of earthquake risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a theft risk?",
+          "passed": true,
+          "detail": "No documented evidence of theft risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a cyber risk?",
+          "passed": true,
+          "detail": "No documented evidence of cyber risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a product contamination risk?",
+          "passed": true,
+          "detail": "No documented evidence of product contamination risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:no stated exposure",
+          "passed": true,
+          "detail": "No exposure is documented in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "risks_answer_only_explicit",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "no_risk_score_answer",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "unstated_control_not_confirmed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "other_tenant_query_nothing",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-003",
+      "facts_audited": 19,
+      "evidence_verified": 19,
+      "page_checked": 19,
+      "page_correct": 19,
+      "items": [
+        {
+          "section": "A",
+          "check": "facts_have_verified_evidence",
+          "passed": true,
+          "detail": "19/19"
+        },
+        {
+          "section": "A",
+          "check": "evidence_on_stated_page",
+          "passed": true,
+          "detail": "19/19"
+        },
+        {
+          "section": "A",
+          "check": "value_stated_in_evidence",
+          "passed": true,
+          "detail": "19/19"
+        },
+        {
+          "section": "B",
+          "check": "legal_name",
+          "passed": true,
+          "detail": "BluePeak Logistics Pvt. Ltd."
+        },
+        {
+          "section": "B",
+          "check": "locations_exact",
+          "passed": true,
+          "detail": [
+            "267 technology park, gurugram, haryana"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "operations_exact",
+          "passed": true,
+          "detail": [
+            "logistics and warehousing"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "controls_exact_no_invented",
+          "passed": true,
+          "detail": [
+            "fire protection"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "risk_factors_only_stated",
+          "passed": true,
+          "detail": [
+            "high-density pallet racking and forklift traffic"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "risks_only_explicit_none_inferred",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "B",
+          "check": "no_exposures_invented",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "B",
+          "check": "assets_three_declared",
+          "passed": true,
+          "detail": [
+            "Buildings and Civil Works",
+            "Plant and Machinery",
+            "Stock"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "declared_values_equal_schedule_lines",
+          "passed": true,
+          "detail": {
+            "persisted": {
+              "buildings and civil works": "275000000",
+              "plant and machinery": "150000000",
+              "stock": "75000000"
+            },
+            "schedule": {
+              "buildings and civil works": "275000000",
+              "plant and machinery": "150000000",
+              "stock": "75000000"
+            }
+          }
+        },
+        {
+          "section": "B",
+          "check": "one_loss_record_no_invented_claims",
+          "passed": true,
+          "detail": 1
+        },
+        {
+          "section": "B",
+          "check": "loss_total_incurred",
+          "passed": true,
+          "detail": "450,000"
+        },
+        {
+          "section": "B",
+          "check": "workforce",
+          "passed": true,
+          "detail": "462"
+        },
+        {
+          "section": "B",
+          "check": "surveyor_rating",
+          "passed": true,
+          "detail": "Low"
+        },
+        {
+          "section": "C",
+          "check": "graph_edges_allowed_and_typed",
+          "passed": true,
+          "detail": "15 edges, bad []"
+        },
+        {
+          "section": "C",
+          "check": "graph_no_document_nodes",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "C",
+          "check": "graph_no_inferred_mitigated_by",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "C",
+          "check": "business_relationships_present",
+          "passed": true,
+          "detail": [
+            [
+              "asset",
+              "owns"
+            ],
+            [
+              "claim",
+              "has_claim"
+            ],
+            [
+              "control",
+              "has_control"
+            ],
+            [
+              "location",
+              "has_location"
+            ],
+            [
+              "operation",
+              "performs_operation"
+            ],
+            [
+              "policy",
+              "has_policy"
+            ],
+            [
+              "risk_factor",
+              "has_risk_factor"
+            ]
+          ]
+        },
+        {
+          "section": "C",
+          "check": "graph_facts_all_evidenced",
+          "passed": true,
+          "detail": 35
+        },
+        {
+          "section": "D",
+          "check": "history_keeps_old_and_new_values",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "E",
+          "check": "contradictions_exact",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "F",
+          "check": "change:business.workforce",
+          "passed": true,
+          "detail": "unchanged"
+        },
+        {
+          "section": "F",
+          "check": "change:business.survey_risk_rating",
+          "passed": true,
+          "detail": "unchanged"
+        },
+        {
+          "section": "F",
+          "check": "change:control:Fire Protection",
+          "passed": true,
+          "detail": "unchanged"
+        },
+        {
+          "section": "F",
+          "check": "change:operation:logistics and warehousing",
+          "passed": true,
+          "detail": "unchanged"
+        },
+        {
+          "section": "F",
+          "check": "no_unexpected_material_change",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "F",
+          "check": "never_removed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "F",
+          "check": "not_reobserved_not_reported_as_change",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "owner_all_endpoints_200",
+          "passed": true,
+          "detail": {}
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_all_endpoints_404_no_data",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_list_excludes_business",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "bad_date_400",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "risk_api_matches_explicit_risks",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "no_risk_score_anywhere",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_query_api_nothing",
+          "passed": true,
+          "detail": 200
+        },
+        {
+          "section": "H",
+          "check": "abstains:Does this company have flood risk?",
+          "passed": true,
+          "detail": "No documented evidence of flood risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there earthquake risk?",
+          "passed": true,
+          "detail": "No documented evidence of earthquake risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a theft risk?",
+          "passed": true,
+          "detail": "No documented evidence of theft risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a cyber risk?",
+          "passed": true,
+          "detail": "No documented evidence of cyber risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a product contamination risk?",
+          "passed": true,
+          "detail": "No documented evidence of product contamination risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:no stated exposure",
+          "passed": true,
+          "detail": "No exposure is documented in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "risks_answer_only_explicit",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "no_risk_score_answer",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "unstated_control_not_confirmed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "other_tenant_query_nothing",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    },
+    {
+      "company_id": "AUR-SYN-004",
+      "facts_audited": 17,
+      "evidence_verified": 17,
+      "page_checked": 17,
+      "page_correct": 17,
+      "items": [
+        {
+          "section": "A",
+          "check": "facts_have_verified_evidence",
+          "passed": true,
+          "detail": "17/17"
+        },
+        {
+          "section": "A",
+          "check": "evidence_on_stated_page",
+          "passed": true,
+          "detail": "17/17"
+        },
+        {
+          "section": "A",
+          "check": "value_stated_in_evidence",
+          "passed": true,
+          "detail": "17/17"
+        },
+        {
+          "section": "B",
+          "check": "legal_name",
+          "passed": true,
+          "detail": "Crestline Foods Pvt. Ltd."
+        },
+        {
+          "section": "B",
+          "check": "locations_exact",
+          "passed": true,
+          "detail": [
+            "464 industrial estate, indore, madhya pradesh"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "operations_exact",
+          "passed": true,
+          "detail": [
+            "processed foods"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "controls_exact_no_invented",
+          "passed": true,
+          "detail": [
+            "fire protection"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "risk_factors_only_stated",
+          "passed": true,
+          "detail": [
+            "refrigeration ammonia system and cold-chain dependency"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "risks_only_explicit_none_inferred",
+          "passed": true,
+          "detail": [
+            "ammonia refrigeration leak at the cold storage plant"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "no_exposures_invented",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "B",
+          "check": "assets_three_declared",
+          "passed": true,
+          "detail": [
+            "Buildings and Civil Works",
+            "Plant and Machinery",
+            "Stock"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "declared_values_equal_schedule_lines",
+          "passed": true,
+          "detail": {
+            "persisted": {
+              "buildings and civil works": "192500000",
+              "plant and machinery": "105000000",
+              "stock": "52500000"
+            },
+            "schedule": {
+              "buildings and civil works": "192500000",
+              "plant and machinery": "105000000",
+              "stock": "52500000"
+            }
+          }
+        },
+        {
+          "section": "B",
+          "check": "one_loss_record_no_invented_claims",
+          "passed": true,
+          "detail": 1
+        },
+        {
+          "section": "B",
+          "check": "loss_total_incurred",
+          "passed": true,
+          "detail": "850,000"
+        },
+        {
+          "section": "B",
+          "check": "workforce_contradiction_not_answered",
+          "passed": true,
+          "detail": [
+            "282",
+            "290"
+          ]
+        },
+        {
+          "section": "B",
+          "check": "surveyor_rating",
+          "passed": true,
+          "detail": "Moderate"
+        },
+        {
+          "section": "C",
+          "check": "graph_edges_allowed_and_typed",
+          "passed": true,
+          "detail": "16 edges, bad []"
+        },
+        {
+          "section": "C",
+          "check": "graph_no_document_nodes",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "C",
+          "check": "graph_no_inferred_mitigated_by",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "C",
+          "check": "business_relationships_present",
+          "passed": true,
+          "detail": [
+            [
+              "asset",
+              "owns"
+            ],
+            [
+              "claim",
+              "has_claim"
+            ],
+            [
+              "control",
+              "has_control"
+            ],
+            [
+              "location",
+              "has_location"
+            ],
+            [
+              "operation",
+              "performs_operation"
+            ],
+            [
+              "policy",
+              "has_policy"
+            ],
+            [
+              "risk",
+              "has_risk"
+            ],
+            [
+              "risk_factor",
+              "has_risk_factor"
+            ]
+          ]
+        },
+        {
+          "section": "C",
+          "check": "graph_facts_all_evidenced",
+          "passed": true,
+          "detail": 35
+        },
+        {
+          "section": "D",
+          "check": "history_keeps_old_and_new_values",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "E",
+          "check": "contradictions_exact",
+          "passed": true,
+          "detail": [
+            "business.workforce"
+          ]
+        },
+        {
+          "section": "E",
+          "check": "contradicted_value_not_answered",
+          "passed": true,
+          "detail": "Sources disagree on this value; a person must correct one side first."
+        },
+        {
+          "section": "E",
+          "check": "contradiction_keeps_both_values:business.workforce",
+          "passed": true,
+          "detail": [
+            "282",
+            "290"
+          ]
+        },
+        {
+          "section": "F",
+          "check": "change_conflicting:business.workforce",
+          "passed": true,
+          "detail": "conflicting"
+        },
+        {
+          "section": "F",
+          "check": "no_unexpected_material_change",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "F",
+          "check": "never_removed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "F",
+          "check": "not_reobserved_not_reported_as_change",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "owner_all_endpoints_200",
+          "passed": true,
+          "detail": {}
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_all_endpoints_404_no_data",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_list_excludes_business",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "bad_date_400",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "risk_api_matches_explicit_risks",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "G",
+          "check": "no_risk_score_anywhere",
+          "passed": true,
+          "detail": []
+        },
+        {
+          "section": "G",
+          "check": "other_tenant_query_api_nothing",
+          "passed": true,
+          "detail": 200
+        },
+        {
+          "section": "H",
+          "check": "abstains:Does this company have flood risk?",
+          "passed": true,
+          "detail": "No documented evidence of flood risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there earthquake risk?",
+          "passed": true,
+          "detail": "No documented evidence of earthquake risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a theft risk?",
+          "passed": true,
+          "detail": "No documented evidence of theft risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a cyber risk?",
+          "passed": true,
+          "detail": "No documented evidence of cyber risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:Is there a product contamination risk?",
+          "passed": true,
+          "detail": "No documented evidence of product contamination risk was found in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "abstains:no stated exposure",
+          "passed": true,
+          "detail": "No exposure is documented in the available documents."
+        },
+        {
+          "section": "H",
+          "check": "risks_answer_only_explicit",
+          "passed": true,
+          "detail": [
+            "Ammonia refrigeration leak at the cold storage plant"
+          ]
+        },
+        {
+          "section": "H",
+          "check": "no_risk_score_answer",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "unstated_control_not_confirmed",
+          "passed": true,
+          "detail": null
+        },
+        {
+          "section": "H",
+          "check": "other_tenant_query_nothing",
+          "passed": true,
+          "detail": null
+        }
+      ]
+    }
+  ]
+}
