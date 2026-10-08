@@ -34,7 +34,7 @@ from doc_intelligence import _numeric_value
 
 from . import entities as _entities
 from . import relationships as _relationships
-from .fact_types import FACT_DEFINITIONS, target_entity_kind
+from .fact_types import FACT_DEFINITIONS, OBSERVED_FACT_TYPES, target_entity_kind
 
 # ---------------------------------------------------------------------------
 # 1. Interpretation (deterministic)
@@ -50,6 +50,9 @@ _FACT_TYPE_PHRASES = [
                         "issued this policy", "who issued")),
     ("policy.definition", ("definition", "defined", "meaning", "mean")),
     ("policy.condition", ("condition", "requirement", "warranty")),
+    # Phase 1D business facts (point-in-time observations)
+    ("business.workforce", ("workforce", "employees", "headcount", "staff")),
+    ("business.survey_risk_rating", ("risk rating", "survey rating", "overall rating")),
     ("property.sum_insured", ("sum insured", "insured value", "declared value", "total insured")),
     # v0.10.2: no bare "limit" — "time limit for notifying a claim" and "age
     # limit of the building" were being answered with the coverage limit.
@@ -112,8 +115,17 @@ def interpret(question: str) -> dict:
     endorsement_dates = _contains_phrase(q, "endorsement") and any(_contains_phrase(q, p) for p in (
         "became effective", "took effect", "effective during", "effective in", "come into effect",
         "came into effect", "effective date"))
+    business_intent = _business_intent_of(q)
+    conflict_words = any(_contains_phrase(q, p) for p in ("contradiction", "contradictory", "conflict",
+                                                         "disagree", "inconsistent", "unresolved"))
+    if business_intent and re.search(r"\b(added|new|removed|changed|change|changes)\b", q):
+        business_intent = "business_changes"
     if endorsement_dates:
         intent = "endorsement_dates"
+    elif conflict_words:
+        intent = "conflicts"
+    elif business_intent:
+        intent = business_intent
     elif any(_contains_phrase(q, p) for p in _PERIOD_PHRASES):
         intent = "policy_period"
     elif which_coverage and re.search(r"\b(highest|largest|biggest|lowest|smallest|maximum|minimum)\b", q):
@@ -138,9 +150,12 @@ def interpret(question: str) -> dict:
     else:
         mode = "current"
 
+    if intent.startswith("business_") and mode == "change":
+        intent = "business_changes"
     if intent == "unknown" and mode == "change":
         intent = "policy_changes"
-    if intent in ("coverage_rank", "conflicts", "endorsement_dates", "policy_status", "policy_changes"):
+    if intent in ("coverage_rank", "conflicts", "endorsement_dates", "policy_status", "policy_changes") \
+            or intent.startswith("business_"):
         fact_type = None
     return {"intent": intent, "fact_type": fact_type, "mode": mode,
             "stated_date": stated_date.isoformat() if stated_date else None}
@@ -441,9 +456,45 @@ def _outside_known_periods(conn, organization_id, targets, fact_type, day: date)
     return bool(known) and not any(_covers(k, day) for k in known)
 
 
+def _observed_rows(facts: list[dict], mode: str, day: date):
+    """Phase 1D observations (point periods [d, d]): current = the latest
+    observation; as of a date = the latest observation on or before it.
+    Undated observations are used only for a current question and only when
+    nothing dated exists. Returns (rows, period) or (None, reason)."""
+    groups = _by_period(facts)
+    dated = sorted((k for k in groups if k[0] is not None), key=lambda k: k[0])
+    if mode == "as_of":
+        before = [k for k in dated if k[0] <= day]
+        if not before:
+            return None, f"Nothing was observed on or before {day.isoformat()}."
+        return groups[before[-1]], before[-1]
+    if dated:
+        return groups[dated[-1]], dated[-1]
+    if (None, None) in groups:
+        return groups[(None, None)], None
+    return None, "No observation is recorded."
+
+
 def _answer_fact(conn, organization_id, result, targets, fact_type, mode, day: date):
     singleton = FACT_DEFINITIONS[fact_type].is_singleton
     facts = _load_facts(conn, organization_id, targets, fact_type)
+    if fact_type in OBSERVED_FACT_TYPES and mode in ("current", "as_of") and facts:
+        rows, period = _observed_rows(facts, mode, day)
+        if rows is None:
+            result["reason"] = period
+            return result
+        values = _distinct_values(rows)
+        result["values"] = values
+        if any(r["status"] == "contradiction_flagged" for r in rows) or (singleton and len(values) > 1):
+            result["contradictions"] = _conflicts(conn, organization_id, targets, fact_type) or [{"values": values}]
+            result["reason"] = "Sources disagree on this value; a person must correct one side first."
+            return _finish(result, rows, period)
+        result["answer"] = values[0] if singleton else values
+        result["answer_type"] = "deterministic"
+        out = _finish(result, rows, period)
+        if period:
+            out["observed_on"] = _iso(period[0])
+        return out
     if not facts:
         result["reason"] = f"No evidenced {fact_type} fact is recorded for this entity."
         return result
@@ -663,6 +714,178 @@ def synthesize(question: str, passages: list[dict]) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Phase 1D business intents (v0.12.0)
+# ---------------------------------------------------------------------------
+_BUSINESS_INTENTS = [
+    # order matters: the first match wins
+    ("business_profile", r"\b(business|company) profile\b|\bprofile of the (business|company)\b"),
+    ("business_locations", r"\blocations\b|\bsites\b|\bpremises\b|\bwhere does the (business|company|insured) operate\b"),
+    ("business_operations", r"\boperations\b|\bwhat does the (business|company|insured) do\b|\bactivities\b|\boperate\b"),
+    ("business_assets", r"\bassets?\b|\bdeclared values\b"),
+    ("business_controls", r"\bcontrols?\b|\bmitigations?\b|\bfire protection\b|\bsprinklers?\b|\bfire alarms?\b|"
+                          r"\bcctv\b|\bguarding\b|\bsecurity\b|\bbackup power\b|\bcontinuity plan\b"),
+    ("business_losses", r"\blosses\b|\bloss history\b|\bloss run\b|\bclaims? history\b|\bincurred\b|"
+                        r"\bhow many claims\b|\bclaims (were|have been|are) (made|reported|filed)\b|\breported losses\b"),
+    ("business_exposures", r"\bexposures?\b"),
+    ("business_risks", r"\brisks?\b(?! factor)(?! rating)(?! survey)"),
+]
+
+
+def mode_is_change(q: str) -> bool:
+    return any(_contains_phrase(q, p) for p in _CHANGE_PHRASES)
+
+
+def _business_intent_of(q: str):
+    if re.search(r"\brisk (factor|rating)s?\b", q) and not re.search(r"\brisks\b", q):
+        return None
+    for name, rx in _BUSINESS_INTENTS:
+        if re.search(rx, q):
+            return name
+    if re.search(r"\bbusiness changes\b|\bchanges? (in|to) the business\b", q):
+        return "business_changes"
+    return None
+
+
+_BUSINESS_WORDS = set("""
+locations location sites site premises operating operate operates operations operation activities activity perform
+performs assets asset declared values major documented controls control mitigation mitigations measures in place
+losses loss claims claim history reported incurred exposures exposure risks risk unresolved contradictory evidence
+supported changed added since period previous business company insured profile show list which there any
+""".split())
+
+
+def _business_for(conn, organization_id, entity):
+    if entity["entity_type"] == "business":
+        return entity
+    if entity["entity_type"] == "policy":
+        for r in db.find_relationships(conn, organization_id, str(entity["id"]), "has_policy", "to"):
+            b = db.get_entity(conn, str(r["from_entity_id"]), organization_id)
+            if b is not None:
+                return b
+    return None
+
+
+def _business_answer(conn, organization_id, result, entity, question, interp, day):
+    import business_intelligence as bi
+    intent = interp["intent"]
+    biz = _business_for(conn, organization_id, entity)
+    if biz is None:
+        result["reason"] = "No business is linked to this entity."
+        return result
+    if str(biz["id"]) != str(entity["id"]):
+        result["entities_used"].append({"entity_id": str(biz["id"]), "entity_type": "business", "name": biz["name"]})
+    terms = [t for t in _qualifier_terms(question, biz) if t not in _BUSINESS_WORDS]
+    interp["qualifier"] = terms
+
+    if intent == "business_changes":
+        ch = bi.get_business_changes(conn, organization_id, str(biz["id"]))
+        if ch["status"] != "compared":
+            result["reason"] = ch["reason"]
+            return result
+        q = _norm(question)
+        prefixes = [p for w, p in (("location", "location:"), ("site", "location:"), ("asset", "asset:"),
+                                   ("control", "control:"), ("risk", "risk"), ("operation", "operation:"),
+                                   ("loss", "claim:"), ("claim", "claim:"), ("workforce", "business.workforce"))
+                    if re.search(rf"\b{w}s?\b", q)]
+        changes = [c for c in ch["changes"] if c["kind"] != "unchanged"
+                   and (not prefixes or any(c["key"].startswith(p) for p in prefixes))]
+        result["change"] = ch
+        result["answer"] = [_describe_business_change(c) for c in changes] or ["no documented change"]
+        result["values"] = result["answer"]
+        result["answer_type"] = "deterministic"
+        ev = [e for c in changes for side in ("old_evidence", "new_evidence") for e in c.get(side) or []]
+        result["evidence"] = ev
+        result["source_documents"] = sorted({e["document_filename"] for e in ev if e.get("document_filename")})
+        result["source_pages"] = [{"document": d, "page": p} for d, p in
+                                  sorted({(e["document_filename"], e["page"]) for e in ev}, key=lambda x: (str(x[0]), x[1] or 0))]
+        result["contradictions"] = [c for c in changes if c["kind"] == "conflicting"]
+        result["review_status"] = "contradiction" if result["contradictions"] else "unverified"
+        result["authoritative"] = False
+        result["needs_review"] = True
+        result["reason"] = f"Business state as of {ch['from']} compared with {ch['to']}."
+        return result
+
+    prof = bi.get_business_profile(conn, organization_id, str(biz["id"]),
+                                   as_of=day if interp.get("stated_date") else None)
+    if intent == "business_profile":
+        lines = []
+        for key, label in (("locations", "Location"), ("operations", "Operation"), ("controls", "Control"),
+                           ("assets", "Asset"), ("risks", "Risk"), ("exposures", "Exposure")):
+            for it in prof[key]:
+                if it["value"]["answer"] is not None:
+                    lines.append(f"{label}: {it['name']}" + ("" if key in ("locations", "operations", "risks", "exposures")
+                                                              else f" — {it['value']['answer']}"))
+        for key, label in (("workforce", "Workforce"), ("survey_risk_rating", "Surveyor's risk rating")):
+            if prof[key]["answer"] is not None:
+                lines.append(f"{label}: {prof[key]['answer']}")
+        facts = [f for k in ("locations", "operations", "controls", "assets", "risks", "exposures")
+                 for it in prof[k] for f in it["value"]["facts_used"]] + \
+                [f for k in ("workforce", "survey_risk_rating") for f in prof[k]["facts_used"]]
+        result.update(answer=lines or None, values=lines, answer_type="deterministic" if lines else "none",
+                      facts_used=facts,
+                      evidence=[dict(e, fact_id=f["fact_id"]) for f in facts for e in f["evidence"]],
+                      contradictions=prof["conflicts"])
+        if not lines:
+            result["reason"] = "Nothing about this business is documented as of this date."
+        return _finish_from_out(result, facts)
+
+    section = {"business_locations": "locations", "business_operations": "operations",
+               "business_assets": "assets", "business_controls": "controls", "business_risks": "risks",
+               "business_exposures": "exposures"}.get(intent)
+    if intent == "business_losses":
+        items = [it for it in prof["claims"]]
+        facts = [f for it in items for k in ("claims_count", "total_incurred") for f in (it[k]["facts_used"] or [])]
+        lines = [f"{it['claims_count']['answer'] or '?'} claim(s) in period, total incurred "
+                 f"{it['total_incurred']['answer'] or 'not stated'}" for it in items
+                 if it["claims_count"]["answer"] or it["total_incurred"]["answer"]]
+        conflicts = [it for it in items for k in ("claims_count", "total_incurred") if it[k]["contradictions"]]
+        if conflicts:
+            result["reason"] = "Loss documents disagree; a person must correct one side first."
+            result["contradictions"] = conflicts
+            return result
+        if not lines:
+            result["reason"] = "No loss or claim is documented in the available documents."
+            return result
+        result.update(answer=lines, values=lines, answer_type="deterministic", facts_used=facts,
+                      evidence=[dict(e, fact_id=f["fact_id"]) for f in facts for e in f["evidence"]])
+        return _finish_from_out(result, facts)
+
+    items = prof[section]
+    conflicted = [it for it in items if it["value"]["contradictions"]]
+    rows = [it for it in items if it["value"]["answer"] is not None]
+    noun = {"locations": "location", "operations": "operation", "assets": "asset", "controls": "control",
+            "risks": "risk", "exposures": "exposure"}[section]
+    if terms:
+        rows = [it for it in rows if all(t in _norm(it["name"] + " " + str(it["value"]["answer"])) or
+                                        t.rstrip("s") in _norm(it["name"] + " " + str(it["value"]["answer"]))
+                                        for t in terms)]
+        if not rows:
+            result["reason"] = (f"No documented evidence of {' '.join(terms)} {noun if noun != 'risk' else 'risk'} "
+                                "was found in the available documents.")
+            return result
+    if conflicted and not terms:
+        result["contradictions"] = [{"name": it["name"], "values": it["value"]["values"]} for it in conflicted]
+    if not rows:
+        result["reason"] = f"No {noun} is documented in the available documents."
+        return result
+    show_value = section in ("assets", "controls")
+    lines = [f"{it['name']}: {it['value']['answer']}" if show_value else it["name"] for it in rows]
+    facts = [f for it in rows for f in it["value"]["facts_used"]]
+    result.update(answer=lines, values=lines, answer_type="deterministic", facts_used=facts,
+                  evidence=[dict(e, fact_id=f["fact_id"]) for f in facts for e in f["evidence"]])
+    return _finish_from_out(result, facts)
+
+
+def _describe_business_change(c: dict) -> str:
+    if c["kind"] == "conflicting":
+        return f"conflicting {c['key']}: {' vs '.join(c['values'])}"
+    if c["kind"] == "added":
+        return f"added {c['key']}: {c['new_value']}"
+    pct = f" ({c['percentage_change']:+}%)" if c.get("percentage_change") is not None else ""
+    return f"{c['kind']} {c['key']}: {c.get('old_value')} -> {c['new_value']}{pct}"
+
+
+# ---------------------------------------------------------------------------
 # 5b. Phase 1C policy intents (v0.11.0) — all deterministic, all evidence-backed
 # ---------------------------------------------------------------------------
 
@@ -743,9 +966,14 @@ def _policy_intent(conn, organization_id, result, entity, question, interp, day)
 
     if intent == "conflicts":
         import policy_intelligence as pi
+        import business_intelligence as bi
         found = []
         for p in policies:
             found += pi.find_policy_conflicts(conn, organization_id, str(p["id"])) or []
+        biz = _business_for(conn, organization_id, entity)
+        if biz is not None:
+            for c in bi.find_business_conflicts(conn, organization_id, str(biz["id"])) or []:
+                found.append({**c, "coverage": c["key"]})
         result["answer"] = [f"{c['coverage'] or c['fact_type']}: {' vs '.join(c['values'])}" for c in found]
         result["values"] = result["answer"]
         result["contradictions"] = found
@@ -804,6 +1032,21 @@ def _policy_intent(conn, organization_id, result, entity, question, interp, day)
         import policy_intelligence as pi
         cmp = pi.compare_policies(conn, organization_id, str(policies[0]["id"]), as_of=day)
         if cmp is None or cmp["status"] != "compared":
+            # v0.12.0: one policy period but several business observations ->
+            # answer with the documented business changes instead.
+            # Never for a question about the policy itself ("what changed at
+            # renewal?" with one policy period must abstain, not answer with
+            # business observations).
+            about_policy = re.search(r"\b(renewal|renew|policy|policies|coverage|cover|limit|deductible|"
+                                     r"endorsement|exclusion|premium)\b", _norm(question))
+            biz = None if about_policy else (_business_for(conn, organization_id, entity) or next(
+                (b for p in policies for b in [_business_for(conn, organization_id, p)] if b), None))
+            if biz is not None:
+                import business_intelligence as bi
+                bc = bi.get_business_changes(conn, organization_id, str(biz["id"]))
+                if bc and bc["status"] == "compared":
+                    interp["intent"] = "business_changes"
+                    return _business_answer(conn, organization_id, result, entity, question, interp, day)
             result["reason"] = (cmp or {}).get("reason") or "Nothing to compare."
             return result
         material = [c for c in cmp["changes"] if not c["change_type"].endswith("_unchanged")]
@@ -877,6 +1120,9 @@ def query(conn, *, organization_id: str, question: str, entity_id: str | None = 
         return result
     result["entities_used"] = [{"entity_id": str(entity["id"]), "entity_type": entity["entity_type"],
                                 "name": entity["name"]}]
+
+    if interp["intent"].startswith("business_"):
+        return _business_answer(conn, organization_id, result, entity, question, interp, day)
 
     if interp["intent"] in ("coverage_rank", "conflicts", "endorsement_dates", "policy_status",
                             "policy_changes") or interp["intent"] in ("fact", "unknown"):

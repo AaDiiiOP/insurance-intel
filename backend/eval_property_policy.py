@@ -905,6 +905,159 @@ def summarise_policy_check(results: list[dict]) -> dict:
             "hard_gate_zero_wrong": all(c["verdict"] != "wrong" for c in checks) and all(p["passed"] for p in probes)}
 
 
+# ---------------------------------------------------------------------------
+# v0.12.0 — Phase 1D business check (part of --query-check).
+#   Stage A (original documents) graded against INDEPENDENT ground truth:
+#     company_profile.json (address, business activity, employees) and
+#     ground_truth.json (risk_rating, loss_amount); controls/assets against the
+#     document text read here independently.
+#   Stage B (benchmark_phase1d/<company>/ supplement, if present): follow-up
+#     documents are added, then change detection, contradictions, explicitly
+#     stated risks and as-of profiles are graded against phase1d_ground_truth.json.
+#   Probes: unsupported risk / exposure questions abstain, no removal from
+#   absence, cross-tenant -> nothing.
+# ---------------------------------------------------------------------------
+PHASE1D_SUPPLEMENT = Path(__file__).parent / "benchmark_phase1d"
+
+
+def business_check_company(conn, organization_id: str, company_dir: Path, ingest_result: dict,
+                           with_supplement: bool = True, supplement_present: bool = False) -> dict:
+    """supplement_present=True (recheck of a run that already added the
+    supplement): stage A is skipped — the current state legitimately reflects
+    the follow-up documents — and stage B is graded without re-adding them."""
+    import re as _re
+    import business_intelligence as bi
+    from knowledge import query as kq
+
+    biz = str(ingest_result["analysis"]["business"]["id"])
+    prof_path, gt_path = company_dir / "company_profile.json", company_dir / "ground_truth.json"
+    profile = json.loads(prof_path.read_text()) if prof_path.exists() else {}
+    gt_v1 = {f["field"]: f.get("value", f.get("value_inr"))
+             for f in (json.loads(gt_path.read_text()).get("facts", []) if gt_path.exists() else [])}
+    checks, probes = [], []
+
+    def ask(q, as_of=None, org=organization_id):
+        return kq.query(conn, organization_id=org, question=q, entity_id=biz, as_of=as_of, use_llm=False)
+
+    def grade(name, r, ok):
+        verdict = "abstained" if r.get("answer") is None else ("correct" if ok else "wrong")
+        checks.append({"check": name, "answer": r.get("answer"), "verdict": verdict, "reason": r.get("reason"),
+                       "evidence_count": len(r.get("evidence") or [])})
+
+    def probe(name, passed, r):
+        probes.append({"probe": name, "passed": bool(passed), "answer": r.get("answer"), "reason": r.get("reason")})
+
+    def norm(x):
+        return " ".join(str(x or "").lower().split())
+
+    stage_a = not supplement_present
+    if stage_a and profile.get("primary_address"):
+        r = ask("What are the business's operating locations?")
+        grade("locations", r, isinstance(r["answer"], list) and
+              [norm(a) for a in r["answer"]] == [norm(profile["primary_address"])])
+    if stage_a and profile.get("business_activity"):
+        r = ask("What operations does the business perform?")
+        grade("operations", r, r["answer"] == [profile["business_activity"]])
+    if stage_a and profile.get("employees"):
+        r = ask("How many employees does the business have?")
+        grade("workforce", r, r["answer"] is not None and
+              kq._numeric_value(str(r["answer"])) == float(profile["employees"]))
+    if stage_a and gt_v1.get("risk_rating"):
+        r = ask("What is the risk rating?")
+        grade("surveyor_risk_rating", r, norm(r["answer"]) == norm(gt_v1["risk_rating"]))
+    if stage_a and gt_v1.get("loss_amount"):
+        r = ask("What losses have been reported?")
+        grade("losses", r, isinstance(r["answer"], list) and
+              any(f"{int(gt_v1['loss_amount']):,}" in a for a in r["answer"]))
+    docs = {d["filename"]: d.get("extracted_text") or "" for d in
+            db.list_submission_documents(conn, ingest_result["submission_id"], organization_id)}
+    survey = next((t for f, t in docs.items() if "risk_survey" in f), "")
+    m = _re.search(r"^\s*Fire protection:\s*(.+?)\.?\s*$", survey, _re.M)
+    if stage_a and m:
+        r = ask("What controls are documented?")
+        grade("controls", r, isinstance(r["answer"], list) and
+              f"Fire Protection: {m.group(1).strip()}" in r["answer"])
+    sched = next((t for f, t in docs.items() if "schedule" in f), "")
+    m = _re.search(r"^\s*Plant and Machinery:\s*\D{0,3}([\d,]+)", sched, _re.M)
+    if stage_a and m:
+        r = ask("What major assets are documented?")
+        grade("asset_machinery", r, isinstance(r["answer"], list) and
+              f"Plant and Machinery: {m.group(1)}" in r["answer"])
+    r = ask("Does this company have flood risk?")
+    probe("unsupported_flood_risk_abstains", r["answer"] is None and
+          str(r["reason"]).startswith("No documented evidence"), r)
+    r = ask("What exposures are documented?")
+    probe("no_stated_exposure_abstains", r["answer"] is None, r)
+    other = str(db.create_organization(conn, f"phase1d-probe-{uuid.uuid4().hex[:8]}")["id"])
+    probe("cross_tenant_profile", bi.get_business_profile(conn, other, biz) is None, {"answer": None, "reason": None})
+
+    sup = PHASE1D_SUPPLEMENT / company_dir.name
+    stage_b = None
+    if (with_supplement or supplement_present) and sup.is_dir():
+        gt = json.loads((sup / "phase1d_ground_truth.json").read_text())
+        new_ids = []
+        for f in ([] if supplement_present else sorted(sup.glob("*.pdf"))):
+            parsed, quality = parse_file_with_quality(f.name, f.read_bytes())
+            row = db.create_document(conn, organization_id=organization_id, carrier_id=None, filename=f.name,
+                                     file_type="pdf", size_bytes=f.stat().st_size, pages=quality["pages"],
+                                     chars=parsed.chars, status="parsed", error_message=None,
+                                     extracted_text=parsed.text)
+            db.set_document_submission(conn, str(row["id"]), ingest_result["submission_id"])
+            new_ids.append(str(row["id"]))
+        if new_ids:
+            ppi.apply_business_documents(conn, ingest_result["submission_id"], organization_id, new_ids)
+        ch = bi.get_business_changes(conn, organization_id, biz)
+        got = {c["key"]: c for c in (ch.get("changes") or [])}
+
+        def find(key):
+            return next((c for k, c in got.items() if k == key or k.endswith("|" + key)), None)
+        for exp in gt.get("changes", []):
+            c = find(exp["key"])
+            ok = c is not None and c["kind"] == exp["kind"] and \
+                all(norm(c.get(f"{s}_value")) == norm(exp[s]) for s in ("old", "new") if s in exp)
+            grade(f"change:{exp['key']}", {"answer": c and c["kind"], "reason": None,
+                                           "evidence": (c or {}).get("new_evidence")}, ok)
+        expected_keys = {e["key"] for e in gt.get("changes", [])} | set(gt.get("contradictions", []))
+        unexpected = [c for c in (ch.get("changes") or []) if c["kind"] in ("added", "changed", "conflicting")
+                      and not any(c["key"] == k or c["key"].endswith("|" + k) for k in expected_keys)]
+        probe("no_unexpected_material_change", not unexpected,
+              {"answer": [c["key"] for c in unexpected], "reason": None})
+        probe("never_removed_from_absence", all(c["kind"] != "removed" for c in (ch.get("changes") or [])),
+              {"answer": None, "reason": None})
+        conflicts = {c["key"] for c in bi.find_business_conflicts(conn, organization_id, biz) or []}
+        grade("contradictions", {"answer": sorted(conflicts), "reason": None, "evidence": []},
+              conflicts == set(gt.get("contradictions", [])))
+        r = ask("What risks are documented?")
+        if gt.get("risks"):
+            grade("explicit_risks", r, r["answer"] == gt["risks"])
+        else:
+            probe("no_stated_risk_abstains", r["answer"] is None, r)
+        r = ask("What are the business's operating locations?")
+        grade("locations_after", r, isinstance(r["answer"], list) and
+              sorted(norm(a) for a in r["answer"]) == sorted(norm(x) for x in gt["locations"]))
+        if gt.get("workforce_before"):
+            before = bi.get_business_profile(conn, organization_id, biz, as_of=gt["before_date"])
+            after = bi.get_business_profile(conn, organization_id, biz, as_of=gt["after_date"])
+            probe("as_of_profile_before_after",
+                  before["workforce"]["answer"] == str(gt["workforce_before"]) and
+                  after["workforce"]["answer"] == str(gt["workforce_after"]),
+                  {"answer": [before["workforce"]["answer"], after["workforce"]["answer"]], "reason": None})
+        stage_b = {"from": ch.get("from"), "to": ch.get("to"), "summary": ch.get("summary")}
+    return {"company_id": company_dir.name, "checks": checks, "probes": probes, "stage_b": stage_b}
+
+
+def summarise_business_check(results: list[dict]) -> dict:
+    checks = [c for r in results for c in r["checks"]]
+    probes = [p for r in results for p in r["probes"]]
+    answered = [c for c in checks if c["answer"] is not None]
+    return {"checks": len(checks), "correct": sum(c["verdict"] == "correct" for c in checks),
+            "abstained": sum(c["verdict"] == "abstained" for c in checks),
+            "wrong": sum(c["verdict"] == "wrong" for c in checks),
+            "probes": len(probes), "probes_failed": sum(not p["passed"] for p in probes),
+            "companies_with_supplement": sum(1 for r in results if r.get("stage_b")),
+            "hard_gate_zero_wrong": all(c["verdict"] != "wrong" for c in checks) and all(p["passed"] for p in probes)}
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 eval_property_policy.py /path/to/Aurevia_Synthetic_Insurance_World_v1")
@@ -972,6 +1125,7 @@ def main():
         company_results = []
         query_results = []
         policy_results = []
+        business_results = []
         query_check = "--query-check" in sys.argv
         for company_dir in company_dirs:
             print(f"  {company_dir.name}...", end=" ", flush=True)
@@ -987,6 +1141,8 @@ def main():
                 policy_results.append(policy_check_company(conn, organization_id, company_dir,
                                                            ingest_result["analysis"]["business"], docs,
                                                            periods[0][0] if periods else None))
+                business_results.append(business_check_company(conn, organization_id, company_dir,
+                                                               ingest_result))
             print(
                 f"recall={result['fact_recall_pct']}%  "
                 f"extracted={result['extracted_fact_count']}  "
@@ -1006,6 +1162,8 @@ def main():
     if query_check:
         output["query_check"] = {"summary": summarise_query_check(query_results), "companies": query_results}
         output["policy_check"] = {"summary": summarise_policy_check(policy_results), "companies": policy_results}
+        output["business_check"] = {"summary": summarise_business_check(business_results),
+                                    "companies": business_results}
     # Timestamped, not overwritten in place — each run is kept as its own
     # historical record (evaluations/phase1a/README.md explains the layout)
     # rather than every run silently erasing the last one, which is exactly
@@ -1043,6 +1201,17 @@ def main():
             for c in r["checks"]:
                 if c["verdict"] != "correct":
                     print(f"  {r['company_id']} {c['check']}: {c['verdict']} — answer={c['answer']!r} reason={c['reason']!r}")
+        bs_ = output["business_check"]["summary"]
+        print(f"business check (Phase 1D): {bs_['checks']} checks  correct {bs_['correct']}  "
+              f"abstained {bs_['abstained']}  WRONG {bs_['wrong']}  probes {bs_['probes']} failed "
+              f"{bs_['probes_failed']}  (supplement used for {bs_['companies_with_supplement']} companies)")
+        for r in business_results:
+            for c in r["checks"]:
+                if c["verdict"] != "correct":
+                    print(f"  {r['company_id']} {c['check']}: {c['verdict']} — answer={c['answer']!r} reason={c['reason']!r}")
+            for p in r["probes"]:
+                if not p["passed"]:
+                    print(f"  BUSINESS PROBE FAILED {r['company_id']} {p['probe']}: answer={p['answer']!r} reason={p['reason']!r}")
             for p in r["probes"]:
                 if not p["passed"]:
                     print(f"  POLICY PROBE FAILED {r['company_id']} {p['probe']}: answer={p['answer']!r} reason={p['reason']!r}")
@@ -1077,6 +1246,11 @@ def main():
             "actually running and reachable before treating this result as "
             "Phase 1A evidence."
         )
+        sys.exit(1)
+
+    if query_check and not output["business_check"]["summary"]["hard_gate_zero_wrong"]:
+        print(f"\nBUSINESS (PHASE 1D) HARD GATE FAILED: {output['business_check']['summary']['wrong']} wrong, "
+              f"{output['business_check']['summary']['probes_failed']} failed probe(s).")
         sys.exit(1)
 
     if query_check and not output["policy_check"]["summary"]["hard_gate_zero_wrong"]:

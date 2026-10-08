@@ -1,0 +1,35 @@
+{
+  "company_id": "AUR-SYN-003",
+  "company_name": "BluePeak Logistics Pvt. Ltd.",
+  "synthetic": true,
+  "dataset": "phase1d-supplement-v1",
+  "documents": [
+    "06_followup_risk_survey.pdf"
+  ],
+  "changes": [
+    {
+      "key": "business.workforce",
+      "kind": "unchanged"
+    },
+    {
+      "key": "business.survey_risk_rating",
+      "kind": "unchanged"
+    },
+    {
+      "key": "control:Fire Protection",
+      "kind": "unchanged"
+    },
+    {
+      "key": "operation:logistics and warehousing",
+      "kind": "unchanged"
+    }
+  ],
+  "no_material_changes": true,
+  "contradictions": [],
+  "risks": [],
+  "locations": [
+    "267 Technology Park, Gurugram, Haryana"
+  ],
+  "before_date": "2026-09-01",
+  "after_date": "2026-10-01"
+}

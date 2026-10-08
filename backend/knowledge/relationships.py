@@ -21,7 +21,21 @@ ALLOWED_RELATIONSHIPS: dict[str, tuple[frozenset, frozenset]] = {
     "exposed_to":  (frozenset({"business"}), frozenset({"risk"})),
     "has_claim":   (frozenset({"business"}), frozenset({"claim"})),
     "supports":    (frozenset({"document"}), frozenset({
-        "business", "asset", "location", "policy", "coverage", "risk", "claim"})),
+        "business", "asset", "location", "policy", "coverage", "risk", "claim",
+        "operation", "control", "exposure", "risk_factor"})),
+    # Phase 1D business-risk graph (v0.12.0)
+    "has_unit":           (frozenset({"business"}), frozenset({"business_unit"})),
+    "has_location":       (frozenset({"business", "business_unit"}), frozenset({"location"})),
+    "performs_operation": (frozenset({"business", "business_unit"}), frozenset({"operation"})),
+    "supports_operation": (frozenset({"location"}), frozenset({"operation"})),
+    "contains_asset":     (frozenset({"location"}), frozenset({"asset"})),
+    "has_exposure":       (frozenset({"business", "location"}), frozenset({"exposure"})),
+    "has_risk":           (frozenset({"business", "location"}), frozenset({"risk"})),
+    "has_risk_factor":    (frozenset({"business", "location", "risk"}), frozenset({"risk_factor"})),
+    "has_control":        (frozenset({"business", "location"}), frozenset({"control"})),
+    "mitigated_by":       (frozenset({"risk"}), frozenset({"control"})),
+    "related_to_risk":    (frozenset({"claim"}), frozenset({"risk"})),
+    "insures":            (frozenset({"policy"}), frozenset({"business", "asset", "location", "exposure"})),
 }
 
 

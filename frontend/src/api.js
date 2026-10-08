@@ -496,3 +496,18 @@ export function comparePolicy(leftPolicyId, rightPolicyId, asOf) {
     body: JSON.stringify({ left_policy_id: leftPolicyId, right_policy_id: rightPolicyId || null, as_of: asOf || null }),
   })
 }
+
+// ---- Business Risk Intelligence (Phase 1D, v0.12.0) -------------------------
+
+export function getBusinessProfile(businessId, asOf) {
+  const q = asOf ? `?as_of=${encodeURIComponent(asOf)}` : ''
+  return request(`/businesses/${businessId}/profile${q}`)
+}
+
+export function getBusinessChanges(businessId, fromDate, toDate) {
+  const p = new URLSearchParams()
+  if (fromDate) p.set('from_date', fromDate)
+  if (toDate) p.set('to_date', toDate)
+  const q = p.toString() ? `?${p}` : ''
+  return request(`/businesses/${businessId}/changes${q}`)
+}

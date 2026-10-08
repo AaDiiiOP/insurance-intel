@@ -828,6 +828,9 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
 
     structure = _apply_policy_structure(conn, organization_id, submission, documents,
                                         business, asset, policy)
+    business_structure = _apply_business_structure(
+        conn, organization_id, submission, documents, business, policy,
+        structure.get("policy_period"))
 
     return {
         "submission_id": submission_id,
@@ -840,8 +843,134 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
         # Phase 1C: deterministic policy structure, kept OUT of "facts" so the
         # Phase 1A benchmark scores exactly what it scored before.
         "policy_structure": structure,
+        # Phase 1D: deterministic business-risk facts (also outside "facts").
+        "business_structure": business_structure,
     }
 
+
+def apply_business_documents(conn, submission_id: str, organization_id: str,
+                             document_ids: list[str]) -> dict:
+    """Phase 1D: run ONLY the deterministic business pass over some documents
+    of a submission (e.g. a follow-up survey added later), without re-running
+    model extraction on the rest. Same entities as analyze_submission."""
+    submission = db.get_submission(conn, submission_id, organization_id)
+    if not submission:
+        raise ValueError("Submission not found.")
+    docs = [d for d in db.list_submission_documents(conn, submission_id, organization_id)
+            if str(d["id"]) in set(document_ids)]
+    business = kc.get_or_create_entity(conn, organization_id=organization_id, entity_type="business",
+                                       name=submission["label"])
+    policy = kc.get_or_create_entity(conn, organization_id=organization_id, entity_type="policy",
+                                     name=f"{submission['label']} — policy")
+    period = None
+    for d in db.list_submission_documents(conn, submission_id, organization_id):
+        import policy_structure as ps
+        if ps.classify_document_role(d.get("extracted_text") or "") == "policy":
+            p = extract_policy_period(d.get("extracted_text") or "")
+            if p:
+                period = [p[0].isoformat(), p[1].isoformat()]
+                break
+    return _apply_business_structure(conn, organization_id, submission, docs, business, policy, period)
+
+
+def _apply_business_structure(conn, organization_id, submission, documents, business, policy,
+                              policy_period) -> dict:
+    """Phase 1D (v0.12.0): write what each document EXPLICITLY states about the
+    business into the Knowledge Core — locations, operations, workforce, the
+    surveyor's rating, controls, asset declared values, losses, risk factors,
+    explicitly stated risks/exposures — as point-in-time observations:
+
+      observation date = the document's own date (survey / report / effective
+      date), else the policy start for documents tied to the policy (policy,
+      schedule, loss run), else undated.
+
+    A later observation of the same fact becomes current and the earlier one
+    history; two different values on the same date are a contradiction.
+    Relationships are created only where the document itself establishes them
+    (e.g. a survey's location supports the operation described in that survey).
+    """
+    import business_structure as bs
+
+    label = submission["label"]
+    start = policy_period[0] if policy_period else None
+    parsed = []
+    for document in documents:
+        text = document.get("extracted_text") or ""
+        if not text.strip():
+            continue
+        st = bs.extract_business_structure(text)
+        observed = st["observed_on"] or (start if st["role"] in ("policy", "schedule", "loss_run") else None)
+        parsed.append((observed or "", document, st, observed))
+    parsed.sort(key=lambda x: x[0])
+
+    created = {}
+
+    def entity(kind, name, rel_from=None, rel=None, attrs=None):
+        key = (kind, name.lower())
+        if key not in created:
+            e = kc.get_or_create_entity(conn, organization_id=organization_id, entity_type=kind,
+                                        name=f"{label} — {name}", attributes=attrs or {kind: name})
+            created[key] = e
+        e = created[key]
+        if rel_from is not None and rel:
+            kc.create_relationship(conn, organization_id=organization_id, from_entity_id=str(rel_from["id"]),
+                                   to_entity_id=str(e["id"]), relationship_type=rel)
+        return e
+
+    def owned_assets():
+        out = [e for (k, _), e in created.items() if k == "asset"]
+        for r in db.find_relationships(conn, organization_id, str(business["id"]), "owns", "from"):
+            e = db.get_entity(conn, str(r["to_entity_id"]), organization_id)
+            if e is not None and not any(str(x["id"]) == str(e["id"]) for x in out):
+                out.append(e)
+        return out
+
+    written, docs_out = [], []
+    rel_for = {"location": "has_location", "operation": "performs_operation", "control": "has_control",
+               "asset": "owns", "claim": "has_claim", "risk_factor": "has_risk_factor", "risk": "has_risk",
+               "exposure": "has_exposure"}
+    for _, document, st, observed in parsed:
+        document_id = str(document["id"])
+        primary_loc = None
+        for it in st["items"]:
+            if it["kind"] == "location" and it.get("primary"):
+                primary_loc = entity("location", it["value"], business, "has_location", {"address": it["value"]})
+        n = 0
+        for it in st["items"]:
+            kind = it["kind"]
+            if kind == "business":
+                target = business
+            elif kind == "asset" and it["name"] == "__machinery__":
+                cands = [a for a in owned_assets() if "machinery" in a["name"].lower()]
+                if len(cands) != 1:
+                    EXTRACTION_DIAGNOSTICS["business_machinery_revision_unmatched"] += 1
+                    continue
+                target = cands[0]
+            else:
+                attrs = {"address": it["value"]} if kind == "location" else None
+                target = entity(kind, it["name"], business, rel_for[kind], attrs)
+                if kind == "location" and st["role"] == "policy":
+                    kc.create_relationship(conn, organization_id=organization_id, from_entity_id=str(policy["id"]),
+                                           to_entity_id=str(target["id"]), relationship_type="insures")
+                if primary_loc is not None and kind in ("operation", "control"):
+                    kc.create_relationship(conn, organization_id=organization_id,
+                                           from_entity_id=str(primary_loc["id"]), to_entity_id=str(target["id"]),
+                                           relationship_type="supports_operation" if kind == "operation" else "has_control")
+            fact = kc.reconcile_fact(
+                conn, organization_id=organization_id, entity_id=str(target["id"]), fact_type=it["fact_type"],
+                value=it["value"], normalized_value=it.get("normalized_value"),
+                confidence={"value": 1.0, "type": "deterministic", "method": "labelled_line",
+                            "note": f"observed {observed}" if observed else "undated"},
+                produced_by="business_structure", document_id=document_id, evidence_page=it["page"],
+                evidence_section=None, evidence_snippet=it["snippet"], evidence_source="text_layer",
+                effective_from=observed, effective_to=observed)
+            written.append({"fact_id": str(fact["id"]), "fact_type": it["fact_type"], "entity": target["name"],
+                            "value": fact["value"], "status": fact["status"], "observed_on": observed})
+            EXTRACTION_DIAGNOSTICS[f"business_fact:{it['fact_type']}"] += 1
+            n += 1
+        docs_out.append({"document_id": document_id, "filename": document["filename"], "role": st["role"],
+                         "observed_on": observed, "facts": n})
+    return {"documents": docs_out, "facts": written}
 
 def _apply_policy_structure(conn, organization_id, submission, documents, business, asset, policy) -> dict:
     """Phase 1C (v0.11.0): read policy structure deterministically from every

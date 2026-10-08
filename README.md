@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.11.0** (see `frontend/package.json` — the one version number
+**Version: 0.12.0** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Status (stated precisely, 2026-10-02):**
@@ -26,6 +26,7 @@ for the whole project; bump it there on every release)
 | v0.10.3 — fix | Undated period-bound values are never given outside the known policy periods; reproduced and tested (146/146). `recheck_query.py` re-grades stored facts without the model. Recheck on Run 1's stored facts (2026-10-07): 40 questions, 34 correct, 6 abstained, **0 wrong**, **28/28 probes**. **Phase 1B: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.** |
 
 | v0.11.0 — Phase 1C Policy Intelligence | Policy number, insurer, conditions, definitions, sub-limits, per-coverage limits, endorsement ids/dates and document roles read deterministically from labelled lines; policy view / history / conflicts / typed comparison with both-side evidence (`/policies/*`); new policy questions; Policy panel in the explorer. 166/166 tests, 13/13 comparison, structure reader 20/20 companies, Real Qwen AUR-SYN-001–004 (2026-10-08): silent wrong 0, recall 100%, query 0 wrong + 28/28 probes, **policy check 28/28 correct + 24/24 probes**. **Phase 1C: READY FOR ACCEPTANCE (4-company development benchmark; 20-company deferred).** See `PHASE_1C_STATUS.md`. |
+| v0.12.0 — Phase 1D Business Risk Intelligence | Business risk graph in the existing Knowledge Core (no graph database): locations, operations, assets, controls, losses, risk factors, risks, exposures, workforce, surveyor rating — read deterministically from labelled lines, each with document + page, dated by the document's own date. Time-aware profile (`?as_of=`), change intelligence (added / changed / unchanged / conflicting; never "removed" from absence), business conflicts, graph view (`/businesses/*`), business questions, Business panel in the explorer. 177/177 tests; dry run (model off) AUR-SYN-001–004: Phase 1B 28/28 probes, Phase 1C 28/28 + 24/24, **Phase 1D 53/53 + 24/24**. Real Qwen AUR-SYN-001–004 (2026-10-08): silent wrong 0, query 0 wrong + 28/28 probes, policy 28/28 + 24/24, **business check 53/53 correct + 24/24 probes**. **Phase 1D: READY FOR ACCEPTANCE (4-company development benchmark; 20-company deferred).** See `PHASE_1D_STATUS.md`. |
 
 Tenant isolation is application-level (not PostgreSQL RLS); revisit before production.
 See `Results.md` for run-by-run detail.
@@ -1113,3 +1114,38 @@ APIs, validation and limits: **`PHASE_1C_STATUS.md`**.
 Phase 1C was validated using the 3–4 company development benchmark (real Qwen,
 2026-10-08: 0 silent wrong, 0 wrong answers, policy check 28/28, all probes
 passed). Large-scale 20-company acceptance is deferred.
+
+## v0.12.0 — Phase 1D Business Risk Intelligence (2026-10-08)
+
+Built on the Knowledge Core (nothing rebuilt, no Neo4j). Full design, rules,
+validation and limits: **`PHASE_1D_STATUS.md`**.
+
+- `business_structure.py` — deterministic reader of what a document *states*
+  about the business: locations, operations, workforce, surveyor risk rating,
+  controls, declared asset values, loss count / total incurred, legal name,
+  risk factors, explicit risks, explicit exposures. Never the model, never
+  inferred from industry.
+- New entity types (business_unit, operation, exposure, risk_factor, control)
+  and relationships (has_location, performs_operation, has_control, has_risk,
+  mitigated_by, insures, …); one DB migration widens the entity-type check.
+- Every value is an *observation* dated by its document (survey / report /
+  endorsement date, or policy start). Later observation = current, earlier =
+  history; two different values on the same date = contradiction.
+- `business_intelligence.py` + `api/businesses.py` — `GET /businesses`,
+  `/{id}`, `/profile?as_of=`, `/locations`, `/assets`, `/operations`,
+  `/exposures`, `/risks`, `/controls`, `/claims`, `/changes?from_date=&to_date=`,
+  `/conflicts`, `/graph`. Another organisation's id → 404.
+- Questions: business profile, locations, operations, assets, controls, losses,
+  exposures, risks, "what changed", contradictions. "Is there flood risk?" with
+  nothing stated → abstains ("No documented evidence…").
+- Explorer: Business panel on business entities (profile with evidence,
+  changes, conflicts).
+- Dev supplement (synthetic, labelled): `backend/benchmark_phase1d/` — follow-up
+  survey / loss run for AUR-SYN-001–004 to test change, no-change and
+  contradiction, because the benchmark has one period and no stated risks.
+- `--query-check` prints a 4th gate, **business check (Phase 1D)**.
+
+Phase 1D validated on the 3–4 company development benchmark (real Qwen,
+2026-10-08: 0 silent wrong, 0 wrong answers, business check 53/53, all probes
+passed); 20-company acceptance deferred.
+

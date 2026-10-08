@@ -1,0 +1,49 @@
+{
+  "company_id": "AUR-SYN-002",
+  "company_name": "Northstar Pharma Systems Pvt. Ltd.",
+  "synthetic": true,
+  "dataset": "phase1d-supplement-v1",
+  "documents": [
+    "06_followup_risk_survey.pdf",
+    "07_followup_loss_run.pdf"
+  ],
+  "changes": [
+    {
+      "key": "business.survey_risk_rating",
+      "kind": "changed",
+      "old": "Low",
+      "new": "Elevated"
+    },
+    {
+      "key": "control:Security",
+      "kind": "added"
+    },
+    {
+      "key": "control:Fire Protection",
+      "kind": "unchanged"
+    },
+    {
+      "key": "loss.claims_count",
+      "kind": "changed",
+      "old": "1",
+      "new": "2"
+    },
+    {
+      "key": "loss.total_incurred",
+      "kind": "changed",
+      "old": "450,000",
+      "new": "2,750,000"
+    },
+    {
+      "key": "business.workforce",
+      "kind": "unchanged"
+    }
+  ],
+  "contradictions": [],
+  "risks": [],
+  "locations": [
+    "750 Logistics Hub, Ahmedabad, Gujarat"
+  ],
+  "before_date": "2026-09-01",
+  "after_date": "2026-09-25"
+}

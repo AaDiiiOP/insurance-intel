@@ -26,8 +26,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 Cardinality = Literal["singleton", "multi"]
-ValueType = Literal["money", "text", "location"]
-EntityKind = Literal["asset", "policy", "coverage"]
+ValueType = Literal["money", "number", "text", "location"]
+EntityKind = Literal["asset", "policy", "coverage", "business", "location", "operation", "control",
+                     "claim", "risk", "risk_factor", "exposure"]
 
 
 @dataclass(frozen=True)
@@ -47,7 +48,7 @@ class FactTypeDefinition:
 
     @property
     def is_numeric(self) -> bool:
-        return self.value_type == "money"
+        return self.value_type in ("money", "number")
 
 
 # The full registry. `entity` says which Knowledge Core entity a fact of
@@ -80,6 +81,19 @@ FACT_DEFINITIONS: dict[str, FactTypeDefinition] = {
         FactTypeDefinition("policy.sublimit", "multi", "text", "policy", "structure"),
         FactTypeDefinition("policy.endorsement_ref", "multi", "text", "policy", "structure"),
         FactTypeDefinition("coverage.limit", "singleton", "money", "coverage", "structure"),
+        # Phase 1D business risk (v0.12.0) — deterministic, labelled lines only.
+        FactTypeDefinition("business.legal_name", "singleton", "text", "business", "business"),
+        FactTypeDefinition("business.workforce", "singleton", "number", "business", "business"),
+        FactTypeDefinition("business.survey_risk_rating", "singleton", "text", "business", "business"),
+        FactTypeDefinition("location.address", "singleton", "location", "location", "business"),
+        FactTypeDefinition("operation.description", "singleton", "text", "operation", "business"),
+        FactTypeDefinition("control.description", "singleton", "text", "control", "business"),
+        FactTypeDefinition("asset.declared_value", "singleton", "money", "asset", "business"),
+        FactTypeDefinition("loss.claims_count", "singleton", "number", "claim", "business"),
+        FactTypeDefinition("loss.total_incurred", "singleton", "money", "claim", "business"),
+        FactTypeDefinition("risk.description", "singleton", "text", "risk", "business"),
+        FactTypeDefinition("risk_factor.description", "singleton", "text", "risk_factor", "business"),
+        FactTypeDefinition("exposure.description", "singleton", "text", "exposure", "business"),
     ]
 }
 
@@ -89,6 +103,14 @@ ALL_FACT_TYPES: frozenset[str] = frozenset(
     ft for ft, d in FACT_DEFINITIONS.items() if d.source == "model")
 STRUCTURE_FACT_TYPES: frozenset[str] = frozenset(
     ft for ft, d in FACT_DEFINITIONS.items() if d.source == "structure")
+BUSINESS_FACT_TYPES: frozenset[str] = frozenset(
+    ft for ft, d in FACT_DEFINITIONS.items() if d.source == "business")
+# Phase 1D: facts that are OBSERVATIONS at a date (a survey, an endorsement, a
+# loss-run report). They carry a point period [date, date]; a later observation
+# becomes current and the earlier one history (knowledge.service already treats
+# non-overlapping stated periods as history, not contradiction). Two different
+# values observed on the SAME date are still a contradiction.
+OBSERVED_FACT_TYPES: frozenset[str] = BUSINESS_FACT_TYPES
 
 SINGLETON_FACT_TYPES: frozenset[str] = frozenset(
     ft for ft, d in FACT_DEFINITIONS.items() if d.is_singleton

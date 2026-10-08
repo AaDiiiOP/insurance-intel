@@ -1,0 +1,49 @@
+{
+  "company_id": "AUR-SYN-001",
+  "company_name": "Apex Precision Components Pvt. Ltd.",
+  "synthetic": true,
+  "dataset": "phase1d-supplement-v1",
+  "documents": [
+    "06_followup_risk_survey.pdf"
+  ],
+  "changes": [
+    {
+      "key": "business.workforce",
+      "kind": "changed",
+      "old": "786",
+      "new": "812"
+    },
+    {
+      "key": "control:Fire Protection",
+      "kind": "changed"
+    },
+    {
+      "key": "location:41 Industrial Estate, Chakan, Maharashtra",
+      "kind": "added"
+    },
+    {
+      "key": "asset:Plant and Machinery",
+      "kind": "changed",
+      "old": "180,000,000",
+      "new": "210,000,000"
+    },
+    {
+      "key": "business.survey_risk_rating",
+      "kind": "unchanged"
+    },
+    {
+      "key": "operation:precision components",
+      "kind": "unchanged"
+    }
+  ],
+  "contradictions": [],
+  "risks": [],
+  "locations": [
+    "932 Technology Park, Pune, Maharashtra",
+    "41 Industrial Estate, Chakan, Maharashtra"
+  ],
+  "workforce_before": 786,
+  "workforce_after": 812,
+  "before_date": "2026-09-01",
+  "after_date": "2026-09-20"
+}

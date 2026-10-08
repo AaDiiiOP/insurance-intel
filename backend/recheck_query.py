@@ -27,7 +27,7 @@ def main():
         sys.exit(2)
     dataset, org = Path(sys.argv[1]), sys.argv[2]
     only = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else None
-    results, policy_results = [], []
+    results, policy_results, business_results = [], [], []
     with db.get_connection() as conn:
         for company_dir in sorted((dataset / "companies").iterdir()):
             if not company_dir.is_dir() or (only and company_dir.name not in only):
@@ -49,6 +49,16 @@ def main():
                     for d in db.list_submission_documents(conn, str(s["id"]), org)]
             policy_results.append(ev.policy_check_company(conn, org, company_dir, biz, docs,
                                                           periods[0][0] if periods else None))
+            subs = [s_ for s_ in db.list_submissions(conn, org) if s_["label"] == company_dir.name]
+            if subs:
+                # Stage A only: re-grading must not add the Phase 1D supplement documents.
+                sub_docs = {d["filename"] for d in db.list_submission_documents(conn, str(subs[0]["id"]), org)}
+                sup_dir = ev.PHASE1D_SUPPLEMENT / company_dir.name
+                present = sup_dir.is_dir() and any(f.name in sub_docs for f in sup_dir.glob("*.pdf"))
+                business_results.append(ev.business_check_company(
+                    conn, org, company_dir, {"submission_id": str(subs[0]["id"]),
+                                             "analysis": {"business": biz}},
+                    with_supplement=False, supplement_present=present))
             print(f"  {company_dir.name}: rechecked")
         conn.rollback()      # probes create a throwaway organization; keep nothing
     if not results:
@@ -56,13 +66,16 @@ def main():
         sys.exit(2)
     summary = ev.summarise_query_check(results)
     policy_summary = ev.summarise_policy_check(policy_results)
+    business_summary = ev.summarise_business_check(business_results)
     out = Path(__file__).parent / "evaluations" / "phase1a" / (
         "query-recheck-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + ".json")
     out.write_text(json.dumps({"organization_id": org, "summary": summary, "companies": results,
-                               "policy_summary": policy_summary, "policy_companies": policy_results},
+                               "policy_summary": policy_summary, "policy_companies": policy_results,
+                               "business_summary": business_summary, "business_companies": business_results},
                               indent=2, default=str))
     print(json.dumps(summary, indent=2))
     print("policy check (Phase 1C):", json.dumps(policy_summary, indent=2))
+    print("business check (Phase 1D):", json.dumps(business_summary, indent=2))
     for r in results:
         for q in r["questions"]:
             if q["verdict"] != "correct":
@@ -78,7 +91,16 @@ def main():
             if not p["passed"]:
                 print(f"  POLICY PROBE FAILED {r['company_id']} {p['probe']}: answer={p['answer']!r}")
     print(f"written to {out}")
-    sys.exit(0 if summary["hard_gate_zero_wrong_answers"] and policy_summary["hard_gate_zero_wrong"] else 1)
+    for r in business_results:
+        for c in r["checks"]:
+            if c["verdict"] != "correct":
+                print(f"  {r['company_id']} {c['check']}: {c['verdict']} — {c['reason']}")
+        for p in r["probes"]:
+            if not p["passed"]:
+                print(f"  BUSINESS PROBE FAILED {r['company_id']} {p['probe']}: answer={p['answer']!r}")
+    ok = (summary["hard_gate_zero_wrong_answers"] and policy_summary["hard_gate_zero_wrong"]
+          and business_summary["hard_gate_zero_wrong"])
+    sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":

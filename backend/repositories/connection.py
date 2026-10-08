@@ -538,7 +538,8 @@ CREATE TABLE IF NOT EXISTS kc_entities (
     entity_type       TEXT NOT NULL CHECK (entity_type IN (
                           'business', 'carrier', 'policy', 'document',
                           'location', 'asset', 'coverage', 'claim', 'risk',
-                          'person'
+                          'person', 'business_unit', 'operation', 'exposure',
+                          'risk_factor', 'control'
                       )),
     name              TEXT NOT NULL,
     -- Type-specific fields (a business's industry, an asset's address) live
@@ -902,6 +903,13 @@ ALTER TABLE kc_facts DROP CONSTRAINT IF EXISTS kc_facts_status_check;
 ALTER TABLE kc_facts ADD CONSTRAINT kc_facts_status_check
     CHECK (status IN ('needs_review', 'verified', 'corrected',
                        'contradiction_flagged', 'superseded'));
+-- v0.12.0 (Phase 1D): business-risk entity types. Same replace-the-CHECK-by-
+-- name pattern; every existing row stays valid.
+ALTER TABLE kc_entities DROP CONSTRAINT IF EXISTS kc_entities_entity_type_check;
+ALTER TABLE kc_entities ADD CONSTRAINT kc_entities_entity_type_check
+    CHECK (entity_type IN ('business', 'carrier', 'policy', 'document', 'location', 'asset',
+                           'coverage', 'claim', 'risk', 'person',
+                           'business_unit', 'operation', 'exposure', 'risk_factor', 'control'));
 """
 
 

@@ -17,7 +17,8 @@ deliberately shows an older version.
 | result-20261007T070750 * | v0.10.2 | development + query check + probes, real Qwen | 4 | 96.2% | 0; query 0 wrong; 1 probe failed | fixed in v0.10.3 |
 | result-20261007T074446 * | v0.10.2 | AUR-SYN-001 re-run, real Qwen | 1 | 100% | 0; query 0 wrong; probes 7/7 | clean re-run |
 | query-recheck-20261007T121100 * | v0.10.3 | recheck, no model, on run 07:07's stored facts | 4 | — | query 0 wrong; probes 28/28 | **current — Phase 1B development acceptance** |
-| result-20261008T073454 * | v0.11.0 | development, real Qwen, Phase 1A+1B+1C gates | 4 | 100% | 0; query 0 wrong, probes 28/28; policy 28/28, probes 24/24 | **current — Phase 1C development acceptance** |
+| result-20261008T073454 * | v0.11.0 | development, real Qwen, Phase 1A+1B+1C gates | 4 | 100% | 0; query 0 wrong, probes 28/28; policy 28/28, probes 24/24 | Phase 1C development acceptance |
+| result-20261008T165020 * | v0.12.0 | development, real Qwen, Phase 1A+1B+1C+1D gates | 4 | 100% | 0; query 0 wrong, probes 28/28; policy 28/28, probes 24/24; business 53/53, probes 24/24 | **current — Phase 1D development acceptance** |
 | (phase end) full 20-company run | end of Phase 1B | acceptance, real Qwen | 20 | | | **pending — not run yet** |
 
 \* produced on the developer's machine; commit them from `backend/evaluations/phase1a/`.

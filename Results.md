@@ -1203,3 +1203,11 @@ Phase 1B simulation 40/40 + 28/28 probes (unchanged). Structure reader on 20 com
 per-coverage limits 40/40 vs GT, endorsement id/ref/date 20/20, roles 100/100, no facts from surveys/loss runs.
 Phase 1C dry run on AUR-SYN-001–004 real documents (model off): 28/28 checks, 24/24 probes.
 Real Qwen (2026-10-08 07:34 UTC, result-20261008T073454, AUR-SYN-001–004): Phase 1A recall 100%, false 2.7% (2 flagged), silent wrong 0, evidence/page 100%; Phase 1B query 34 correct / 6 abstained / 0 wrong, probes 28/28; Phase 1C policy check 28/28 correct, 0 wrong, probes 24/24. Phase 1C: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.
+
+## v0.12.0 (2026-10-08) — Phase 1D Business Risk Intelligence
+Deterministic: 177/177 tests (11 new), policy comparison 13/13, Phase 1B simulation 40/40 + 28/28 probes (unchanged).
+Business reader on 20 companies vs independent ground truth: location, operation, workforce, surveyor rating, loss count/total, legal name 20/20; 0 risks / 0 exposures invented.
+Dry run (model off) on AUR-SYN-001–004 real documents + Phase 1D supplement: Phase 1B probes 28/28; Phase 1C 28/28 correct, probes 24/24; Phase 1D 53/53 correct, 0 wrong, probes 24/24 (supplement used for 4 companies).
+Regression found and fixed during the dry run: "What changed during renewal?" with one policy period had started answering with business changes (4 Phase 1C probes failed) — now abstains again; regression test added.
+Real Qwen (2026-10-08 16:50 UTC, result-20261008T165020, AUR-SYN-001–004): Phase 1A recall 100%, false 4.1% (3, all flagged contradictions), silent wrong 0, evidence/page 100%; Phase 1B query 34 correct / 6 abstained / 0 wrong, probes 28/28; Phase 1C 28/28, probes 24/24; Phase 1D business check 53/53 correct, 0 wrong, probes 24/24. Phase 1D: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.
+

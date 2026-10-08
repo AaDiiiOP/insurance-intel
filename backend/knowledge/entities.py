@@ -12,6 +12,8 @@ import db
 ENTITY_TYPES = {
     "business", "carrier", "policy", "document", "location", "asset",
     "coverage", "claim", "risk", "person",
+    # Phase 1D business-risk ontology (v0.12.0)
+    "business_unit", "operation", "exposure", "risk_factor", "control",
 }
 
 
