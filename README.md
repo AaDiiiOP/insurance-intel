@@ -25,7 +25,7 @@ for the whole project; bump it there on every release)
 | v0.10.2 real-Qwen 4-company `--query-check` (2026-10-07) | Silent wrong **0**, wrong answers **0**, evidence 100% / page 100%, recall 96.2% (one Ollama HTTP 500 on AUR-SYN-001; clean re-run of 001: recall 100%, 7/7 probes). 1 of 28 safety probes failed: an undated limit was given for a date before the policy began. |
 | v0.10.3 — fix | Undated period-bound values are never given outside the known policy periods; reproduced and tested (146/146). `recheck_query.py` re-grades stored facts without the model. Recheck on Run 1's stored facts (2026-10-07): 40 questions, 34 correct, 6 abstained, **0 wrong**, **28/28 probes**. **Phase 1B: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.** |
 
-| v0.11.0 — Phase 1C Policy Intelligence | Policy number, insurer, conditions, definitions, sub-limits, per-coverage limits, endorsement ids/dates and document roles read deterministically from labelled lines; policy view / history / conflicts / typed comparison with both-side evidence (`/policies/*`); new policy questions; Policy panel in the explorer. 166/166 tests, 13/13 comparison, structure reader 20/20 companies, Phase 1C dry run 28/28 + 24/24 probes. **Real-Qwen 4-company run pending.** See `PHASE_1C_STATUS.md`. |
+| v0.11.0 — Phase 1C Policy Intelligence | Policy number, insurer, conditions, definitions, sub-limits, per-coverage limits, endorsement ids/dates and document roles read deterministically from labelled lines; policy view / history / conflicts / typed comparison with both-side evidence (`/policies/*`); new policy questions; Policy panel in the explorer. 166/166 tests, 13/13 comparison, structure reader 20/20 companies, Real Qwen AUR-SYN-001–004 (2026-10-08): silent wrong 0, recall 100%, query 0 wrong + 28/28 probes, **policy check 28/28 correct + 24/24 probes**. **Phase 1C: READY FOR ACCEPTANCE (4-company development benchmark; 20-company deferred).** See `PHASE_1C_STATUS.md`. |
 
 Tenant isolation is application-level (not PostgreSQL RLS); revisit before production.
 See `Results.md` for run-by-run detail.
@@ -1110,5 +1110,6 @@ APIs, validation and limits: **`PHASE_1C_STATUS.md`**.
 - `--query-check` now also prints a **policy check (Phase 1C)** gate;
   `recheck_query.py` re-grades it on stored facts without the model.
 
-Phase 1C was validated using the 3–4 company development benchmark (dry run;
-real-Qwen run pending). Large-scale 20-company acceptance is deferred.
+Phase 1C was validated using the 3–4 company development benchmark (real Qwen,
+2026-10-08: 0 silent wrong, 0 wrong answers, policy check 28/28, all probes
+passed). Large-scale 20-company acceptance is deferred.

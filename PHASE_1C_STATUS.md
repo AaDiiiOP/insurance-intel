@@ -1,9 +1,10 @@
 # Phase 1C — Policy Intelligence: status (v0.11.0, 2026-10-07)
 
-Status: **PHASE 1C NOT READY — one real-Qwen run pending** (section E).
-Everything that can be checked without the model passes. Phase 1C is
-validated on the 3–4 company development benchmark only; large-scale
-20-company acceptance is deferred.
+Status: **READY FOR PHASE 1C ACCEPTANCE** (2026-10-08).
+Phase 1C was validated using the 3–4 company development benchmark
+(AUR-SYN-001–004, real qwen2.5:7b): 0 silent wrong, 0 wrong answers, 28/28
+Phase 1C policy checks correct, 24/24 Phase 1C probes, 28/28 Phase 1B probes.
+Large-scale 20-company acceptance is deferred.
 
 Previous version v0.10.3 (Phase 1B ready) → new version **v0.11.0** (minor
 bump: new capability, Phase 1B behaviour preserved).
@@ -60,7 +61,7 @@ is reported as "not stated / needs review". Phase 1A fact scoring is untouched
 - Structure reader on all 20 benchmark companies (app parser): roles 100/100 documents, policy number 20/20, insurer 20/20, conditions 20/20 (40 sentences), per-coverage limits 40/40 equal to ground truth, endorsement id/reference/date 20/20, nothing read from surveys or loss runs, 0 definitions / 0 sub-limits (none exist).
 - Dry run of the Phase 1C checks on AUR-SYN-001–004 real documents (model off): 28/28 checks correct, 24/24 probes.
 
-**Real Qwen (pending — mandatory):**
+**Real Qwen (done, 2026-10-08 07:34 UTC, `result-20261008T073454`):**
 
     docker-compose exec backend python3 eval_property_policy.py /app/benchmark_data --only AUR-SYN-001,AUR-SYN-002,AUR-SYN-003,AUR-SYN-004 --query-check
 
@@ -76,7 +77,11 @@ current in period, policy view equals query answers, cross-tenant → nothing.
 | Version | v0.11.0 |
 | Companies | AUR-SYN-001, 002, 003, 004 |
 | Model | qwen2.5:7b (Ollama) |
-| Silent wrong / wrong answers / Phase 1C wrong / probes failed | _pending_ |
+| Date | 2026-10-08 |
+| Phase 1A facts | recall 100%, false extraction 2.7% (2, both flagged contradictions), silent wrong **0**, evidence verified 100%, page accuracy 100% |
+| Phase 1B query check | 40 questions: 34 correct, 6 abstained (5 contradictions + 1 occupancy restatement), **0 wrong**; probes **28/28** |
+| Phase 1C policy check | 28 checks: **28 correct**, 0 abstained, **0 wrong**, answered with evidence 100%; probes **24/24** |
+| Structure facts written | policy.number 8, insurer 4, conditions 8, coverage limits 8, endorsement ids 4 |
 
 ## F. Security
 Tenant isolation is application-level (organization_id in every query), not
