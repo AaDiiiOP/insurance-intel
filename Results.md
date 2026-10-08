@@ -1196,3 +1196,10 @@ Run 2 (07:44 UTC, AUR-SYN-001 only, result-20261007T074446): recall 100%, false 
 ## v0.10.3 (2026-10-07)
 Fix for the failed probe (undated period-bound values not given outside known periods). Reproduced: old code fails the probe with 600,000,000, new code abstains. 146/146 tests.
 Final confirmation (2026-10-07 12:11 UTC, query-recheck-20261007T121100.json, no model, Run 1's stored facts): 40 questions, 34 correct, 6 abstained, 0 wrong; interpretation 100%; answered with evidence 100%; probes 28/28. Phase 1B: READY FOR ACCEPTANCE on the 4-company development benchmark; 20-company acceptance deferred.
+
+## v0.11.0 (2026-10-07) — Phase 1C Policy Intelligence
+Deterministic: 166/166 tests (20 new; 1 test made outcome-based, see PHASE_1C_STATUS.md), policy comparison 13/13 (scratch copy),
+Phase 1B simulation 40/40 + 28/28 probes (unchanged). Structure reader on 20 companies: number 20/20, insurer 20/20, conditions 20/20,
+per-coverage limits 40/40 vs GT, endorsement id/ref/date 20/20, roles 100/100, no facts from surveys/loss runs.
+Phase 1C dry run on AUR-SYN-001–004 real documents (model off): 28/28 checks, 24/24 probes.
+Real Qwen: NOT yet run on v0.11.0. Pending: `--only AUR-SYN-001,AUR-SYN-002,AUR-SYN-003,AUR-SYN-004 --query-check`.

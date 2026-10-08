@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import PolicyPanel from './PolicyPanel'
+
 import {
   getDocumentText,
   getEntityKnowledge,
@@ -358,6 +360,8 @@ export default function KnowledgeExplorer({ initialEntityId }) {
               {aliases.length > 0 ? ` · also known as: ${aliases.join(', ')}` : ''}
             </div>
           </div>
+
+          {data.entity.entity_type === 'policy' && <PolicyPanel policyId={String(data.entity.id)} asOf={asOf} />}
 
           <AskPanel entityId={entityId} asOf={asOf} onOpenEntity={open} />
 

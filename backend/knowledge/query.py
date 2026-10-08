@@ -42,6 +42,14 @@ from .fact_types import FACT_DEFINITIONS, target_entity_kind
 
 # Most specific phrases first: "coverage limit" must win over "coverage".
 _FACT_TYPE_PHRASES = [
+    # Phase 1C structure types first: "sub-limit" must win over "limit",
+    # "policy number" over "policy", "insurer" over everything.
+    ("policy.sublimit", ("sublimit", "sub limit")),
+    ("policy.number", ("policy number", "policy no")),
+    ("policy.insurer", ("insurer", "carrier", "insurance company", "underwriter", "issued the policy",
+                        "issued this policy", "who issued")),
+    ("policy.definition", ("definition", "defined", "meaning", "mean")),
+    ("policy.condition", ("condition", "requirement", "warranty")),
     ("property.sum_insured", ("sum insured", "insured value", "declared value", "total insured")),
     # v0.10.2: no bare "limit" — "time limit for notifying a claim" and "age
     # limit of the building" were being answered with the coverage limit.
@@ -100,8 +108,22 @@ def interpret(question: str) -> dict:
     if m:
         stated_date = ppi._parse_date(m.group(0))
 
-    if any(_contains_phrase(q, p) for p in _PERIOD_PHRASES):
+    which_coverage = re.search(r"\bwhich (coverage|cover|peril)s?\b", q) is not None
+    endorsement_dates = _contains_phrase(q, "endorsement") and any(_contains_phrase(q, p) for p in (
+        "became effective", "took effect", "effective during", "effective in", "come into effect",
+        "came into effect", "effective date"))
+    if endorsement_dates:
+        intent = "endorsement_dates"
+    elif any(_contains_phrase(q, p) for p in _PERIOD_PHRASES):
         intent = "policy_period"
+    elif which_coverage and re.search(r"\b(highest|largest|biggest|lowest|smallest|maximum|minimum)\b", q):
+        intent = "coverage_rank"
+    elif any(_contains_phrase(q, p) for p in ("contradiction", "conflict", "disagree", "inconsistent")):
+        intent = "conflicts"
+    elif fact_type is None and any(_contains_phrase(q, p) for p in (
+            "in force", "expired", "still active", "is it active", "policy status", "is the policy current",
+            "is the policy active", "is the policy valid")):
+        intent = "policy_status"
     elif fact_type is None:
         intent = "unknown"
     else:
@@ -116,6 +138,10 @@ def interpret(question: str) -> dict:
     else:
         mode = "current"
 
+    if intent == "unknown" and mode == "change":
+        intent = "policy_changes"
+    if intent in ("coverage_rank", "conflicts", "endorsement_dates", "policy_status", "policy_changes"):
+        fact_type = None
     return {"intent": intent, "fact_type": fact_type, "mode": mode,
             "stated_date": stated_date.isoformat() if stated_date else None}
 
@@ -390,8 +416,13 @@ def _conflicts(conn, organization_id: str, targets: list[dict], fact_type: str) 
     return out
 
 
+# Fact types whose effective dates ARE the policy period (Phase 1C adds the
+# structure types). policy.endorsement_ref is deliberately absent: its dates are
+# the endorsement's own effective date, not the policy period.
 _PERIOD_BOUND = ("policy.coverage", "policy.coverage_limit", "policy.deductible",
-                 "policy.exclusion", "policy.endorsement", "property.sum_insured")
+                 "policy.exclusion", "policy.endorsement", "property.sum_insured",
+                 "policy.number", "policy.insurer", "policy.condition", "policy.definition",
+                 "policy.sublimit")
 
 
 def _outside_known_periods(conn, organization_id, targets, fact_type, day: date) -> bool:
@@ -511,8 +542,7 @@ def _answer_fact(conn, organization_id, result, targets, fact_type, mode, day: d
 
 def _answer_period(conn, organization_id, result, targets, day: date):
     facts = []
-    for ft in ("policy.coverage", "policy.coverage_limit", "policy.deductible",
-               "property.sum_insured", "policy.exclusion", "policy.endorsement"):
+    for ft in _PERIOD_BOUND:
         facts += [f for f in _load_facts(conn, organization_id, targets, ft) if f.get("effective_from")]
     if not facts:
         result["reason"] = "No policy period is stated in this entity's documents."
@@ -633,6 +663,199 @@ def synthesize(question: str, passages: list[dict]) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# 5b. Phase 1C policy intents (v0.11.0) — all deterministic, all evidence-backed
+# ---------------------------------------------------------------------------
+
+def _coverages_for(conn, organization_id, entity):
+    policies, edges = _targets(conn, organization_id, entity, "policy")
+    covs = []
+    for p in policies:
+        for r in _relationships.find_relationships(conn, organization_id, str(p["id"]), "provides", "from"):
+            c = db.get_entity(conn, str(r["to_entity_id"]), organization_id)
+            if c is not None and c["entity_type"] == "coverage":
+                covs.append(c)
+    return policies, edges, covs
+
+
+def _cov_name(c) -> str:
+    return (c.get("attributes") or {}).get("coverage") or c["name"]
+
+
+def _policy_intent(conn, organization_id, result, entity, question, interp, day):
+    """Returns a finished result for a Phase 1C intent, or None to fall through."""
+    intent, q = interp["intent"], _norm(question)
+    policies, edges, covs = _coverages_for(conn, organization_id, entity)
+
+    def use(targets_extra):
+        result["relationships_used"] = edges
+        for t in policies + targets_extra:
+            if str(t["id"]) != str(entity["id"]) and not any(
+                    e["entity_id"] == str(t["id"]) for e in result["entities_used"]):
+                result["entities_used"].append({"entity_id": str(t["id"]), "entity_type": t["entity_type"],
+                                                "name": t["name"]})
+
+    # A limit / sum insured question that names one of the policy's coverages
+    # is answered from THAT coverage's own limit (never the policy-wide one).
+    if intent in ("fact", "unknown") and covs and (
+            interp.get("fact_type") in ("policy.coverage_limit", "property.sum_insured", None)
+            and re.search(r"\b(limit|sum insured|insured for|cover amount)\b", q)):
+        named = [c for c in covs if _norm(_cov_name(c)) and f" {_norm(_cov_name(c))} " in f" {q} "]
+        if len(named) == 1:
+            c = named[0]
+            use([c])
+            interp.update(intent="fact", fact_type="coverage.limit", coverage=_cov_name(c))
+            return _answer_fact(conn, organization_id, result, [c], "coverage.limit", interp["mode"], day)
+    if intent in ("fact", "unknown"):
+        return None
+    if not policies:
+        result["reason"] = "No policy is linked to this entity."
+        return result
+    use([])
+
+    if intent == "coverage_rank":
+        if not covs:
+            result["reason"] = "No coverage with its own stated limit is recorded for this policy."
+            return result
+        rows, problems = [], []
+        for c in covs:
+            r = _answer_fact(conn, organization_id, _empty("", {}), [c], "coverage.limit", "current", day)
+            if r["answer"] is None:
+                problems.append(f"{_cov_name(c)}: {r['reason']}")
+            else:
+                rows.append((c, r))
+        if problems:
+            result["reason"] = "Cannot rank: " + "; ".join(problems)
+            return result
+        lowest = re.search(r"\b(lowest|smallest|minimum)\b", q) is not None
+        rows.sort(key=lambda cr: _number({"value": cr[1]["answer"], "normalized_value":
+                                          cr[1]["facts_used"][0]["normalized_value"]}) or 0, reverse=not lowest)
+        top_c, top_r = rows[0]
+        if len(rows) > 1 and rows[0][1]["answer"] == rows[1][1]["answer"]:
+            result["reason"] = "Two coverages share the same limit; no single answer."
+            return result
+        facts = [f for _, r in rows for f in r["facts_used"]]
+        result["answer"] = f"{_cov_name(top_c)} ({top_r['answer']})"
+        result["values"] = [f"{_cov_name(c)}: {r['answer']}" for c, r in rows]
+        result["answer_type"] = "deterministic"
+        result["facts_used"] = facts
+        result["evidence"] = [dict(e, fact_id=f["fact_id"]) for f in facts for e in f["evidence"]]
+        return _finish_from_out(result, facts)
+
+    if intent == "conflicts":
+        import policy_intelligence as pi
+        found = []
+        for p in policies:
+            found += pi.find_policy_conflicts(conn, organization_id, str(p["id"])) or []
+        result["answer"] = [f"{c['coverage'] or c['fact_type']}: {' vs '.join(c['values'])}" for c in found]
+        result["values"] = result["answer"]
+        result["contradictions"] = found
+        result["answer_type"] = "deterministic"
+        facts = [f for c in found for f in c["facts"]]
+        result["facts_used"] = facts
+        result["evidence"] = [dict(e, fact_id=f["fact_id"]) for f in facts for e in f["evidence"]]
+        result["reason"] = None if found else "No unresolved contradiction is recorded for this policy."
+        out = _finish_from_out(result, facts)
+        out["review_status"] = "contradiction" if found else "deterministic"
+        out["authoritative"] = True       # the list of open conflicts is itself a recorded fact
+        out["needs_review"] = bool(found)
+        return out
+
+    if intent == "endorsement_dates":
+        refs = [f for f in _load_facts(conn, organization_id, policies, "policy.endorsement_ref")
+                if f.get("valid_to") is None]
+        periods = sorted({_period_key(f) for ft in _PERIOD_BOUND
+                          for f in _load_facts(conn, organization_id, policies, ft) if f.get("effective_from")},
+                         key=lambda k: k[0])
+        cur = next((k for k in periods if _covers(k, day)), None)
+        if cur is None:
+            result["reason"] = f"No stated policy period covers {day.isoformat()}."
+            return result
+        inside = [f for f in refs if f.get("effective_from") and cur[0] <= f["effective_from"] <= cur[1]]
+        undated = [f for f in refs if not f.get("effective_from")]
+        result["answer"] = [f"{f['value']} (effective {_iso(f['effective_from'])})" for f in inside]
+        result["values"] = result["answer"]
+        result["answer_type"] = "deterministic"
+        if undated:
+            result["candidates"] = [_fact_out(f) for f in undated]
+            result["reason"] = f"{len(undated)} endorsement(s) have no readable effective date and are not counted."
+        elif not inside:
+            result["reason"] = "No endorsement with a stated effective date falls in this policy period."
+        return _finish(result, inside, cur)
+
+    if intent == "policy_status":
+        periods = sorted({_period_key(f) for ft in _PERIOD_BOUND
+                          for f in _load_facts(conn, organization_id, policies, ft) if f.get("effective_from")},
+                         key=lambda k: k[0])
+        if not periods:
+            result["reason"] = "No policy period is stated, so the status cannot be established."
+            return result
+        import policy_intelligence as pi
+        status = pi._status(periods, day)
+        rep = [f for ft in _PERIOD_BOUND for f in _load_facts(conn, organization_id, policies, ft)
+               if f.get("effective_from")][:1]
+        result["answer"] = f"{status} on {day.isoformat()}"
+        result["values"] = [{"from": _iso(a), "to": _iso(b)} for a, b in periods]
+        result["answer_type"] = "deterministic"
+        out = _finish(result, rep)
+        out.update(authoritative=True, needs_review=False, review_status="deterministic")
+        return out
+
+    if intent == "policy_changes":
+        import policy_intelligence as pi
+        cmp = pi.compare_policies(conn, organization_id, str(policies[0]["id"]), as_of=day)
+        if cmp is None or cmp["status"] != "compared":
+            result["reason"] = (cmp or {}).get("reason") or "Nothing to compare."
+            return result
+        material = [c for c in cmp["changes"] if not c["change_type"].endswith("_unchanged")]
+        result["change"] = cmp
+        result["answer"] = [_describe_change(c) for c in material] or ["no material change"]
+        result["values"] = result["answer"]
+        result["answer_type"] = "deterministic"
+        ev = [e for c in material for side in ("old_evidence", "new_evidence") for e in c.get(side) or []]
+        result["evidence"] = ev
+        result["source_documents"] = sorted({e["document_filename"] for e in ev if e.get("document_filename")})
+        result["source_pages"] = [{"document": d, "page": p} for d, p in
+                                  sorted({(e["document_filename"], e["page"]) for e in ev},
+                                         key=lambda x: (str(x[0]), x[1] or 0))]
+        statuses = {c["review_status"] for c in material}
+        result["review_status"] = ("contradiction" if "contradiction" in statuses else
+                                   "verified" if statuses <= {"verified", "deterministic"} else "unverified")
+        result["authoritative"] = result["review_status"] == "verified"
+        result["needs_review"] = not result["authoritative"]
+        result["contradictions"] = [c for c in material if c["change_type"] == "unresolved_contradiction"]
+        return result
+    return None
+
+
+def _describe_change(c: dict) -> str:
+    who = f" ({c['coverage']})" if c.get("coverage") else ""
+    t = c["change_type"]
+    if "old_value" in c and "new_value" in c:
+        pct = f", {c['percentage_change']:+}%" if c.get("percentage_change") is not None else ""
+        return f"{t}{who}: {c['old_value']} -> {c['new_value']}{pct}"
+    if "new_value" in c:
+        return f"{t}{who}: {c['new_value']}"
+    if "old_value" in c:
+        return f"{t}{who}: {c['old_value']}"
+    return f"{t}{who}: {' / '.join(c.get('old_values', []))} vs {' / '.join(c.get('new_values', []))}"
+
+
+def _finish_from_out(result: dict, facts_out: list[dict]) -> dict:
+    """_finish for facts already in _fact_out shape."""
+    ev = result["evidence"]
+    result["source_documents"] = sorted({e["document_filename"] for e in ev if e.get("document_filename")})
+    result["source_pages"] = [{"document": d, "page": p} for d, p in
+                              sorted({(e["document_filename"], e["page"]) for e in ev},
+                                     key=lambda x: (str(x[0]), x[1] or 0))]
+    st = {f["status"] for f in facts_out}
+    result["review_status"] = ("contradiction" if "contradiction_flagged" in st else
+                               "verified" if st and st <= {"verified", "corrected"} else "unverified")
+    result["authoritative"] = result["answer"] is not None and result["review_status"] == "verified"
+    result["needs_review"] = not result["authoritative"]
+    return result
+
+
+# ---------------------------------------------------------------------------
 # 6. Entry point
 # ---------------------------------------------------------------------------
 
@@ -654,6 +877,12 @@ def query(conn, *, organization_id: str, question: str, entity_id: str | None = 
         return result
     result["entities_used"] = [{"entity_id": str(entity["id"]), "entity_type": entity["entity_type"],
                                 "name": entity["name"]}]
+
+    if interp["intent"] in ("coverage_rank", "conflicts", "endorsement_dates", "policy_status",
+                            "policy_changes") or interp["intent"] in ("fact", "unknown"):
+        handled = _policy_intent(conn, organization_id, result, entity, question, interp, day)
+        if handled is not None:
+            return handled
 
     if interp["intent"] in ("fact", "policy_period"):
         kind = "policy" if interp["intent"] == "policy_period" else target_entity_kind(interp["fact_type"])

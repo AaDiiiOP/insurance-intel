@@ -1680,3 +1680,11 @@ button.suggestion:hover { border-color: var(--accent-line); color: var(--accent-
 .kx-ask { margin-bottom: 14px; }
 .kx-ask-input { flex: 1 1 260px; min-width: 0; padding: 7px 10px; border: 1px solid var(--line);
   border-radius: 6px; background: var(--raised); color: var(--ink); font: inherit; }
+
+/* ---- Policy panel (Phase 1C) ---- */
+.kx-policy { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--raised); }
+.kx-prow { display: grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.kx-plabel { font-size: 12.5px; color: var(--ink-soft); }
+.kx-bad { color: var(--bad); font-weight: 600; }
+@media (max-width: 560px) { .kx-prow { grid-template-columns: 1fr; gap: 2px; } }
+.kx-cov { margin-bottom: 6px; }

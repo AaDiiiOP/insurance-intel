@@ -52,8 +52,14 @@ def test_an_already_replaced_value_cannot_be_corrected_again(conn, world):
     "Is there a waiting period for Orion Plastics?",
 ])
 def test_misleading_questions_do_not_get_a_stored_fact(conn, world, question):
-    i = kq.interpret(question)
-    assert i["intent"] == "unknown", (question, i)
+    # v0.11.0 change (explained in PHASE_1C_STATUS.md): "insurer address" now
+    # routes to the new policy.insurer type, where the qualifier "address" makes
+    # it abstain. The protected behaviour is unchanged and now asserted directly:
+    # no stored fact is returned as the answer.
+    r = ask(conn, world, question)
+    assert r["answer"] is None, (question, r["interpretation"], r["answer"])
+    if "insurer" not in question:
+        assert kq.interpret(question)["intent"] == "unknown", question
 
 
 @pytest.mark.parametrize("question", [

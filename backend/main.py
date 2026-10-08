@@ -39,6 +39,7 @@ from api import (
     matching,
     organizations,
     submissions,
+    policies,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -101,3 +102,4 @@ app.include_router(ask.router)
 app.include_router(submissions.router)
 app.include_router(doc_intelligence.router)
 app.include_router(knowledge.router)
+app.include_router(policies.router)

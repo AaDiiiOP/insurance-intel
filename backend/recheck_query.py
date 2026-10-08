@@ -27,7 +27,7 @@ def main():
         sys.exit(2)
     dataset, org = Path(sys.argv[1]), sys.argv[2]
     only = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else None
-    results = []
+    results, policy_results = [], []
     with db.get_connection() as conn:
         for company_dir in sorted((dataset / "companies").iterdir()):
             if not company_dir.is_dir() or (only and company_dir.name not in only):
@@ -45,17 +45,24 @@ def main():
             ingest = {"analysis": {"business": biz,
                                    "documents_processed": [{"policy_period": p} for p in periods]}}
             results.append(ev.query_check_company(conn, org, company_dir, ingest))
+            docs = [d for s in db.list_submissions(conn, org) if s["label"] == company_dir.name
+                    for d in db.list_submission_documents(conn, str(s["id"]), org)]
+            policy_results.append(ev.policy_check_company(conn, org, company_dir, biz, docs,
+                                                          periods[0][0] if periods else None))
             print(f"  {company_dir.name}: rechecked")
         conn.rollback()      # probes create a throwaway organization; keep nothing
     if not results:
         print("No benchmark companies found in that organization.")
         sys.exit(2)
     summary = ev.summarise_query_check(results)
+    policy_summary = ev.summarise_policy_check(policy_results)
     out = Path(__file__).parent / "evaluations" / "phase1a" / (
         "query-recheck-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + ".json")
-    out.write_text(json.dumps({"organization_id": org, "summary": summary, "companies": results},
+    out.write_text(json.dumps({"organization_id": org, "summary": summary, "companies": results,
+                               "policy_summary": policy_summary, "policy_companies": policy_results},
                               indent=2, default=str))
     print(json.dumps(summary, indent=2))
+    print("policy check (Phase 1C):", json.dumps(policy_summary, indent=2))
     for r in results:
         for q in r["questions"]:
             if q["verdict"] != "correct":
@@ -63,8 +70,15 @@ def main():
         for p in r["probes"]:
             if not p["passed"]:
                 print(f"  PROBE FAILED {r['company_id']} {p['probe']}: answer={p['answer']!r}")
+    for r in policy_results:
+        for c in r["checks"]:
+            if c["verdict"] != "correct":
+                print(f"  {r['company_id']} {c['check']}: {c['verdict']} — {c['reason']}")
+        for p in r["probes"]:
+            if not p["passed"]:
+                print(f"  POLICY PROBE FAILED {r['company_id']} {p['probe']}: answer={p['answer']!r}")
     print(f"written to {out}")
-    sys.exit(0 if summary["hard_gate_zero_wrong_answers"] else 1)
+    sys.exit(0 if summary["hard_gate_zero_wrong_answers"] and policy_summary["hard_gate_zero_wrong"] else 1)
 
 
 if __name__ == "__main__":

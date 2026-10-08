@@ -775,6 +775,136 @@ def summarise_query_check(results: list[dict]) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# v0.11.0 — Phase 1C policy checks (part of --query-check). Graded against:
+#   * ground truth: per-coverage limits (phase1 GT policy.coverage value_inr)
+#     and the coverage with the highest limit;
+#   * document references: policy number, insurer, conditions, endorsement id
+#     and effective date, read from the STORED document text by simple
+#     regexes written here independently of policy_structure.py.
+# Verdicts: correct / abstained / wrong (wrong must be 0) and probes
+# (must pass): definitions & sub-limits not stated -> abstain, one period ->
+# no renewal diff, status in mid-period = current, cross-tenant -> nothing.
+# ---------------------------------------------------------------------------
+def _doc_refs(documents: list[dict]) -> dict:
+    import re as _re
+    from datetime import datetime as _dt
+    refs = {"policy_number": None, "insurer": None, "conditions": [], "endorsements": []}
+    for d in documents:
+        text = d.get("extracted_text") or ""
+        head = " ".join(text.splitlines()[:6]).lower()
+        if "endorsement" in head:
+            eid = _re.search(r"^\s*Endorsement\s+(\S+)\s*$", text, _re.M)
+            eff = _re.search(r"^\s*Effective:\s*(.+?)\s*$", text, _re.M)
+            date = None
+            if eff:
+                for fmt in ("%d %B %Y", "%d %b %Y", "%Y-%m-%d"):
+                    try:
+                        date = _dt.strptime(eff.group(1).strip(), fmt).date().isoformat()
+                        break
+                    except ValueError:
+                        pass
+            if eid:
+                refs["endorsements"].append((eid.group(1), date))
+            continue
+        if "policy" in head and "schedule" not in head:
+            m = _re.search(r"^\s*Policy Number:\s*(\S+)", text, _re.M)
+            refs["policy_number"] = refs["policy_number"] or (m.group(1) if m else None)
+            m = _re.search(r"^\s*Carrier:\s*(.+?)\s*$", text, _re.M)
+            refs["insurer"] = refs["insurer"] or (m.group(1) if m else None)
+            m = _re.search(r"^\s*Conditions\s*$\n(.+?)(?:\n.*NOT REAL INSURANCE DATA|\Z)", text, _re.M | _re.S)
+            if m:
+                body = " ".join(m.group(1).split())
+                refs["conditions"] = [c.strip() + ("" if c.strip().endswith(".") else ".")
+                                      for c in body.split(". ") if c.strip()]
+    return refs
+
+
+def policy_check_company(conn, organization_id: str, company_dir: Path, business: dict,
+                         documents: list[dict], as_of: str | None) -> dict:
+    from knowledge import query as kq
+    import policy_intelligence as pi
+
+    gt = load_ground_truth_facts(company_dir)
+    refs = _doc_refs(documents)
+    rows, probes = [], []
+    biz = str(business["id"])
+
+    def ask(question, day=as_of, org=organization_id):
+        return kq.query(conn, organization_id=org, question=question, entity_id=biz, as_of=day, use_llm=False)
+
+    def grade(name, r, ok):
+        verdict = "abstained" if r["answer"] is None else ("correct" if ok else "wrong")
+        rows.append({"check": name, "answer": r["answer"], "verdict": verdict, "reason": r["reason"],
+                     "evidence_count": len(r["evidence"])})
+
+    def probe(name, passed, r):
+        probes.append({"probe": name, "passed": bool(passed), "answer": r.get("answer"), "reason": r.get("reason")})
+
+    def norm(x):
+        return " ".join(str(x or "").lower().split())
+
+    if refs["policy_number"]:
+        r = ask("What is the policy number?")
+        grade("policy_number", r, norm(r["answer"]) == norm(refs["policy_number"]))
+    if refs["insurer"]:
+        r = ask("Which insurer issued this policy?")
+        grade("insurer", r, norm(r["answer"]) == norm(refs["insurer"]))
+    if refs["conditions"]:
+        r = ask("What conditions apply?")
+        got = sorted(norm(x) for x in (r["answer"] or []))
+        grade("conditions", r, got == sorted(norm(x) for x in refs["conditions"]))
+    covs = {g["value"]: g.get("value_inr") for g in gt if g["fact_type"] == "policy.coverage" and g.get("value_inr")}
+    for cov, inr in covs.items():
+        r = ask(f"What is the limit for {cov}?")
+        n = None
+        if r["answer"] is not None and r["facts_used"]:
+            n = r["facts_used"][0]["normalized_value"]
+        grade(f"coverage_limit:{cov}", r, n is not None and abs(n - inr) <= max(1, inr * 0.01))
+    if len(covs) >= 2:
+        top = max(covs, key=covs.get)
+        r = ask("Which coverage has the highest limit?")
+        grade("highest_limit_coverage", r, isinstance(r["answer"], str) and r["answer"].startswith(top + " ("))
+    for eid, eff in refs["endorsements"]:
+        r = ask("Which endorsements became effective during the policy period?",
+                day=eff or as_of)
+        grade(f"endorsement_effective:{eid}", r,
+              isinstance(r["answer"], list) and f"{eid} (effective {eff})" in r["answer"])
+
+    r = ask("What does flood mean?")
+    probe("definition_not_stated_abstains", r["answer"] is None, r)
+    r = ask("What sublimits apply?")
+    probe("sublimit_not_stated_abstains", r["answer"] is None, r)
+    r = ask("What changed during renewal?")
+    probe("single_period_no_renewal_diff", r["answer"] is None, r)
+    if as_of:
+        r = ask("Is the policy in force?")
+        probe("status_current_in_period", r["answer"] == f"current on {as_of}", r)
+    policies = [x for x in db.find_relationships(conn, organization_id, biz, "has_policy", "from")]
+    if policies:
+        pid = str(policies[0]["to_entity_id"])
+        view = pi.get_policy(conn, organization_id, pid, as_of=as_of)
+        same = all(c["limit"]["answer"] == ask(f"What is the limit for {c['name']}?")["answer"]
+                   for c in view["coverages"])
+        probe("policy_view_matches_query_answers", same, {"answer": same, "reason": None})
+        other = str(db.create_organization(conn, f"phase1c-probe-{uuid.uuid4().hex[:8]}")["id"])
+        probe("cross_tenant_policy_view", pi.get_policy(conn, other, pid) is None,
+              {"answer": None, "reason": None})
+    return {"company_id": company_dir.name, "checks": rows, "probes": probes}
+
+
+def summarise_policy_check(results: list[dict]) -> dict:
+    checks = [c for r in results for c in r["checks"]]
+    probes = [p for r in results for p in r["probes"]]
+    return {"checks": len(checks), "correct": sum(c["verdict"] == "correct" for c in checks),
+            "abstained": sum(c["verdict"] == "abstained" for c in checks),
+            "wrong": sum(c["verdict"] == "wrong" for c in checks),
+            "answered_with_evidence_pct": (round(100 * sum(c["evidence_count"] > 0 for c in checks if c["answer"] is not None)
+                                                 / max(1, sum(c["answer"] is not None for c in checks)), 1)),
+            "probes": len(probes), "probes_failed": sum(not p["passed"] for p in probes),
+            "hard_gate_zero_wrong": all(c["verdict"] != "wrong" for c in checks) and all(p["passed"] for p in probes)}
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 eval_property_policy.py /path/to/Aurevia_Synthetic_Insurance_World_v1")
@@ -841,6 +971,7 @@ def main():
         ppi.reset_extraction_diagnostics()
         company_results = []
         query_results = []
+        policy_results = []
         query_check = "--query-check" in sys.argv
         for company_dir in company_dirs:
             print(f"  {company_dir.name}...", end=" ", flush=True)
@@ -850,6 +981,12 @@ def main():
             company_results.append(result)
             if query_check:
                 query_results.append(query_check_company(conn, organization_id, company_dir, ingest_result))
+                docs = db.list_submission_documents(conn, ingest_result["submission_id"], organization_id)
+                periods = [d.get("policy_period") for d in ingest_result["analysis"].get("documents_processed", [])
+                           if d.get("policy_period")]
+                policy_results.append(policy_check_company(conn, organization_id, company_dir,
+                                                           ingest_result["analysis"]["business"], docs,
+                                                           periods[0][0] if periods else None))
             print(
                 f"recall={result['fact_recall_pct']}%  "
                 f"extracted={result['extracted_fact_count']}  "
@@ -868,6 +1005,7 @@ def main():
               "extraction_diagnostics": diagnostics, "companies": company_results}
     if query_check:
         output["query_check"] = {"summary": summarise_query_check(query_results), "companies": query_results}
+        output["policy_check"] = {"summary": summarise_policy_check(policy_results), "companies": policy_results}
     # Timestamped, not overwritten in place — each run is kept as its own
     # historical record (evaluations/phase1a/README.md explains the layout)
     # rather than every run silently erasing the last one, which is exactly
@@ -896,6 +1034,18 @@ def main():
                     print(f"  {r['company_id']} {q['fact_type']}: {q['verdict']} — "
                           f"answer={q['answer']!r} reason={q['reason']!r}")
         print(f"safety probes: {qs['probes']}  failed {qs['probes_failed']}")
+        ps_ = output["policy_check"]["summary"]
+        print(f"policy check (Phase 1C): {ps_['checks']} checks  correct {ps_['correct']}  "
+              f"abstained {ps_['abstained']}  WRONG {ps_['wrong']}  "
+              f"answered with evidence {ps_['answered_with_evidence_pct']}%  "
+              f"probes {ps_['probes']} failed {ps_['probes_failed']}")
+        for r in policy_results:
+            for c in r["checks"]:
+                if c["verdict"] != "correct":
+                    print(f"  {r['company_id']} {c['check']}: {c['verdict']} — answer={c['answer']!r} reason={c['reason']!r}")
+            for p in r["probes"]:
+                if not p["passed"]:
+                    print(f"  POLICY PROBE FAILED {r['company_id']} {p['probe']}: answer={p['answer']!r} reason={p['reason']!r}")
         for r in query_results:
             for p in r.get("probes", []):
                 if not p["passed"]:
@@ -927,6 +1077,11 @@ def main():
             "actually running and reachable before treating this result as "
             "Phase 1A evidence."
         )
+        sys.exit(1)
+
+    if query_check and not output["policy_check"]["summary"]["hard_gate_zero_wrong"]:
+        print(f"\nPOLICY (PHASE 1C) HARD GATE FAILED: {output['policy_check']['summary']['wrong']} wrong, "
+              f"{output['policy_check']['summary']['probes_failed']} failed probe(s).")
         sys.exit(1)
 
     if query_check and not output["query_check"]["summary"]["hard_gate_zero_wrong_answers"]:

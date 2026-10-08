@@ -481,3 +481,18 @@ export function queryKnowledge(question, { entityId, asOf, useLlm = true } = {})
     body: JSON.stringify({ question, entity_id: entityId || null, as_of: asOf || null, use_llm: useLlm }),
   })
 }
+
+// ---- Policy Intelligence (Phase 1C, v0.11.0) --------------------------------
+
+export function getPolicy(policyId, asOf) {
+  const q = asOf ? `?as_of=${encodeURIComponent(asOf)}` : ''
+  return request(`/policies/${policyId}${q}`)
+}
+
+export function comparePolicy(leftPolicyId, rightPolicyId, asOf) {
+  return request('/policies/compare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ left_policy_id: leftPolicyId, right_policy_id: rightPolicyId || null, as_of: asOf || null }),
+  })
+}

@@ -27,7 +27,7 @@ from typing import Literal
 
 Cardinality = Literal["singleton", "multi"]
 ValueType = Literal["money", "text", "location"]
-EntityKind = Literal["asset", "policy"]
+EntityKind = Literal["asset", "policy", "coverage"]
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,10 @@ class FactTypeDefinition:
     cardinality: Cardinality
     value_type: ValueType
     entity: EntityKind
+    # "model": extracted by the local model (Phase 1A, scored by the Phase 1A
+    # benchmark). "structure": read deterministically from labelled lines of
+    # policy documents (Phase 1C) — never accepted from the model.
+    source: str = "model"
 
     @property
     def is_singleton(self) -> bool:
@@ -68,10 +72,23 @@ FACT_DEFINITIONS: dict[str, FactTypeDefinition] = {
         FactTypeDefinition("policy.deductible", "singleton", "money", "policy"),
         FactTypeDefinition("policy.exclusion", "multi", "text", "policy"),
         FactTypeDefinition("policy.endorsement", "multi", "text", "policy"),
+        # Phase 1C policy structure (v0.11.0) — deterministic, labelled lines only.
+        FactTypeDefinition("policy.number", "singleton", "text", "policy", "structure"),
+        FactTypeDefinition("policy.insurer", "singleton", "text", "policy", "structure"),
+        FactTypeDefinition("policy.condition", "multi", "text", "policy", "structure"),
+        FactTypeDefinition("policy.definition", "multi", "text", "policy", "structure"),
+        FactTypeDefinition("policy.sublimit", "multi", "text", "policy", "structure"),
+        FactTypeDefinition("policy.endorsement_ref", "multi", "text", "policy", "structure"),
+        FactTypeDefinition("coverage.limit", "singleton", "money", "coverage", "structure"),
     ]
 }
 
-ALL_FACT_TYPES: frozenset[str] = frozenset(FACT_DEFINITIONS)
+# ALL_FACT_TYPES keeps its Phase 1A meaning: the types the MODEL extracts and
+# the Phase 1A benchmark / policy comparison score. Structure types are separate.
+ALL_FACT_TYPES: frozenset[str] = frozenset(
+    ft for ft, d in FACT_DEFINITIONS.items() if d.source == "model")
+STRUCTURE_FACT_TYPES: frozenset[str] = frozenset(
+    ft for ft, d in FACT_DEFINITIONS.items() if d.source == "structure")
 
 SINGLETON_FACT_TYPES: frozenset[str] = frozenset(
     ft for ft, d in FACT_DEFINITIONS.items() if d.is_singleton

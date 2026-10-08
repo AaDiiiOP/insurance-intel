@@ -59,7 +59,8 @@ SNIPPET_SIMILARITY_THRESHOLD = 0.85
 # Derived from the registry, never re-listed by hand, so a new multi-valued
 # type added to FACT_DEFINITIONS is picked up here automatically.
 MULTI_VALUED_FACT_TYPES = frozenset(
-    ft for ft, definition in FACT_DEFINITIONS.items() if not definition.is_singleton
+    ft for ft, definition in FACT_DEFINITIONS.items()
+    if not definition.is_singleton and ft in ALL_FACT_TYPES
 )
 
 # Cheap, deterministic "does this text even have a labelled section for that
@@ -253,6 +254,7 @@ def clean_endorsement_value(value: str) -> str:
 #     (e.g. a sum of two stated figures) is left to numeric grounding.
 _LIMIT_CUE_RE = re.compile(r"sum\s+insured|limit|indemnity|cover|insured\s+value|total\s+insured", re.I)
 LIMIT_CUE_FACT_TYPES = frozenset({"policy.coverage_limit", "property.sum_insured"})
+_SUBLIMIT_RE = re.compile(r"sub[\s-]?limit", re.I)
 
 
 def numeric_on_limit_line(value: str, source_text: str) -> bool:
@@ -263,7 +265,13 @@ def numeric_on_limit_line(value: str, source_text: str) -> bool:
     hits = [i for i, l in enumerate(lines) if any(abs(f - target) < 0.5 for f in _figures(l))]
     if not hits:
         return True
-    return any(_LIMIT_CUE_RE.search(lines[i]) or (i > 0 and _LIMIT_CUE_RE.search(lines[i - 1]))
+    # v0.11.0: a sub-limit is not the coverage limit or the sum insured. Lines
+    # that state a sub-limit never qualify as limit lines.
+    hits = [i for i in hits if not _SUBLIMIT_RE.search(lines[i])]
+    if not hits:
+        return False
+    return any(_LIMIT_CUE_RE.search(lines[i]) or (i > 0 and _LIMIT_CUE_RE.search(lines[i - 1])
+                                                  and not _SUBLIMIT_RE.search(lines[i - 1]))
                for i in hits)
 
 
@@ -599,7 +607,10 @@ def extract_property_policy_facts(*, text: str, ocr_confidence: float | None = N
         results.append({
             "fact_type": fact_type,
             "value": value[:300],
-            "normalized_value": _numeric(value) if fact_type in NUMERIC_FACT_TYPES else None,
+            # v0.11.0: "5% of the loss" is not the number 5 — a percentage is
+            # kept as text only (no normalized amount).
+            "normalized_value": (_numeric(value) if fact_type in NUMERIC_FACT_TYPES and "%" not in value
+                                 else None),
             "evidence": {
                 "page": page,
                 "section": (str(item.get("section")).strip()[:200] or None) if item.get("section") else None,
@@ -815,6 +826,9 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
                     **fact["_contradiction"],
                 })
 
+    structure = _apply_policy_structure(conn, organization_id, submission, documents,
+                                        business, asset, policy)
+
     return {
         "submission_id": submission_id,
         "business": business,
@@ -823,4 +837,112 @@ def analyze_submission(conn, submission_id: str, organization_id: str) -> dict:
         "documents_processed": documents_processed,
         "facts": facts_written,
         "contradictions": contradictions,
+        # Phase 1C: deterministic policy structure, kept OUT of "facts" so the
+        # Phase 1A benchmark scores exactly what it scored before.
+        "policy_structure": structure,
     }
+
+
+def _apply_policy_structure(conn, organization_id, submission, documents, business, asset, policy) -> dict:
+    """Phase 1C (v0.11.0): read policy structure deterministically from every
+    document of the submission and write it into the Knowledge Core.
+
+    - documents become `document` entities with their role, linked
+      document -[supports]-> policy only when the document's policy number /
+      reference matches the policy's (or neither states one). A document that
+      names a DIFFERENT policy is never attached to this one.
+    - policy.number / policy.insurer / conditions / definitions / sub-limits
+      from policy + schedule documents (dated with the document's stated period).
+    - each coverage named on the policy becomes a `coverage` entity
+      (policy -[provides]-> coverage) carrying its own coverage.limit.
+    - each endorsement gets a policy.endorsement_ref fact (its id) effective from
+      its stated effective date — only if it references this policy.
+    """
+    import policy_structure as ps
+
+    label = submission["label"]
+    per_doc = []
+    for document in documents:
+        text = document.get("extracted_text") or ""
+        st = ps.extract_policy_structure(text) if text.strip() else {"role": "unknown", "items": [],
+                                                                       "endorsements": [], "coverages": []}
+        per_doc.append((document, st, extract_policy_period(text) if text.strip() else None))
+
+    def numbers(roles):
+        return {i["value"] for d, st, _ in per_doc if st["role"] in roles
+                for i in st["items"] if i["fact_type"] == "policy.number"}
+
+    policy_numbers = numbers({"policy"}) or numbers({"schedule", "unknown"})
+    policy_period = next((p for d, st, p in per_doc if st["role"] == "policy" and p), None)
+
+    written, doc_out, coverage_entities = [], [], {}
+    for document, st, period in per_doc:
+        document_id = str(document["id"])
+        own_numbers = {i["value"] for i in st["items"] if i["fact_type"] == "policy.number"}
+        refs = {e["policy_ref"] for e in st["endorsements"] if e.get("policy_ref")}
+        stated = own_numbers | refs
+        matches = not stated or not policy_numbers or bool(stated & policy_numbers)
+        doc_entity = kc.get_or_create_entity(
+            conn, organization_id=organization_id, entity_type="document",
+            name=f"{label} — {document['filename']}",
+            attributes={"document_id": document_id, "role": st["role"]})
+        target = {"risk_survey": asset, "loss_run": business}.get(st["role"], policy)
+        linked = matches or st["role"] in ("risk_survey", "loss_run")
+        if linked:
+            kc.create_relationship(conn, organization_id=organization_id,
+                                   from_entity_id=str(doc_entity["id"]), to_entity_id=str(target["id"]),
+                                   relationship_type="supports")
+        doc_out.append({"document_id": document_id, "filename": document["filename"], "role": st["role"],
+                        "policy_numbers_stated": sorted(stated), "linked_to_policy": linked and target is policy,
+                        "note": None if matches else "names a different policy number; not attached to this policy"})
+        if not matches:
+            EXTRACTION_DIAGNOSTICS["structure_document_other_policy"] += 1
+            continue
+
+        dated = period if st["role"] == "policy" else None
+        for item in st["items"]:
+            ft = item["fact_type"]
+            if ft == "coverage.limit":
+                cov = item["coverage"]
+                if cov not in coverage_entities:
+                    ce = kc.get_or_create_entity(conn, organization_id=organization_id, entity_type="coverage",
+                                                 name=f"{label} — {cov}", attributes={"coverage": cov})
+                    kc.create_relationship(conn, organization_id=organization_id,
+                                           from_entity_id=str(policy["id"]), to_entity_id=str(ce["id"]),
+                                           relationship_type="provides")
+                    coverage_entities[cov] = ce
+                entity_id = str(coverage_entities[cov]["id"])
+            else:
+                entity_id = str(policy["id"])
+            fact = kc.reconcile_fact(
+                conn, organization_id=organization_id, entity_id=entity_id, fact_type=ft,
+                value=item["value"], normalized_value=item.get("normalized_value"),
+                confidence={"value": 1.0, "type": "deterministic", "method": "labelled_line",
+                            "note": "read from a labelled line of the document"},
+                produced_by="policy_structure", document_id=document_id, evidence_page=item["page"],
+                evidence_section=None, evidence_snippet=item["snippet"], evidence_source="text_layer",
+                effective_from=dated[0] if dated else None, effective_to=dated[1] if dated else None)
+            written.append({"fact_id": str(fact["id"]), "fact_type": ft, "value": fact["value"],
+                            "status": fact["status"], "coverage": item.get("coverage")})
+            EXTRACTION_DIAGNOSTICS[f"structure_fact:{ft}"] += 1
+
+        for e in st["endorsements"]:
+            start = e.get("effective_date")
+            end = policy_period[1].isoformat() if policy_period and start and \
+                policy_period[0].isoformat() <= start <= policy_period[1].isoformat() else None
+            fact = kc.reconcile_fact(
+                conn, organization_id=organization_id, entity_id=str(policy["id"]),
+                fact_type="policy.endorsement_ref", value=e["endorsement_id"], normalized_value=None,
+                confidence={"value": 1.0, "type": "deterministic", "method": "labelled_line",
+                            "note": f"policy reference {e.get('policy_ref')}"},
+                produced_by="policy_structure", document_id=document_id, evidence_page=e["page"],
+                evidence_section=None, evidence_snippet=e["snippet"], evidence_source="text_layer",
+                effective_from=start if end else None, effective_to=end)
+            written.append({"fact_id": str(fact["id"]), "fact_type": "policy.endorsement_ref",
+                            "value": fact["value"], "status": fact["status"], "effective_from": start})
+            EXTRACTION_DIAGNOSTICS["structure_fact:policy.endorsement_ref"] += 1
+
+    return {"documents": doc_out, "facts": written,
+            "coverages": {k: str(v["id"]) for k, v in coverage_entities.items()},
+            "policy_numbers": sorted(policy_numbers),
+            "policy_period": [policy_period[0].isoformat(), policy_period[1].isoformat()] if policy_period else None}
