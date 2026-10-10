@@ -1215,3 +1215,9 @@ Real Qwen (2026-10-08 16:50 UTC, result-20261008T165020, AUR-SYN-001–004): Pha
 Baseline 177/177 (0 failed, 0 skipped); Phase 1D tests 11/11. Implementation unchanged.
 New read-only `phase1d_acceptance_audit.py` (198 checks). Sandbox dry audit (model stub, not the acceptance result): 198/198, evidence 100%, page 100%. One evaluator assumption fixed (AUR-SYN-004 schedule total ≠ its items — benchmark inconsistency). Audit on the real-Qwen run's data (2026-10-08 19:12 UTC, phase1d-acceptance-20261008T191206, org cabeb69a…): 198/198 passed, 0 failed; 80 business facts, evidence verified 100%, page accuracy 100%; 0 unsupported risks/controls/claims; contradictions, change detection, tenant isolation 100%. **Phase 1D accepted using 4-company validation — FROZEN. Ready for Phase 1E.** 20-company acceptance not claimed.
 
+## v0.13.0 (2026-10-09) — Phase 1E Risk → Coverage Intelligence
+Baseline 177/177. Now 199/199 (22 new). Same data on v0.12.1 vs v0.13.0 code: Phase 1B/1C/1D answers and probes identical; Phase 1D acceptance audit 198/198.
+Dry run (model off) AUR-SYN-001–004: Phase 1B 0 wrong + 28/28 probes; 1C 28/28 + 24/24; 1D 53/53 + 24/24; 1E coverage check 36/36 correct, 0 wrong, 51/51 probes, evidence verified 100%, page accuracy 100%.
+Knowledge Core silent-wrong fixed (earlier-period value after renewal), found by Phase 1E temporal tests.
+Real Qwen (2026-10-10 04:56 UTC, result-20261010T045655, AUR-SYN-001–004): Phase 1A recall 100%, false 2.6% (2 flagged), silent wrong 0, evidence/page 100%; Phase 1B 35 correct / 5 abstained / 0 wrong, probes 28/28; Phase 1C 28/28, probes 24/24; Phase 1D 53/53, probes 24/24; Phase 1E 33 correct / 3 abstained (AUR-SYN-004 sum-insured conflict) / 0 wrong, probes 51/51, evidence and page 100%. Phase 1E: DEVELOPMENT COMPLETE — READY FOR ACCEPTANCE (4-company; 20-company not claimed).
+

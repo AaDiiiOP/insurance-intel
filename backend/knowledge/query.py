@@ -116,11 +116,15 @@ def interpret(question: str) -> dict:
         "became effective", "took effect", "effective during", "effective in", "come into effect",
         "came into effect", "effective date"))
     business_intent = _business_intent_of(q)
+    import coverage_intelligence as _ci     # local import: avoids a cycle
+    coverage_intent = _ci.coverage_intent_of(q)
     conflict_words = any(_contains_phrase(q, p) for p in ("contradiction", "contradictory", "conflict",
                                                          "disagree", "inconsistent", "unresolved"))
     if business_intent and re.search(r"\b(added|new|removed|changed|change|changes)\b", q):
         business_intent = "business_changes"
-    if endorsement_dates:
+    if coverage_intent:
+        intent = coverage_intent
+    elif endorsement_dates:
         intent = "endorsement_dates"
     elif conflict_words:
         intent = "conflicts"
@@ -150,6 +154,10 @@ def interpret(question: str) -> dict:
     else:
         mode = "current"
 
+    if intent.startswith("cov_"):
+        fact_type = None
+        if mode == "change":
+            mode = "current"
     if intent.startswith("business_") and mode == "change":
         intent = "business_changes"
     if intent == "unknown" and mode == "change":
@@ -1120,6 +1128,14 @@ def query(conn, *, organization_id: str, question: str, entity_id: str | None = 
         return result
     result["entities_used"] = [{"entity_id": str(entity["id"]), "entity_type": entity["entity_type"],
                                 "name": entity["name"]}]
+
+    if interp["intent"].startswith("cov_"):
+        import coverage_intelligence as ci
+        biz = _business_for(conn, organization_id, entity)
+        if biz is None:
+            result["reason"] = "No business is linked to this entity."
+            return result
+        return ci.answer(conn, organization_id, result, biz, interp["intent"], question, day, interp["mode"])
 
     if interp["intent"].startswith("business_"):
         return _business_answer(conn, organization_id, result, entity, question, interp, day)

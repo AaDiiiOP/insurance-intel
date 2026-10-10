@@ -1,0 +1,28 @@
+{
+  "company_id": "AUR-SYN-003",
+  "written_from": "the company's own policy, schedule, endorsement, survey and loss-run documents plus the Phase 1D supplement, read by hand (not produced by the system)",
+  "coverage": "Property Damage",
+  "mapping_type": "EXPLICIT_POLICY_LINK",
+  "condition_reviews": [
+    "Fire protection systems must be maintained."
+  ],
+  "no_policy_before": "2026-04-22",
+  "policy_number": "SYN-PROP-0003",
+  "limit": 500000000,
+  "exposure": 500000000,
+  "limit_state": "WITHIN_DOCUMENTED_LIMIT",
+  "exclusion_reviews": [
+    {
+      "contains": "goods in transit",
+      "subject": "Stock"
+    }
+  ],
+  "unmapped_risks": [],
+  "as_of": {
+    "2026-08-01": "WITHIN_DOCUMENTED_LIMIT"
+  },
+  "window_change": [
+    "WITHIN_DOCUMENTED_LIMIT",
+    "WITHIN_DOCUMENTED_LIMIT"
+  ]
+}

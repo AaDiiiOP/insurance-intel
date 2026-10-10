@@ -72,7 +72,7 @@ def list_submission_documents(conn, submission_id: str, organization_id: str) ->
             SELECT d.* FROM documents d
             JOIN submissions s ON s.id = d.submission_id
             WHERE d.submission_id = %s AND s.organization_id = %s
-            ORDER BY d.uploaded_at ASC
+            ORDER BY d.uploaded_at ASC, d.filename ASC, d.id ASC
             """,
             (submission_id, organization_id),
         )

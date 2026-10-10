@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import BusinessPanel from './BusinessPanel'
+import CoveragePanel from './CoveragePanel'
 import PolicyPanel from './PolicyPanel'
 
 import {
@@ -364,6 +365,7 @@ export default function KnowledgeExplorer({ initialEntityId }) {
 
           {data.entity.entity_type === 'policy' && <PolicyPanel policyId={String(data.entity.id)} asOf={asOf} />}
           {data.entity.entity_type === 'business' && <BusinessPanel businessId={String(data.entity.id)} asOf={asOf} />}
+          {data.entity.entity_type === 'business' && <CoveragePanel businessId={String(data.entity.id)} asOf={asOf} />}
 
           <AskPanel entityId={entityId} asOf={asOf} onOpenEntity={open} />
 

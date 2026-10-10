@@ -910,6 +910,29 @@ ALTER TABLE kc_entities ADD CONSTRAINT kc_entities_entity_type_check
     CHECK (entity_type IN ('business', 'carrier', 'policy', 'document', 'location', 'asset',
                            'coverage', 'claim', 'risk', 'person',
                            'business_unit', 'operation', 'exposure', 'risk_factor', 'control'));
+-- v0.13.0 (Phase 1E): broker review decisions on coverage mappings and
+-- coverage findings. Mappings and findings themselves are computed on read
+-- from the Knowledge Core (never stored, so they can never drift from the
+-- facts); only the human decisions are stored, append-only. subject_id is
+-- the deterministic id of the mapping/finding; fingerprint is a hash of the
+-- values the reviewer saw, so a review never silently carries over to a
+-- finding whose evidence has since changed.
+CREATE TABLE IF NOT EXISTS kc_coverage_reviews (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    business_id      UUID NOT NULL REFERENCES kc_entities(id) ON DELETE CASCADE,
+    subject_type     TEXT NOT NULL CHECK (subject_type IN ('mapping', 'finding')),
+    subject_id       UUID NOT NULL,
+    fingerprint      TEXT NOT NULL,
+    decision         TEXT NOT NULL CHECK (decision IN ('OPEN', 'REVIEWED', 'ACCEPTED', 'REJECTED',
+                                                       'NEEDS_MORE_EVIDENCE')),
+    reviewer         TEXT NOT NULL,
+    comment          TEXT,
+    evidence         JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS kc_coverage_reviews_org_business_idx
+    ON kc_coverage_reviews (organization_id, business_id, created_at);
 """
 
 

@@ -14,6 +14,11 @@ from .connection import (
     get_connection,
     init_schema,
 )
+from .coverage_reviews import (
+    REVIEW_DECISIONS,
+    add_coverage_review,
+    list_coverage_reviews,
+)
 from .organizations import (
     create_organization,
     get_or_create_default_organization,
@@ -212,4 +217,7 @@ __all__ = [
     "set_fact_status",
     "update_entity",
     "update_fact_value",
+    "REVIEW_DECISIONS",
+    "add_coverage_review",
+    "list_coverage_reviews",
 ]

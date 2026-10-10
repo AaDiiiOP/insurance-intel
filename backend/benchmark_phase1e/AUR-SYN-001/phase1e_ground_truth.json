@@ -1,0 +1,28 @@
+{
+  "company_id": "AUR-SYN-001",
+  "written_from": "the company's own policy, schedule, endorsement, survey and loss-run documents plus the Phase 1D supplement, read by hand (not produced by the system)",
+  "coverage": "Property Damage",
+  "mapping_type": "EXPLICIT_POLICY_LINK",
+  "condition_reviews": [
+    "Fire protection systems must be maintained."
+  ],
+  "no_policy_before": "2026-04-08",
+  "policy_number": "SYN-PROP-0001",
+  "limit": 600000000,
+  "exposure": 630000000,
+  "limit_state": "EXCEEDS_DOCUMENTED_LIMIT",
+  "exclusion_reviews": [
+    {
+      "contains": "machinery breakdown",
+      "subject": "Plant and Machinery"
+    }
+  ],
+  "unmapped_risks": [],
+  "as_of": {
+    "2026-08-01": "WITHIN_DOCUMENTED_LIMIT"
+  },
+  "window_change": [
+    "WITHIN_DOCUMENTED_LIMIT",
+    "EXCEEDS_DOCUMENTED_LIMIT"
+  ]
+}

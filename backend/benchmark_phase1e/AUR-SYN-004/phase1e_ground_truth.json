@@ -1,0 +1,31 @@
+{
+  "company_id": "AUR-SYN-004",
+  "written_from": "the company's own policy, schedule, endorsement, survey and loss-run documents plus the Phase 1D supplement, read by hand (not produced by the system)",
+  "coverage": "Property Damage",
+  "mapping_type": "EXPLICIT_POLICY_LINK",
+  "condition_reviews": [
+    "Fire protection systems must be maintained."
+  ],
+  "no_policy_before": "2026-04-29",
+  "policy_number": "SYN-PROP-0004",
+  "limit": 350000000,
+  "exposure": 350000000,
+  "limit_state": "WITHIN_DOCUMENTED_LIMIT",
+  "limit_state_if_sum_insured_conflict": "NEEDS_REVIEW",
+  "exclusion_reviews": [
+    {
+      "contains": "spoilage of stock",
+      "subject": "Stock"
+    }
+  ],
+  "unmapped_risks": [
+    "Ammonia refrigeration leak at the cold storage plant"
+  ],
+  "as_of": {
+    "2026-08-10": "WITHIN_DOCUMENTED_LIMIT"
+  },
+  "window_change": [
+    "WITHIN_DOCUMENTED_LIMIT",
+    "WITHIN_DOCUMENTED_LIMIT"
+  ]
+}

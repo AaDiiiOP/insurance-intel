@@ -511,3 +511,18 @@ export function getBusinessChanges(businessId, fromDate, toDate) {
   const q = p.toString() ? `?${p}` : ''
   return request(`/businesses/${businessId}/changes${q}`)
 }
+
+// ---- Risk → Coverage Intelligence (Phase 1E, v0.13.0) -----------------------
+
+export function getCoverageAudit(businessId, asOf) {
+  const q = asOf ? `?as_of=${encodeURIComponent(asOf)}` : ''
+  return request(`/businesses/${businessId}/coverage-audit${q}`)
+}
+
+export function reviewCoverageFinding(findingId, businessId, decision, reviewer, comment) {
+  return request(`/coverage-findings/${findingId}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ business_id: businessId, decision, reviewer, comment: comment || null }),
+  })
+}

@@ -70,6 +70,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import db
+import eval_coverage
 import llm
 import property_policy_intelligence as ppi
 from knowledge.fact_types import FACT_DEFINITIONS, NUMERIC_FACT_TYPES
@@ -1126,6 +1127,7 @@ def main():
         query_results = []
         policy_results = []
         business_results = []
+        coverage_results = []
         query_check = "--query-check" in sys.argv
         for company_dir in company_dirs:
             print(f"  {company_dir.name}...", end=" ", flush=True)
@@ -1143,6 +1145,9 @@ def main():
                                                            periods[0][0] if periods else None))
                 business_results.append(business_check_company(conn, organization_id, company_dir,
                                                                ingest_result))
+                # Phase 1E runs on the state the Phase 1D check left (supplement added).
+                coverage_results.append(eval_coverage.coverage_check_company(
+                    conn, organization_id, company_dir, str(ingest_result["analysis"]["business"]["id"])))
             print(
                 f"recall={result['fact_recall_pct']}%  "
                 f"extracted={result['extracted_fact_count']}  "
@@ -1164,6 +1169,8 @@ def main():
         output["policy_check"] = {"summary": summarise_policy_check(policy_results), "companies": policy_results}
         output["business_check"] = {"summary": summarise_business_check(business_results),
                                     "companies": business_results}
+        output["coverage_check"] = {"summary": eval_coverage.summarise_coverage_check(coverage_results),
+                                    "companies": coverage_results}
     # Timestamped, not overwritten in place — each run is kept as its own
     # historical record (evaluations/phase1a/README.md explains the layout)
     # rather than every run silently erasing the last one, which is exactly
@@ -1220,6 +1227,7 @@ def main():
                 if not p["passed"]:
                     print(f"  PROBE FAILED {r['company_id']} {p['probe']}: expected {p['expect']} — "
                           f"answer={p['answer']!r} reason={p['reason']!r}")
+        eval_coverage.print_coverage_summary(output["coverage_check"]["summary"], coverage_results)
 
     # latest.json only ever reflects a run where the model was genuinely
     # reachable — a smoke-test run (model unreachable) is still saved above
@@ -1246,6 +1254,12 @@ def main():
             "actually running and reachable before treating this result as "
             "Phase 1A evidence."
         )
+        sys.exit(1)
+
+    if query_check and not output["coverage_check"]["summary"]["hard_gate_zero_wrong"]:
+        cs = output["coverage_check"]["summary"]
+        print(f"\nCOVERAGE (PHASE 1E) HARD GATE FAILED: {cs['wrong']} wrong, {cs['probes_failed']} failed "
+              f"probe(s), evidence verified {cs['evidence_verified_pct']}%, page {cs['page_accuracy_pct']}%.")
         sys.exit(1)
 
     if query_check and not output["business_check"]["summary"]["hard_gate_zero_wrong"]:

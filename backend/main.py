@@ -41,6 +41,7 @@ from api import (
     submissions,
     policies,
     businesses,
+    coverage,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -104,4 +105,5 @@ app.include_router(submissions.router)
 app.include_router(doc_intelligence.router)
 app.include_router(knowledge.router)
 app.include_router(policies.router)
+app.include_router(coverage.router)      # before businesses: it has a catch-all /{section}
 app.include_router(businesses.router)

@@ -265,6 +265,34 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
                 produced_by=produced_by, normalized_value=normalized_value, unit=unit,
                 status="needs_review", **period,
             )
+        elif _different_periods(current, effective_from, effective_to) and \
+                (same := _same_period_fact(conn, organization_id, entity_id, fact_type,
+                                           effective_from, effective_to)) is not None:
+            # v0.13.0 fix (found by Phase 1E temporal tests): the new value is for
+            # an EARLIER period that already has a value (e.g. a 2026 document
+            # read after the 2027 renewal). Compare it with THAT period's value,
+            # not with the current (later) period — otherwise a disagreement
+            # inside the earlier period was silently stored as history and the
+            # later-recorded value answered for that period.
+            if _values_agree(same, value, normalized_value):
+                fact = same
+            else:
+                fact = _facts.create_fact(
+                    conn, organization_id=organization_id, entity_id=entity_id,
+                    fact_type=fact_type, value=value, confidence=confidence,
+                    produced_by=produced_by, normalized_value=normalized_value, unit=unit,
+                    status="contradiction_flagged", **period,
+                )
+                if same.get("valid_to") is not None:      # keep both visible for that period
+                    fact = db.close_fact_validity(conn, str(fact["id"]), organization_id, same["valid_to"])
+                db.set_fact_status(conn, str(same["id"]), organization_id, "contradiction_flagged")
+                contradiction_info = {"other_fact_id": str(same["id"]), "other_value": same["value"]}
+                conflict = db.get_unresolved_conflict(conn, entity_id, organization_id, fact_type)
+                if conflict is None:
+                    db.create_conflict(conn, organization_id=organization_id, entity_id=entity_id,
+                                       fact_type=fact_type, fact_ids=[str(same["id"]), str(fact["id"])])
+                else:
+                    db.add_fact_to_conflict(conn, str(conflict["id"]), str(fact["id"]))
         elif _different_periods(current, effective_from, effective_to):
             # Two values for two non-overlapping stated periods (2025 limit vs
             # 2026 limit): history, not disagreement. Keep both; the later
@@ -410,6 +438,16 @@ def correct_fact(conn, fact_id: str, organization_id: str, *, new_value: str,
             db.set_fact_status(conn, other_fact_id, organization_id, "superseded")
 
     return new_fact
+
+
+def _same_period_fact(conn, organization_id, entity_id, fact_type, eff_from, eff_to):
+    """The latest non-rejected fact stating exactly this period, if any."""
+    if eff_from is None:
+        return None
+    rows = [f for f in db.list_facts_for_entity(conn, entity_id, organization_id, fact_type, False)
+            if f["status"] != "superseded" and f.get("effective_from") == eff_from
+            and f.get("effective_to") == eff_to]
+    return max(rows, key=lambda f: f["valid_from"]) if rows else None
 
 
 def _different_periods(current: dict, new_from, new_to) -> bool:

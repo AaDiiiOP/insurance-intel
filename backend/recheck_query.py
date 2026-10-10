@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import db
+import eval_coverage
 import eval_property_policy as ev
 import property_policy_intelligence as ppi
 
@@ -27,7 +28,7 @@ def main():
         sys.exit(2)
     dataset, org = Path(sys.argv[1]), sys.argv[2]
     only = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else None
-    results, policy_results, business_results = [], [], []
+    results, policy_results, business_results, coverage_results = [], [], [], []
     with db.get_connection() as conn:
         for company_dir in sorted((dataset / "companies").iterdir()):
             if not company_dir.is_dir() or (only and company_dir.name not in only):
@@ -55,6 +56,7 @@ def main():
                 sub_docs = {d["filename"] for d in db.list_submission_documents(conn, str(subs[0]["id"]), org)}
                 sup_dir = ev.PHASE1D_SUPPLEMENT / company_dir.name
                 present = sup_dir.is_dir() and any(f.name in sub_docs for f in sup_dir.glob("*.pdf"))
+                coverage_results.append(eval_coverage.coverage_check_company(conn, org, company_dir, str(biz["id"])))
                 business_results.append(ev.business_check_company(
                     conn, org, company_dir, {"submission_id": str(subs[0]["id"]),
                                              "analysis": {"business": biz}},
@@ -67,11 +69,13 @@ def main():
     summary = ev.summarise_query_check(results)
     policy_summary = ev.summarise_policy_check(policy_results)
     business_summary = ev.summarise_business_check(business_results)
+    coverage_summary = eval_coverage.summarise_coverage_check(coverage_results)
     out = Path(__file__).parent / "evaluations" / "phase1a" / (
         "query-recheck-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + ".json")
     out.write_text(json.dumps({"organization_id": org, "summary": summary, "companies": results,
                                "policy_summary": policy_summary, "policy_companies": policy_results,
-                               "business_summary": business_summary, "business_companies": business_results},
+                               "business_summary": business_summary, "business_companies": business_results,
+                               "coverage_summary": coverage_summary, "coverage_companies": coverage_results},
                               indent=2, default=str))
     print(json.dumps(summary, indent=2))
     print("policy check (Phase 1C):", json.dumps(policy_summary, indent=2))
@@ -98,8 +102,9 @@ def main():
         for p in r["probes"]:
             if not p["passed"]:
                 print(f"  BUSINESS PROBE FAILED {r['company_id']} {p['probe']}: answer={p['answer']!r}")
+    eval_coverage.print_coverage_summary(coverage_summary, coverage_results)
     ok = (summary["hard_gate_zero_wrong_answers"] and policy_summary["hard_gate_zero_wrong"]
-          and business_summary["hard_gate_zero_wrong"])
+          and business_summary["hard_gate_zero_wrong"] and coverage_summary["hard_gate_zero_wrong"])
     sys.exit(0 if ok else 1)
 
 

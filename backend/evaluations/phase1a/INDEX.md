@@ -19,7 +19,8 @@ deliberately shows an older version.
 | query-recheck-20261007T121100 * | v0.10.3 | recheck, no model, on run 07:07's stored facts | 4 | — | query 0 wrong; probes 28/28 | **current — Phase 1B development acceptance** |
 | result-20261008T073454 * | v0.11.0 | development, real Qwen, Phase 1A+1B+1C gates | 4 | 100% | 0; query 0 wrong, probes 28/28; policy 28/28, probes 24/24 | Phase 1C development acceptance |
 | result-20261008T165020 * | v0.12.0 | development, real Qwen, Phase 1A+1B+1C+1D gates | 4 | 100% | 0; query 0 wrong, probes 28/28; policy 28/28, probes 24/24; business 53/53, probes 24/24 | Phase 1D development acceptance (gates) |
-| phase1d-acceptance-20261008T191206 * | v0.12.1 | read-only audit of result-20261008T165020's stored data | 4 | — | 198/198 checks; evidence 100%, page 100%; 0 unsupported | **current — Phase 1D ACCEPTED (4-company), frozen** |
+| phase1d-acceptance-20261008T191206 * | v0.12.1 | read-only audit of result-20261008T165020's stored data | 4 | — | 198/198 checks; evidence 100%, page 100%; 0 unsupported | Phase 1D ACCEPTED (4-company), frozen |
+| result-20261010T045655 * | v0.13.0 | development, real Qwen, Phase 1A–1E gates | 4 | 100% | 0; query 0 wrong, probes 28/28; policy 28/28 + 24/24; business 53/53 + 24/24; coverage 33 + 3 abstained, 0 wrong, 51/51 | **current — Phase 1E ready for acceptance** |
 | (phase end) full 20-company run | end of Phase 1B | acceptance, real Qwen | 20 | | | **pending — not run yet** |
 
 \* produced on the developer's machine; commit them from `backend/evaluations/phase1a/`.
