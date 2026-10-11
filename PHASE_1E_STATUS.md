@@ -1,6 +1,9 @@
 # Phase 1E — Risk → Coverage Intelligence: status (v0.13.0, 2026-10-09)
 
-Status: **PHASE 1E DEVELOPMENT COMPLETE — READY FOR ACCEPTANCE** (2026-10-10).
+Status: **DEVELOPMENT COMPLETE · ACCEPTANCE PASSED · FROZEN** (2026-10-10).
+**Phase 1E accepted using 4-company validation** (lead review of v0.13.0, 2026-10-10). 20-company acceptance is not claimed. No further Phase 1E feature work; known limitations (section K) are carried forward, and authentication/RBAC belongs to production hardening.
+
+Acceptance basis (unchanged from the run below):
 Validated on the 4-company development benchmark (AUR-SYN-001–004, real
 qwen2.5:7b): all five gates passed — 0 silent wrong, 0 wrong answers in every
 gate, coverage check 33 correct + 3 correct abstentions, 51/51 probes,
@@ -209,3 +212,13 @@ rendered as text (React escapes them).
 - Exclusion text is model-extracted (Phase 1A); a wording the category list
   does not recognise is not matched.
 - 20-company acceptance not claimed. No Phase 2 work.
+
+## L. Acceptance (2026-10-10)
+Lead review of v0.13.0: Phase 1E passes the 4-company development validation;
+freeze. Exact results (real Qwen, `result-20261010T045655`): coverage check 36
+checks — 33 correct, 3 correct abstentions (AUR-SYN-004 sum-insured conflict),
+0 wrong; 51/51 probes; evidence 100%; page accuracy 100%; Phase 1A silent wrong
+0; Phase 1B/1C/1D 0 wrong with all probes passed; regression suite 199/199.
+Status-only update — no feature or code change.
+**Phase 1E: ACCEPTED (4-company) — FROZEN. Next: Phase 2 (BrokerOS), not started.**
+
