@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { createClient, extractClient, listClients } from '../api'
+import { archiveClient, createClient, extractClient, restoreClient, searchClients } from '../api'
 
 const CATEGORIES = [
   'fire',
@@ -55,8 +55,16 @@ function formatDate(iso) {
   }
 }
 
-export default function Clients({ refreshKey, onOpen, onCreated }) {
+export default function Clients({ me, refreshKey, onOpen, onCreated }) {
+  const canEdit = me?.permissions?.includes('clients.edit')
   const [clients, setClients] = useState(null)
+  const [query, setQuery] = useState('')
+  const [status, setStatus] = useState('active')
+  const [mine, setMine] = useState(false)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [reload, setReload] = useState(0)
+  const PAGE_SIZE = 24
   const [error, setError] = useState(null)
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -73,13 +81,30 @@ export default function Clients({ refreshKey, onOpen, onCreated }) {
   useEffect(() => {
     let cancelled = false
     setError(null)
-    listClients()
-      .then((d) => !cancelled && setClients(d.clients))
-      .catch((e) => !cancelled && setError(e.message))
+    const t = setTimeout(() => {
+      searchClients({ q: query.trim(), status, assigned_to: mine ? 'me' : '', page, page_size: PAGE_SIZE })
+        .then((d) => {
+          if (cancelled) return
+          setClients(d.clients)
+          setTotal(d.total)
+        })
+        .catch((e) => !cancelled && setError(e.message))
+    }, 250)
     return () => {
       cancelled = true
+      clearTimeout(t)
     }
-  }, [refreshKey])
+  }, [refreshKey, query, status, mine, page, reload])
+
+  async function toggleArchive(client) {
+    try {
+      if (client.status === 'archived') await restoreClient(client.client_id)
+      else await archiveClient(client.client_id)
+      setReload((r) => r + 1)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -159,6 +184,8 @@ export default function Clients({ refreshKey, onOpen, onCreated }) {
         ...form,
         categories,
         risk_notes: notes,
+        // Fields filled from a document and not retyped: stored as unconfirmed.
+        extracted_fields: [...prefilled],
       })
       reset()
       onCreated?.()
@@ -340,32 +367,56 @@ export default function Clients({ refreshKey, onOpen, onCreated }) {
             every carrier you have briefed.
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setAdding(true)}>
-          + New client
-        </button>
+        {canEdit && (
+          <button className="btn-primary" onClick={() => setAdding(true)}>
+            + New client
+          </button>
+        )}
       </header>
+
+      <div className="ws-filters">
+        <input
+          aria-label="Search clients"
+          placeholder="Search name, trading name, industry, city"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setPage(1) }}
+        />
+        <select aria-label="Status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+          <option value="all">All</option>
+        </select>
+        <label className="kx-meta">
+          <input type="checkbox" checked={mine} onChange={(e) => { setMine(e.target.checked); setPage(1) }} /> Assigned to me
+        </label>
+        <span className="kx-meta">{total} client{total === 1 ? '' : 's'}</span>
+      </div>
 
       {error && <div className="banner bad">{error}</div>}
       {clients === null && !error && <p className="loading">Loading…</p>}
 
       {clients?.length === 0 && (
         <div className="empty">
-          <p>No clients yet.</p>
-          <button className="btn-primary" onClick={() => setAdding(true)}>
-            Add the first one
-          </button>
+          <p>{query || status !== 'active' || mine ? 'No clients match these filters.' : 'No clients yet.'}</p>
+          {canEdit && !query && status === 'active' && !mine && (
+            <button className="btn-primary" onClick={() => setAdding(true)}>
+              Add the first one
+            </button>
+          )}
         </div>
       )}
 
       {clients?.length > 0 && (
         <div className="card-grid">
           {clients.map((client) => (
-            <button
-              key={client.client_id}
-              className="card"
+            <div key={client.client_id} className="card" role="button" tabIndex={0}
               onClick={() => onOpen(client.client_id)}
-            >
-              <h3 className="card-title">{client.business_name}</h3>
+              onKeyDown={(e) => e.key === 'Enter' && onOpen(client.client_id)}>
+              <h3 className="card-title">
+                {client.business_name}
+                {client.status === 'archived' && <span className="pill"> archived</span>}
+              </h3>
+              {client.trading_name && <div className="card-meta">trading as {client.trading_name}</div>}
               <div className="card-meta">
                 {client.industry && <span>{client.industry}</span>}
                 {client.city && <span>· {client.city}</span>}
@@ -384,8 +435,25 @@ export default function Clients({ refreshKey, onOpen, onCreated }) {
                   <span className="pill">Not matched</span>
                 )}
               </div>
-            </button>
+              <div className="card-meta" style={{ marginTop: 6 }}>
+                {client.assigned_to ? `Assigned: ${client.assigned_to.display_name}` : 'Unassigned'} ·{' '}
+                {client.document_count} document{client.document_count === 1 ? '' : 's'}
+                {canEdit && (
+                  <button className="link" style={{ marginLeft: 8 }}
+                    onClick={(e) => { e.stopPropagation(); toggleArchive(client) }}>
+                    {client.status === 'archived' ? 'Restore' : 'Archive'}
+                  </button>
+                )}
+              </div>
+            </div>
           ))}
+        </div>
+      )}
+      {total > PAGE_SIZE && (
+        <div className="actions">
+          <button className="btn-ghost" disabled={page === 1} onClick={() => setPage(page - 1)}>← Previous</button>
+          <span className="kx-meta">Page {page} of {Math.ceil(total / PAGE_SIZE)}</span>
+          <button className="btn-ghost" disabled={page * PAGE_SIZE >= total} onClick={() => setPage(page + 1)}>Next →</button>
         </div>
       )}
     </>

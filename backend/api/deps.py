@@ -6,7 +6,6 @@ import uuid
 
 from fastapi import HTTPException
 
-import db
 
 
 def _validate_uuid(value: str, label: str) -> str:
@@ -17,35 +16,25 @@ def _validate_uuid(value: str, label: str) -> str:
         raise HTTPException(status_code=400, detail=f"Invalid {label}.")
 
 
-def _resolve_organization(conn, x_organization_id: str | None) -> str:
+def _resolve_organization(conn, x_organization_id: str | None = None) -> str:
     """
-    Which organization the caller is acting as.
+    Which organization the caller is acting as — Phase 2A (v0.14.0).
 
-    Reads the X-Organization-Id header if given and confirms it actually
-    exists; falls back to the pilot-stage default organization when no
-    header is sent, so every existing call site and the current UI (which
-    sends no header) keep working exactly as before. This is the ONLY
-    place in the app that decides "who is asking" — every doc-intelligence
-    endpoint calls this first and passes the result to every db function
-    that reads or writes org-scoped data, rather than each endpoint
-    re-deciding it independently.
+    Comes ONLY from the signed-in session's verified, active membership
+    (auth.guard, a global dependency, sets it for every request). The
+    X-Organization-Id header is no longer proof of anything: auth.guard
+    rejects a header that names a different organization (403), and here it
+    is ignored. Without a session this fails closed with 401, so an endpoint
+    can never fall back to a default organization.
 
-    This is still application-level scoping, not database-enforced
-    isolation (no Postgres row-level security) — a caller who sends
-    ANY organization_id, including one that is not really theirs, is
-    trusted. That is the documented pilot-stage boundary, not a gap
-    introduced here; what this function adds is that the boundary is now
-    actually enforced at every read and write, instead of not existing at
-    all.
+    Still application-level isolation (every query filters on
+    organization_id), not PostgreSQL row-level security.
     """
-    if not x_organization_id:
-        return db.get_or_create_default_organization(conn)
+    import auth
+    return auth.require_context().organization_id
 
-    organization_id = _validate_uuid(x_organization_id, "X-Organization-Id header")
-    org = db.get_organization(conn, organization_id)
-    if not org:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No organization with id {organization_id}.",
-        )
-    return organization_id
+
+def _actor() -> str:
+    """The signed-in person, for audit/approval records (never a typed name)."""
+    import auth
+    return auth.require_context().actor

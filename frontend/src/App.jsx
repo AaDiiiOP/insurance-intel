@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { getHealth } from './api'
+import { getHealth, getMe, logout, switchOrganization } from './api'
 import Ask from './views/Ask'
 import Briefing from './views/Briefing'
 import Carriers from './views/Carriers'
@@ -9,6 +9,8 @@ import Clients from './views/Clients'
 import Health from './views/Health'
 import DocIntelligence from './views/DocIntelligence'
 import Knowledge from './views/Knowledge'
+import Login from './views/Login'
+import Team from './views/Team'
 import Home from './views/Home'
 import Review from './views/Review'
 import Upload from './views/Upload'
@@ -23,10 +25,25 @@ const NAV = [
   { id: 'review', label: 'Review' },
   { id: 'doc-intel', label: 'Doc Intelligence' },
   { id: 'knowledge', label: 'Knowledge Core' },
+  { id: 'team', label: 'Team & security' },
   { id: 'health', label: 'Settings' },
 ]
 
 export default function App() {
+  // Phase 2A: null = checking the session, false = signed out, object = signed in.
+  const [me, setMe] = useState(null)
+  useEffect(() => {
+    getMe().then(setMe).catch(() => setMe(false))
+    const out = () => setMe(false)
+    window.addEventListener('aurevia:signed-out', out)
+    return () => window.removeEventListener('aurevia:signed-out', out)
+  }, [])
+  if (me === null) return <div className="login-wrap"><p className="subtitle">Checking your session…</p></div>
+  if (me === false) return <Login onSignedIn={setMe} />
+  return <Workspace me={me} setMe={setMe} />
+}
+
+function Workspace({ me, setMe }) {
   const [view, setView] = useState('home')
   // Bumped after an upload or delete so the list refetches instead of
   // showing stale data.
@@ -116,13 +133,40 @@ export default function App() {
           ))}
         </nav>
 
+        <div className="org-box">
+          <div className="kx-meta">Organization</div>
+          {me.memberships.filter((m) => m.status === 'active').length > 1 ? (
+            <select
+              value={me.organization.organization_id}
+              onChange={async (e) => {
+                const next = await switchOrganization(e.target.value)
+                setView('home')
+                setMe(next)
+              }}
+            >
+              {me.memberships.filter((m) => m.status === 'active').map((m) => (
+                <option key={m.organization_id} value={m.organization_id}>{m.name}</option>
+              ))}
+            </select>
+          ) : (
+            <b>{me.organization.name}</b>
+          )}
+          <div className="kx-meta">
+            {me.user.display_name} · {me.role}
+          </div>
+          <button className="btn-ghost kx-small" style={{ marginLeft: 0 }}
+            onClick={async () => { await logout().catch(() => {}); setMe(false) }}>
+            Sign out
+          </button>
+        </div>
+
         <div className="sidebar-foot">
           <span className="dot" style={{ background: healthColour }} />
           {healthLabel}
         </div>
       </aside>
 
-      <main className="main">
+      <main className="main" key={me.organization.organization_id}>
         {view === 'upload' && (
           <Upload
             onUploaded={() => {
@@ -155,6 +199,7 @@ export default function App() {
         )}
         {view === 'clients' && (
           <Clients
+            me={me}
             refreshKey={refreshKey}
             onOpen={openClient}
             onCreated={() => setRefreshKey((k) => k + 1)}
@@ -162,6 +207,7 @@ export default function App() {
         )}
         {view === 'client' && openClientId && (
           <ClientDetail
+            me={me}
             clientId={openClientId}
             onBack={() => setView('clients')}
             onDeleted={() => {
@@ -175,6 +221,7 @@ export default function App() {
         {view === 'review' && <Review />}
         {view === 'doc-intel' && <DocIntelligence />}
         {view === 'knowledge' && <Knowledge />}
+        {view === 'team' && <Team me={me} />}
         {view === 'health' && <Health />}
       </main>
     </div>

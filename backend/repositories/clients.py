@@ -12,7 +12,7 @@ CLIENT_FIELDS = (
     "business_name", "entity_type", "industry", "city", "state",
     "turnover", "years_trading", "employee_count",
     "pan", "gstin", "contact_name", "contact_phone", "contact_email",
-    "sum_insured", "risk_notes",
+    "sum_insured", "risk_notes", "trading_name", "notes",
 )
 
 
@@ -247,3 +247,89 @@ def delete_client_document(conn, document_id: str, organization_id: str) -> bool
             (document_id, organization_id),
         )
         return cur.rowcount > 0
+
+
+# --- Phase 2A: client workspace -------------------------------------------------------
+
+_UNSET = object()
+
+
+def search_clients(conn, organization_id: str, *, q: str | None = None, status: str = "active",
+                   assigned_user_id: str | None = None, limit: int = 25, offset: int = 0) -> tuple[list[dict], int]:
+    """One page of clients (newest first) plus the total count, filtered in SQL."""
+    clauses, params = ["c.organization_id = %s"], [organization_id]
+    if status in ("active", "archived"):
+        clauses.append("c.status = %s")
+        params.append(status)
+    if q:
+        clauses.append("(c.business_name ILIKE %s OR c.trading_name ILIKE %s OR c.industry ILIKE %s "
+                       "OR c.city ILIKE %s)")
+        like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        params += [like] * 4
+    if assigned_user_id:
+        clauses.append("c.assigned_user_id = %s")
+        params.append(assigned_user_id)
+    where = " AND ".join(clauses)
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT count(*) AS n FROM clients c WHERE {where}", params)
+        total = cur.fetchone()["n"]
+        cur.execute(
+            f"""SELECT c.id, c.business_name, c.trading_name, c.industry, c.city, c.state, c.categories,
+                       c.turnover, c.status, c.assigned_user_id, u.display_name AS assigned_name,
+                       c.business_entity_id, c.created_at, c.updated_at,
+                       (SELECT max(created_at) FROM matches m WHERE m.client_id = c.id) AS last_matched_at,
+                       ((SELECT count(*) FROM client_documents d WHERE d.client_id = c.id)
+                        + (SELECT count(*) FROM documents d JOIN submissions s ON s.id = d.submission_id
+                           WHERE s.client_id = c.id AND s.organization_id = c.organization_id)) AS document_count
+                FROM clients c LEFT JOIN users u ON u.id = c.assigned_user_id
+                WHERE {where} ORDER BY c.created_at DESC, c.id LIMIT %s OFFSET %s""",
+            (*params, limit, offset),
+        )
+        return cur.fetchall(), total
+
+
+def set_client_status(conn, client_id: str, organization_id: str, status: str) -> dict | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """UPDATE clients SET status = %s, archived_at = CASE WHEN %s = 'archived' THEN now() ELSE NULL END,
+                      updated_at = now()
+               WHERE id = %s AND organization_id = %s RETURNING *""",
+            (status, status, client_id, organization_id),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def set_client_workspace(conn, client_id: str, organization_id: str, *, assigned_user_id=_UNSET,
+                         field_provenance=_UNSET, business_entity_id=_UNSET) -> dict | None:
+    sets, params = [], []
+    if assigned_user_id is not _UNSET:
+        sets.append("assigned_user_id = %s")
+        params.append(assigned_user_id)
+    if field_provenance is not _UNSET:
+        sets.append("field_provenance = %s")
+        params.append(Jsonb(field_provenance))
+    if business_entity_id is not _UNSET:
+        sets.append("business_entity_id = %s")
+        params.append(business_entity_id)
+    if not sets:
+        return get_client(conn, client_id, organization_id)
+    with conn.cursor() as cur:
+        cur.execute(f"UPDATE clients SET {', '.join(sets)}, updated_at = now() "
+                    f"WHERE id = %s AND organization_id = %s RETURNING *", (*params, client_id, organization_id))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def link_submission_to_client(conn, submission_id: str, client_id: str, organization_id: str) -> dict | None:
+    with conn.cursor() as cur:
+        cur.execute("UPDATE submissions SET client_id = %s WHERE id = %s AND organization_id = %s RETURNING *",
+                    (client_id, submission_id, organization_id))
+        return cur.fetchone()
+
+
+def list_client_submissions(conn, client_id: str, organization_id: str) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM submissions WHERE client_id = %s AND organization_id = %s ORDER BY created_at",
+                    (client_id, organization_id))
+        return cur.fetchall()

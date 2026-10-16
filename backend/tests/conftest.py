@@ -143,3 +143,12 @@ def stub_ollama():
     server.start()
     yield server
     server.stop()
+
+
+@pytest.fixture(autouse=True)
+def _generous_ip_login_limit(monkeypatch):
+    """Phase 2A: every TestClient signs in from the same address, so the
+    per-IP failed-login limit is raised for the suite; the rate-limit test
+    lowers it again explicitly."""
+    import auth
+    monkeypatch.setattr(auth, "MAX_FAILS_PER_IP", 100_000)

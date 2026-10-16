@@ -63,10 +63,6 @@ export default function CoveragePanel({ businessId, asOf }) {
   }, [businessId, asOf])
 
   async function decide(f, decision) {
-    if (!reviewer.trim()) {
-      setErr('Enter your name as reviewer first.')
-      return
-    }
     setBusy(f.finding_id)
     try {
       await reviewCoverageFinding(f.finding_id, businessId, decision, reviewer.trim())
@@ -155,15 +151,7 @@ export default function CoveragePanel({ businessId, asOf }) {
       </Row>
 
       <Row label="Findings for review">
-        <div className="kx-actions" style={{ marginBottom: 6 }}>
-          <input
-            className="kx-ask-input"
-            style={{ maxWidth: 220 }}
-            placeholder="Reviewer name"
-            value={reviewer}
-            onChange={(e) => setReviewer(e.target.value)}
-          />
-        </div>
+        <div className="kx-meta" style={{ marginBottom: 6 }}>Decisions are recorded under your signed-in name.</div>
         {findings.length === 0 && <span className="kx-meta">No finding on this date.</span>}
         {[
           ['Limit comparisons', ['EXPOSURE_EXCEEDS_LIMIT', 'LIMIT_EXCEEDS_EXPOSURE']],

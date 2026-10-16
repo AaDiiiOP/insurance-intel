@@ -261,8 +261,8 @@ def test_api_query_round_trip(conn, world):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from api import knowledge as api_knowledge
-    app = FastAPI(); app.include_router(api_knowledge.router)
-    c = TestClient(app); h = {"X-Organization-Id": world["org"]}
+    from tests.auth_helpers import signed_in
+    c = signed_in([api_knowledge.router], conn, world["org"]); h = {"X-Organization-Id": world["org"]}
     r = c.post("/knowledge/query", json={"question": "What is the coverage limit for Orion Plastics?",
                                          "as_of": TODAY, "use_llm": False}, headers=h)
     assert r.status_code == 200 and r.json()["answer"] == "180,000,000"

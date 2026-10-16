@@ -1,5 +1,6 @@
 """Phase 1C (v0.11.0) — Policy Intelligence service, comparison, history, API, isolation."""
 import pytest
+from tests.auth_helpers import signed_in
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -144,8 +145,7 @@ def test_history_labels(conn, world):
 def test_policy_api_and_tenant_isolation(conn, analysed):
     org, pid = analysed
     conn.commit()
-    app = FastAPI(); app.include_router(api_policies.router)
-    c = TestClient(app)
+    c = signed_in([api_policies.router], conn, org)
     h = {"X-Organization-Id": org}
     assert c.get(f"/policies/{pid}?as_of=2026-06-01", headers=h).json()["policy_number"]["answer"] == "SYN-PROP-0099"
     assert any(p["policy_id"] == pid for p in c.get("/policies", headers=h).json()["policies"])
@@ -156,10 +156,10 @@ def test_policy_api_and_tenant_isolation(conn, analysed):
     assert c.get("/policies/not-a-uuid", headers=h).status_code in (400, 404, 422)
     other = str(db.create_organization(conn, "pytest-org-policy-b")["id"])
     conn.commit()
-    hb = {"X-Organization-Id": other}
+    cb = signed_in([api_policies.router], conn, other)
     for url in (f"/policies/{pid}", f"/policies/{pid}/history", f"/policies/{pid}/conflicts"):
-        r = c.get(url, headers=hb)
+        r = cb.get(url)
         assert r.status_code == 404 and "SYN-PROP" not in r.text
-    r = c.post("/policies/compare", json={"left_policy_id": pid}, headers=hb)
+    r = cb.post("/policies/compare", json={"left_policy_id": pid})
     assert r.status_code == 404
-    assert c.get("/policies", headers=hb).json() == {"policies": []}
+    assert cb.get("/policies").json() == {"policies": []}

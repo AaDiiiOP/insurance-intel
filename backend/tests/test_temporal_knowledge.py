@@ -214,9 +214,8 @@ def test_api_endpoints_round_trip(conn, test_org, policy):
     f = _fact(conn, test_org, policy, "300000000", start="2026-04-01", end="2027-03-31")
     conn.commit() if hasattr(conn, "commit") else None
 
-    app = FastAPI()
-    app.include_router(api_knowledge.router)
-    client = TestClient(app)
+    from tests.auth_helpers import signed_in
+    client = signed_in([api_knowledge.router], conn, test_org)
     h = {"X-Organization-Id": test_org}
 
     r = client.get(f"/knowledge/entities/{policy}/knowledge?as_of=2026-06-01", headers=h)

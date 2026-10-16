@@ -12,7 +12,7 @@ from pydantic import BaseModel
 import coverage_intelligence as ci
 import db
 from api.businesses import _date
-from api.deps import _resolve_organization, _validate_uuid
+from api.deps import _actor, _resolve_organization, _validate_uuid
 from api.knowledge import _json_safe
 
 router = APIRouter()
@@ -68,7 +68,7 @@ def graph(business_id: str, as_of: str | None = None, x_organization_id: str | N
 class ReviewBody(BaseModel):
     business_id: str
     decision: str
-    reviewer: str
+    reviewer: str | None = None   # ignored: the signed-in user is the reviewer
     comment: str | None = None
 
 
@@ -78,7 +78,7 @@ def _review(subject_type, subject_id, body: ReviewBody, x_organization_id):
     with db.get_connection() as conn:
         org = _resolve_organization(conn, x_organization_id)
         try:
-            out = ci.review(conn, org, business_id, subject_type, subject_id, body.decision, body.reviewer,
+            out = ci.review(conn, org, business_id, subject_type, subject_id, body.decision, _actor(),
                             body.comment)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))

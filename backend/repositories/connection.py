@@ -933,6 +933,126 @@ CREATE TABLE IF NOT EXISTS kc_coverage_reviews (
 );
 CREATE INDEX IF NOT EXISTS kc_coverage_reviews_org_business_idx
     ON kc_coverage_reviews (organization_id, business_id, created_at);
+
+-- ==========================================================================
+-- v0.14.0 (Phase 2A): users, memberships, sessions, one-time tokens, login
+-- attempts, audit events, client workspace columns, stored original files.
+-- ==========================================================================
+CREATE TABLE IF NOT EXISTS users (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email                TEXT NOT NULL UNIQUE,          -- stored lower-cased
+    display_name         TEXT NOT NULL,
+    password_hash        TEXT NOT NULL,                 -- argon2id, never plaintext
+    is_active            BOOLEAN NOT NULL DEFAULT TRUE,
+    password_changed_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS memberships (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role             TEXT NOT NULL CHECK (role IN ('OWNER', 'ADMIN', 'BROKER', 'REVIEWER')),
+    status           TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (organization_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS memberships_user_idx ON memberships (user_id);
+-- Only a SHA-256 of the session token is stored; the token itself lives only
+-- in the user's HttpOnly cookie.
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    token_hash       TEXT NOT NULL UNIQUE,
+    user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    organization_id  UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    csrf_token       TEXT NOT NULL,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at       TIMESTAMPTZ NOT NULL,
+    revoked_at       TIMESTAMPTZ,
+    ip               TEXT,
+    user_agent       TEXT
+);
+CREATE INDEX IF NOT EXISTS auth_sessions_user_idx ON auth_sessions (user_id);
+-- Invitations and password resets: random, hashed, time-limited, single-use.
+CREATE TABLE IF NOT EXISTS auth_tokens (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kind             TEXT NOT NULL CHECK (kind IN ('invite', 'password_reset')),
+    token_hash       TEXT NOT NULL UNIQUE,
+    organization_id  UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    email            TEXT NOT NULL,
+    role             TEXT CHECK (role IN ('OWNER', 'ADMIN', 'BROKER', 'REVIEWER')),
+    user_id          UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_by       UUID REFERENCES users(id) ON DELETE SET NULL,
+    expires_at       TIMESTAMPTZ NOT NULL,
+    used_at          TIMESTAMPTZ,
+    revoked_at       TIMESTAMPTZ,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id          BIGSERIAL PRIMARY KEY,
+    email       TEXT,
+    ip          TEXT,
+    succeeded   BOOLEAN NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS login_attempts_email_idx ON login_attempts (email, created_at);
+CREATE INDEX IF NOT EXISTS login_attempts_ip_idx ON login_attempts (ip, created_at);
+-- Append-only audit trail. No foreign keys on purpose (a record must outlive
+-- what it describes) and a trigger refuses UPDATE / DELETE, so not even a
+-- bug in an endpoint can rewrite history.
+CREATE TABLE IF NOT EXISTS audit_events (
+    id               BIGSERIAL PRIMARY KEY,
+    organization_id  UUID,
+    actor_user_id    UUID,
+    actor_email      TEXT,
+    action           TEXT NOT NULL,
+    resource_type    TEXT,
+    resource_id      TEXT,
+    metadata         JSONB NOT NULL DEFAULT '{}'::jsonb,
+    ip               TEXT,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS audit_events_org_idx ON audit_events (organization_id, created_at DESC);
+CREATE OR REPLACE FUNCTION audit_events_append_only() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'audit_events is append-only';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS audit_events_no_change ON audit_events;
+CREATE TRIGGER audit_events_no_change BEFORE UPDATE OR DELETE ON audit_events
+    FOR EACH ROW EXECUTE FUNCTION audit_events_append_only();
+-- Client workspace.
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE clients DROP CONSTRAINT IF EXISTS clients_status_check;
+ALTER TABLE clients ADD CONSTRAINT clients_status_check CHECK (status IN ('active', 'archived'));
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS trading_name TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS assigned_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS business_entity_id UUID REFERENCES kc_entities(id) ON DELETE SET NULL;
+-- Which client fields were typed by a person and which were pre-filled from a
+-- document and not yet confirmed: {"industry": "extracted_unconfirmed", ...}.
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS field_provenance JSONB NOT NULL DEFAULT '{}'::jsonb;
+-- Intelligence submissions can belong to a client.
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES clients(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS submissions_client_idx ON submissions (client_id);
+-- Original uploaded files (new uploads), for authorized download and
+-- duplicate detection. Exactly one of document_id / client_document_id.
+CREATE TABLE IF NOT EXISTS stored_files (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    document_id          UUID REFERENCES documents(id) ON DELETE CASCADE,
+    client_document_id   UUID REFERENCES client_documents(id) ON DELETE CASCADE,
+    client_id            UUID REFERENCES clients(id) ON DELETE CASCADE,
+    filename             TEXT NOT NULL,
+    content_type         TEXT NOT NULL,
+    sha256               TEXT NOT NULL,
+    size_bytes           BIGINT NOT NULL,
+    data                 BYTEA NOT NULL,
+    uploaded_by          UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS stored_files_org_sha_idx ON stored_files (organization_id, client_id, sha256);
 """
 
 

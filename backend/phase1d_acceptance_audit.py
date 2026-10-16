@@ -270,26 +270,26 @@ def audit_company(conn, org, company_dir, probe_org, client):
     check("F", "not_reobserved_not_reported_as_change", not (nr & set(got)), sorted(nr & set(got)))
 
     # ---------------- G. APIs over HTTP ----------------
-    h, hb = {"X-Organization-Id": org}, {"X-Organization-Id": probe_org}
+    h, hb = {}, {}        # v0.14.0: the organization comes from each client's own session
     urls = ["", "/profile", f"/profile?as_of={sup['before_date']}", "/locations", "/assets", "/operations",
             "/exposures", "/risks", "/risk_factors", "/controls", "/claims", "/changes", "/conflicts", "/graph"]
-    own = {u: client.get(f"/businesses/{bid}{u}", headers=h) for u in urls}
+    own = {u: client["own"].get(f"/businesses/{bid}{u}", headers=h) for u in urls}
     check("G", "owner_all_endpoints_200", all(r.status_code == 200 for r in own.values()),
           {u: r.status_code for u, r in own.items() if r.status_code != 200})
-    other = {u: client.get(f"/businesses/{bid}{u}", headers=hb) for u in urls}
+    other = {u: client["other"].get(f"/businesses/{bid}{u}", headers=hb) for u in urls}
     leak = [u for u, r in other.items() if r.status_code != 404 or cid in r.text
             or norm(profile["legal_name"]) in norm(r.text)]
     check("G", "other_tenant_all_endpoints_404_no_data", not leak, leak)
-    listed = client.get("/businesses", headers=hb).json().get("businesses", [])
+    listed = client["other"].get("/businesses", headers=hb).json().get("businesses", [])
     check("G", "other_tenant_list_excludes_business", all(b["business_id"] != bid for b in listed))
-    check("G", "bad_date_400", client.get(f"/businesses/{bid}/profile?as_of=not-a-date", headers=h).status_code == 400)
+    check("G", "bad_date_400", client["own"].get(f"/businesses/{bid}/profile?as_of=not-a-date", headers=h).status_code == 400)
     check("G", "risk_api_matches_explicit_risks",
           sorted(norm(i["name"]) for i in own["/risks"].json().get("risks", [])) ==
           sorted(norm(r) for r in sup.get("risks", [])))
     scored = [p for u in ("/profile", "/graph", "/changes", "/risks") for p, k in _walk_keys(own[u].json())
               if "score" in str(k).lower()]
     check("G", "no_risk_score_anywhere", not scored, scored)
-    q = client.post("/knowledge/query", headers=hb,
+    q = client["other"].post("/knowledge/query", headers=hb,
                     json={"question": "What risks are documented?", "entity_id": bid, "use_llm": False})
     check("G", "other_tenant_query_api_nothing", q.status_code in (404, 400) or
           (q.json().get("answer") is None and not q.json().get("evidence")), q.status_code)
@@ -322,25 +322,44 @@ def main():
     if len(sys.argv) < 3:
         print(__doc__)
         sys.exit(2)
-    from fastapi import FastAPI
+    import secrets
+    from fastapi import Depends, FastAPI
     from fastapi.testclient import TestClient
-    from api import businesses as api_businesses, knowledge as api_knowledge
+    import auth
+    from api import auth as auth_api, businesses as api_businesses, knowledge as api_knowledge
 
     dataset, org = Path(sys.argv[1]), sys.argv[2]
     only = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else {f"AUR-SYN-00{i}" for i in range(1, 5)}
-    app = FastAPI()
-    app.include_router(api_businesses.router)
-    app.include_router(api_knowledge.router)
-    client = TestClient(app)
+    app = FastAPI(dependencies=[Depends(auth.guard)])
+    for r in (auth_api.router, api_businesses.router, api_knowledge.router):
+        app.include_router(r)
+    # v0.14.0: API checks run through real sign-in. Two temporary read-only
+    # auditor accounts (REVIEWER) are created and deleted again at the end.
+    temp_users = []
+
+    def signed_in_client(conn, organization_id):
+        pw = secrets.token_urlsafe(24)
+        u = db.create_user(conn, f"phase1d-auditor-{uuid.uuid4().hex[:8]}@audit.invalid", "Phase 1D auditor",
+                           auth.hash_password(pw))
+        db.add_membership(conn, organization_id, str(u["id"]), "REVIEWER")
+        conn.commit()
+        temp_users.append(str(u["id"]))
+        c = TestClient(app)
+        r = c.post("/auth/login", json={"email": u["email"], "password": pw, "organization_id": organization_id})
+        c.headers["X-CSRF-Token"] = r.json()["csrf_token"]
+        return c
     results = []
     with db.get_connection() as conn:
         probe_org = str(db.create_organization(conn, f"phase1d-acceptance-probe-{uuid.uuid4().hex[:8]}")["id"])
         conn.commit()
+        client = {"own": signed_in_client(conn, org), "other": signed_in_client(conn, probe_org)}
         for company_dir in sorted((dataset / "companies").iterdir()):
             if company_dir.is_dir() and company_dir.name in only:
                 results.append(audit_company(conn, org, company_dir, probe_org, client))
                 print(f"  {company_dir.name}: audited")
         conn.rollback()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM users WHERE id = ANY(%s::uuid[])", (temp_users,))
     items = [i for r in results for i in r["items"]]
     failed = [dict(i, company=r["company_id"]) for r in results for i in r["items"] if not i["passed"]]
     by_section = {}

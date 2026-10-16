@@ -29,6 +29,7 @@ services:
       # default covers local dev; a deployed instance uses
       # docker-compose.prod.yml, which sets this from PUBLIC_URL.
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5183,http://localhost:3000}
+      - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE:-false}
     # Lets a container reach a service running on ITS OWN host machine,
     # regardless of what that host actually is (laptop or EC2 instance) —
     # needed both for local Ollama and for a same-instance EC2 setup.

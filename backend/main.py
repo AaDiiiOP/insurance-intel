@@ -22,9 +22,10 @@ import os
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import auth
 import db
 from api import (
     ask,
@@ -37,12 +38,13 @@ from api import (
     health,
     knowledge,
     matching,
-    organizations,
     submissions,
     policies,
     businesses,
     coverage,
+    workspace,
 )
+from api import auth as auth_api
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -69,7 +71,11 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Insurance Intelligence API", lifespan=lifespan)
+# Phase 2A: every route goes through auth.guard (session, CSRF, permission).
+app = FastAPI(title="Insurance Intelligence API", lifespan=lifespan, dependencies=[Depends(auth.guard)],
+              docs_url=None if os.getenv("AUREVIA_ENV") == "production" else "/docs",
+              redoc_url=None if os.getenv("AUREVIA_ENV") == "production" else "/redoc",
+              openapi_url=None if os.getenv("AUREVIA_ENV") == "production" else "/openapi.json")
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,14 +94,17 @@ app.add_middleware(
         ).split(",")
         if origin.strip()
     ],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # Session cookies must travel with requests from the frontend origin.
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "X-Organization-Id"],
 )
 
 app.include_router(health.router)
-app.include_router(organizations.router)
+app.include_router(auth_api.router)
 app.include_router(carriers.router)
 app.include_router(clients.router)
+app.include_router(workspace.router)
 app.include_router(matching.router)
 app.include_router(gaps.router)
 app.include_router(drafting.router)

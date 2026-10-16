@@ -248,8 +248,8 @@ def test_unsupported_risk_and_missing_evidence_abstain(conn, biz):
 def test_api_and_tenant_isolation(conn, biz):
     _add(conn, biz["org"], biz["sub"], "06_follow_up.pdf", FOLLOW_UP)
     conn.commit()
-    app = FastAPI(); app.include_router(api_businesses.router)
-    c = TestClient(app)
+    from tests.auth_helpers import signed_in
+    c = signed_in([api_businesses.router], conn, biz["org"])
     h = {"X-Organization-Id": biz["org"]}
     assert any(b["business_id"] == biz["id"] for b in c.get("/businesses", headers=h).json()["businesses"])
     for url in ("", "/profile", "/changes", "/conflicts", "/graph", "/locations", "/assets", "/operations",
@@ -261,11 +261,13 @@ def test_api_and_tenant_isolation(conn, biz):
         == "12 Mill Road, Pune, Maharashtra"
     other = str(db.create_organization(conn, "pytest-org-biz-b")["id"])
     conn.commit()
-    hb = {"X-Organization-Id": other}
+    cb = signed_in([api_businesses.router], conn, other)
     for url in ("", "/profile", "/changes", "/conflicts", "/graph", "/locations", "/risks", "/claims"):
-        r = c.get(f"/businesses/{biz['id']}{url}", headers=hb)
+        r = cb.get(f"/businesses/{biz['id']}{url}")
         assert r.status_code == 404 and "Mill Road" not in r.text, url
-    assert c.get("/businesses", headers=hb).json() == {"businesses": []}
+    assert cb.get("/businesses").json() == {"businesses": []}
+    # Phase 2A: naming another organization in the header is refused outright.
+    assert c.get("/businesses", headers={"X-Organization-Id": other}).status_code == 403
     q = kq.query(conn, organization_id=other, question="What are the business's operating locations?",
                  entity_id=biz["id"], use_llm=False)
     assert q["answer"] is None and not q["evidence"]

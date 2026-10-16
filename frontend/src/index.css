@@ -1688,3 +1688,44 @@ button.suggestion:hover { border-color: var(--accent-line); color: var(--accent-
 .kx-bad { color: var(--bad); font-weight: 600; }
 @media (max-width: 560px) { .kx-prow { grid-template-columns: 1fr; gap: 2px; } }
 .kx-cov { margin-bottom: 6px; }
+
+/* ---- Phase 2A: sign-in, organization box, team ---------------------------- */
+.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--paper, #f7f4ee); }
+.login-card { width: 100%; max-width: 380px; display: grid; gap: 12px; padding: 28px; border: 1px solid var(--line); border-radius: 10px; background: var(--card, #fff); }
+.login-card label { display: grid; gap: 4px; font-size: 13px; color: var(--ink-soft); }
+.login-card input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.login-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.link { background: none; border: none; padding: 0; color: var(--accent-deep, #7a5b16); text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
+.org-box { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line); margin-top: 10px; }
+.org-box select { max-width: 100%; }
+.team-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.team-table th, .team-table td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); }
+.audit-list { list-style: none; padding: 0; margin: 0; font-size: 13.5px; }
+.audit-list li { padding: 4px 0; border-top: 1px solid var(--line); }
+.ws-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.ws-filters input, .ws-filters select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.ws-doc { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 6px 0; border-top: 1px solid var(--line); }
+@media (max-width: 560px) { .team-table { font-size: 12.5px; } .ws-doc { grid-template-columns: 1fr; } }
+.login-card .wordmark { color: var(--ink, #1f2a24); }
+.org-box, .org-box .kx-meta { color: var(--rail-soft); }
+.org-box b { color: var(--rail-ink, #f3ede1); }
+
+/* Phase 2A: small screens — the sidebar becomes a top bar, pages use the full width. */
+@media (max-width: 760px) {
+  .shell { flex-direction: column; }
+  .sidebar { width: 100%; padding: 14px 16px; gap: 10px; border-right: none; border-bottom: 1px solid var(--rail-line); }
+  .nav { flex-direction: row; flex-wrap: wrap; gap: 2px; }
+  .nav button { padding: 6px 9px; }
+  .sidebar-foot { display: none; }
+  .main { padding: 20px 16px 60px; max-width: 100%; min-width: 0; }
+  .page-head { flex-direction: column; gap: 10px; }
+  .ws-filters input { flex: 1 1 100%; }
+  .card-grid { grid-template-columns: 1fr; }
+  .team-table { display: block; overflow-x: auto; }
+}
+@media (max-width: 760px) {
+  .actions, .scope-row, .review-bar, .approve-bar { flex-wrap: wrap; }
+  .main input, .main select, .main textarea { max-width: 100%; min-width: 0; }
+  .main pre, .main code { white-space: pre-wrap; word-break: break-word; }
+}
+@media (max-width: 760px) { .sidebar { height: auto; min-height: 0; position: static; } }

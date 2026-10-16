@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 import db
 
-from .deps import _resolve_organization, _validate_uuid
+from .deps import _actor, _resolve_organization, _validate_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class CreateEntityBody(BaseModel):
 class UpdateFactBody(BaseModel):
     new_value: str
     normalized_value: float | None = None
-    reviewed_by: str
+    reviewed_by: str | None = None   # ignored: the signed-in user is the reviewer
 
 
 def _entity_response(row: dict) -> dict:
@@ -190,7 +190,7 @@ def get_entity_relationships(entity_id: str, x_organization_id: str | None = Hea
 
 class ReviewFactBody(BaseModel):
     action: str
-    reviewed_by: str
+    reviewed_by: str | None = None   # ignored: the signed-in user is the reviewer
 
 
 @router.post("/knowledge/facts/{fact_id}/review")
@@ -203,7 +203,7 @@ def review_fact(fact_id: str, body: ReviewFactBody, x_organization_id: str | Non
         organization_id = _resolve_organization(conn, x_organization_id)
         try:
             row = kc.review_fact(conn, fact_id, organization_id, action=body.action,
-                                 reviewed_by=body.reviewed_by)
+                                 reviewed_by=_actor())
         except ValueError as exc:
             status = 404 if "not found" in str(exc).lower() else 400
             raise HTTPException(status_code=status, detail=str(exc))
@@ -299,9 +299,7 @@ def correct_fact(fact_id: str, body: UpdateFactBody, x_organization_id: str | No
     response's `resolved_conflict_id`.
     """
     fact_id = _validate_uuid(fact_id, "fact id")
-    reviewed_by = " ".join((body.reviewed_by or "").split())
-    if not reviewed_by:
-        raise HTTPException(status_code=400, detail="Enter your name to record this correction.")
+    reviewed_by = _actor()
     new_value = (body.new_value or "").strip()
     if not new_value:
         raise HTTPException(status_code=400, detail="Provide the corrected value.")

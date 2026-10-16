@@ -91,9 +91,9 @@ def test_question_length_is_bounded(conn, world):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from api import knowledge as api_knowledge
-    app = FastAPI(); app.include_router(api_knowledge.router)
-    r = TestClient(app).post("/knowledge/query", json={"question": "x" * 5000},
-                             headers={"X-Organization-Id": world["org"]})
+    from tests.auth_helpers import signed_in
+    r = signed_in([api_knowledge.router], conn, world["org"]).post("/knowledge/query",
+                                                                   json={"question": "x" * 5000})
     assert r.status_code == 400
 
 

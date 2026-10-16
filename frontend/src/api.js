@@ -1,37 +1,41 @@
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-// Which organization the app acts as, for the doc-intelligence tenant
-// boundary. null means "no header sent" — the backend then falls back to
-// its own default organization, exactly matching every request made before
-// this existed. Set via setActiveOrganization(), called from the org
-// switcher in the Doc Intelligence screen.
-let activeOrganizationId = null
+// Phase 2A (v0.14.0): the organization and the user come from the signed-in
+// session cookie (HttpOnly, set by the backend). The browser never chooses
+// its organization by header any more. Every state-changing request carries
+// the session's CSRF token, which is kept in memory only.
+let csrfToken = null
 
-export function setActiveOrganization(organizationId) {
-  activeOrganizationId = organizationId || null
+export function setCsrfToken(token) {
+  csrfToken = token || null
 }
 
+// Kept for older views: the organization is no longer chosen client-side.
+export function setActiveOrganization() {}
 export function getActiveOrganization() {
-  return activeOrganizationId
+  return null
+}
+
+function withAuth(options = {}) {
+  const headers = new Headers(options.headers || {})
+  const method = (options.method || 'GET').toUpperCase()
+  if (csrfToken && method !== 'GET' && method !== 'HEAD') headers.set('X-CSRF-Token', csrfToken)
+  return { ...options, headers, credentials: 'include' }
+}
+
+function signalSignedOut() {
+  window.dispatchEvent(new Event('aurevia:signed-out'))
 }
 
 /**
  * One place that turns a non-2xx response into a thrown Error carrying the
- * backend's own `detail` message. Every view can then just catch and show
- * err.message, rather than each one re-deriving what went wrong.
+ * backend's own `detail` message. A 401 also tells the app shell to show the
+ * sign-in screen.
  */
 async function request(path, options = {}) {
   let response
-  const headers = new Headers(options.headers || {})
-  // Sent on every request once an organization is selected — this is the
-  // one place that needs to know about it, so nothing else in api.js (or
-  // any view) has to pass it through by hand.
-  if (activeOrganizationId) {
-    headers.set('X-Organization-Id', activeOrganizationId)
-  }
-
   try {
-    response = await fetch(`${BASE}${path}`, { ...options, headers })
+    response = await fetch(`${BASE}${path}`, withAuth(options))
   } catch {
     throw new Error(
       'Could not reach the backend. Is it running? (docker-compose up --build)',
@@ -39,17 +43,159 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && !path.startsWith('/auth/login')) signalSignedOut()
     let detail = `Request failed (${response.status})`
+    try {
+      const body = await response.json()
+      if (body?.detail) detail = typeof body.detail === 'string' ? body.detail : detail
+    } catch {
+      // Non-JSON error body — keep the status-code message.
+    }
+    const err = new Error(detail)
+    err.status = response.status
+    throw err
+  }
+
+  return response.json()
+}
+
+/** Download any authorized file (binary) and save it under the server's name. */
+export async function downloadFile(path, fallbackName = 'document') {
+  const response = await fetch(`${BASE}${path}`, withAuth())
+  if (!response.ok) {
+    if (response.status === 401) signalSignedOut()
+    let detail = `Download failed (${response.status})`
     try {
       const body = await response.json()
       if (body?.detail) detail = body.detail
     } catch {
-      // Non-JSON error body — keep the status-code message.
+      // binary or empty body
     }
     throw new Error(detail)
   }
+  const disposition = response.headers.get('Content-Disposition') || ''
+  const match = disposition.match(/filename="([^"]+)"/)
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = match ? match[1] : fallbackName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
 
-  return response.json()
+// ---- Sign-in, organization, team (Phase 2A) ---------------------------------
+
+const json = (method, body) => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+})
+
+export async function login(email, password) {
+  const me = await request('/auth/login', json('POST', { email, password }))
+  setCsrfToken(me.csrf_token)
+  return me
+}
+
+export async function getMe() {
+  const me = await request('/auth/me')
+  setCsrfToken(me.csrf_token)
+  return me
+}
+
+export async function logout() {
+  try {
+    await request('/auth/logout', { method: 'POST' })
+  } finally {
+    setCsrfToken(null)
+  }
+}
+
+export async function switchOrganization(organizationId) {
+  const me = await request('/auth/switch-organization', json('POST', { organization_id: organizationId }))
+  setCsrfToken(me.csrf_token)
+  return me
+}
+
+export function changePassword(currentPassword, newPassword) {
+  return request('/auth/change-password', json('POST', { current_password: currentPassword, new_password: newPassword }))
+}
+
+export function acceptInvitation(token, displayName, password) {
+  return request('/auth/invitations/accept', json('POST', { token, display_name: displayName, password }))
+}
+
+export function completePasswordReset(token, password) {
+  return request('/auth/password-reset/complete', json('POST', { token, password }))
+}
+
+export function listMembers() {
+  return request('/organization/members')
+}
+
+export function listAssignableUsers() {
+  return request('/organization/users')
+}
+
+export function listInvitations() {
+  return request('/organization/invitations')
+}
+
+export function inviteMember(email, role) {
+  return request('/organization/invitations', json('POST', { email, role }))
+}
+
+export function revokeInvitation(invitationId) {
+  return request(`/organization/invitations/${invitationId}`, { method: 'DELETE' })
+}
+
+export function updateMember(userId, changes) {
+  return request(`/organization/members/${userId}`, json('PUT', changes))
+}
+
+export function issuePasswordReset(userId) {
+  return request(`/organization/members/${userId}/password-reset`, { method: 'POST' })
+}
+
+export function listAuditEvents(params = {}) {
+  const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+  return request(`/audit-events${q.toString() ? `?${q}` : ''}`)
+}
+
+// ---- Client workspace (Phase 2A) ----------------------------------------------
+
+export function searchClients(params = {}) {
+  const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+  return request(`/clients${q.toString() ? `?${q}` : ''}`)
+}
+
+export function archiveClient(clientId) {
+  return request(`/clients/${clientId}/archive`, { method: 'POST' })
+}
+
+export function restoreClient(clientId) {
+  return request(`/clients/${clientId}/restore`, { method: 'POST' })
+}
+
+export function getClientWorkspace(clientId) {
+  return request(`/clients/${clientId}/workspace`)
+}
+
+export function linkClientBusiness(clientId, businessId) {
+  return request(`/clients/${clientId}/link-business`, json('POST', { business_id: businessId }))
+}
+
+export function uploadIntelligenceDocument(clientId, file) {
+  const form = new FormData()
+  form.append('file', file)
+  return request(`/clients/${clientId}/intelligence-documents`, { method: 'POST', body: form })
+}
+
+export function analyzeSubmission(submissionId) {
+  return request(`/knowledge/submissions/${submissionId}/analyze-property-policy`, { method: 'POST' })
 }
 
 export function getHealth() {
@@ -272,11 +418,7 @@ export function revokeDraft(draftId, reason) {
  * chose, rather than being rebuilt (and drifting) here.
  */
 export async function downloadDraft(draftId) {
-  const headers = new Headers()
-  if (activeOrganizationId) {
-    headers.set('X-Organization-Id', activeOrganizationId)
-  }
-  const response = await fetch(`${BASE}/drafts/${draftId}/export`, { headers })
+  const response = await fetch(`${BASE}/drafts/${draftId}/export`, withAuth())
   if (!response.ok) {
     let detail = `Export failed (${response.status})`
     try {
@@ -399,9 +541,7 @@ export function listOrganizations() {
 }
 
 export function createOrganization(name) {
-  const form = new FormData()
-  form.append('name', name)
-  return request('/organizations', { method: 'POST', body: form })
+  return request('/organizations', json('POST', { name }))
 }
 
 // ---- Knowledge Core (Phase 1) ----------------------------------------------

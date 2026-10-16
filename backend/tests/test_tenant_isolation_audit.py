@@ -8,6 +8,7 @@ PostgreSQL row-level security.
 import json
 
 import pytest
+from tests.auth_helpers import signed_in
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -23,11 +24,12 @@ SECRET_VALUES = ("180,000,000", "150,000,000", "500,000", "Plastic moulding", "O
 
 
 @pytest.fixture
-def client():
-    app = FastAPI()
-    for r in (api_knowledge.router, api_carriers.router, api_doc.router, api_submissions.router):
-        app.include_router(r)
-    return TestClient(app)
+def client(conn):
+    """Phase 2A: a factory — a client signed in to the given organization."""
+    def make(org):
+        return signed_in([api_knowledge.router, api_carriers.router, api_doc.router, api_submissions.router],
+                         conn, org)
+    return make
 
 
 def _no_leak(resp):
@@ -45,6 +47,7 @@ def test_reads_from_another_tenant_return_nothing(conn, world, client):
     sub = db.create_submission(conn, organization_id=world["org"], label="Orion submission")
     conn.commit()
     h = {"X-Organization-Id": other}
+    client = client(other)
     pol, biz = str(world["policy"]["id"]), str(world["biz"]["id"])
     fact = str(world["facts"]["limit26"]["id"])
     doc = world["docs"]["d26"]
@@ -89,6 +92,7 @@ def test_writes_on_another_tenants_data_are_refused(conn, world, client):
     sub = db.create_submission(conn, organization_id=world["org"], label="Orion submission w")
     conn.commit()
     h = {"X-Organization-Id": other}
+    client = client(other)
     fact = str(world["facts"]["ded26"]["id"])
 
     r = client.put(f"/knowledge/facts/{fact}", headers=h,

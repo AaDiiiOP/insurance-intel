@@ -1,3 +1,4 @@
+from tests.auth_helpers import signed_in
 """v0.8.2 deterministic entity normalization / alias handling (real Postgres)."""
 import db
 import knowledge.service as kc
@@ -56,8 +57,7 @@ def test_list_and_duplicate_endpoints(conn, test_org):
     ent.create_entity(conn, organization_id=test_org, entity_type="business", name="Orion Foods Mills")
     ent.create_entity(conn, organization_id=test_org, entity_type="business", name="Orion Foods Mills Unit 2")
     conn.commit()
-    app = FastAPI(); app.include_router(api_knowledge.router)
-    c = TestClient(app); h = {"X-Organization-Id": test_org}
+    c = signed_in([api_knowledge.router], conn, test_org); h = {"X-Organization-Id": test_org}
     r = c.get("/knowledge/entities?entity_type=business", headers=h)
     assert r.status_code == 200 and len(r.json()["entities"]) == 2
     d = c.get("/knowledge/possible-duplicates", headers=h)

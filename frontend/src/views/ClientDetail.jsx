@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import ClientWorkspacePanel from './ClientWorkspacePanel'
+
 import {
   approveDraft,
   createDraft,
@@ -72,7 +74,7 @@ function sourceLine(source) {
   return parts.filter(Boolean).join(' · ')
 }
 
-export default function ClientDetail({ clientId, onBack, onDeleted }) {
+export default function ClientDetail({ me, clientId, onBack, onDeleted }) {
   const [client, setClient] = useState(null)
   const [match, setMatch] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -417,6 +419,8 @@ export default function ClientDetail({ clientId, onBack, onDeleted }) {
         </div>
       </header>
 
+      <ClientWorkspacePanel me={me} clientId={clientId} />
+
       {error && <div className="banner bad">{error}</div>}
 
       {rows.length > 0 && (
@@ -732,12 +736,6 @@ export default function ClientDetail({ clientId, onBack, onDeleted }) {
                   ) : (
                     <div className="approve-bar">
                       <input
-                        className="approve-name"
-                        placeholder="Your name"
-                        value={approver}
-                        onChange={(e) => setApprover(e.target.value)}
-                      />
-                      <input
                         className="approve-note"
                         placeholder="Note (optional) — what you checked"
                         value={approveNote}
@@ -747,7 +745,6 @@ export default function ClientDetail({ clientId, onBack, onDeleted }) {
                         className="btn-primary"
                         onClick={() => handleApprove(draft.draft_id)}
                         disabled={
-                          !approver.trim() ||
                           (draft.warnings || []).some((w) => w.level === 'error')
                         }
                         title={

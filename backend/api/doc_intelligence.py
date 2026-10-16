@@ -19,7 +19,7 @@ import llm
 from llm import LLMError
 from parsers import ParseError, extension_of, parse_file_with_quality
 
-from .deps import _resolve_organization, _validate_uuid
+from .deps import _actor, _resolve_organization, _validate_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
 class ReviewAction(BaseModel):
     """A human verifying, correcting, or flagging one extracted fact."""
 
-    reviewer: str
+    reviewer: str | None = None   # ignored: the signed-in user is the reviewer
     action: str  # 'verified' | 'corrected' | 'flagged'
     new_value: str | None = None
     reason: str | None = None
@@ -137,6 +137,18 @@ async def doc_intelligence_upload(
 
         if submission_id:
             db.set_document_submission(conn, document_id, submission_id)
+
+        # Phase 2A: keep the original file for authorized download.
+        import hashlib
+        import auth
+        from .workspace import content_type_for
+        ctx = auth.current()
+        sub = db.get_submission(conn, submission_id, organization_id) if submission_id else None
+        db.save_stored_file(conn, organization_id, filename, content_type_for(filename),
+                            hashlib.sha256(data).hexdigest(), data, ctx.user_id if ctx else None,
+                            document_id=document_id, client_id=str(sub["client_id"]) if sub and sub.get("client_id") else None)
+        auth.audit(conn, ctx, "document.uploaded", "document", document_id,
+                   {"filename": filename, "kind": "doc_intelligence", "size": len(data)})
 
         db.save_document_quality(
             conn,
@@ -324,9 +336,7 @@ def review_fact(
     """
     fact_id = _validate_uuid(fact_id, "fact id")
 
-    reviewer = " ".join((body.reviewer or "").split())
-    if not reviewer:
-        raise HTTPException(status_code=400, detail="Enter your name to review this.")
+    reviewer = _actor()
 
     action = (body.action or "").strip().lower()
     if action not in {"verified", "corrected", "flagged"}:

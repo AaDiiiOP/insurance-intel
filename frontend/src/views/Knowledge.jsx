@@ -50,10 +50,6 @@ function FactRow({ fact, onError, onCorrected }) {
   const statusCopy = STATUS_COPY[fact.status] || STATUS_COPY.needs_review
 
   async function save() {
-    if (!reviewer.trim()) {
-      onError('Enter your name to record this correction.')
-      return
-    }
     if (!value.trim()) {
       onError('Enter the corrected value.')
       return
@@ -125,12 +121,6 @@ function FactRow({ fact, onError, onCorrected }) {
               placeholder="Corrected value"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-            />
-            <input
-              className="approve-name"
-              placeholder="Your name"
-              value={reviewer}
-              onChange={(e) => setReviewer(e.target.value)}
             />
             <button className="btn-ghost" onClick={() => setCorrecting(false)} disabled={saving}>
               Cancel

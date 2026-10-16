@@ -54,6 +54,10 @@ services:
       # is healthy. A working /health plus "Failed to fetch" in the console
       # is almost always this.
       - CORS_ORIGINS=${PUBLIC_URL:?set PUBLIC_URL}
+      # Phase 2A sign-in. Set AUTH_COOKIE_SECURE=true once the site is served
+      # over HTTPS (the session cookie is then never sent over plain HTTP).
+      - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE:-false}
+      - AUREVIA_ENV=production
     # Embedding a long document can be slow on CPU. Raise if reindexing
     # times out; chat/drafting calls already have no cap.
     # - OLLAMA_EMBED_TIMEOUT=300

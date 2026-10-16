@@ -113,10 +113,6 @@ function FactCard({ fact, historical, reviewer, onReviewed, onError }) {
   const canReview = !historical && fact.status === 'needs_review'
 
   async function review(action) {
-    if (!reviewer.trim()) {
-      onError('Enter your name (top of the explorer) to record a review.')
-      return
-    }
     setBusy(true)
     try {
       await reviewKnowledgeFact(fact.id, action, reviewer.trim())
@@ -331,9 +327,7 @@ export default function KnowledgeExplorer({ initialEntityId }) {
         <input id="kx-asof" type="date" value={asOf}
           onChange={(e) => { setAsOf(e.target.value); loadEntity(entityId, e.target.value) }} />
         {asOf && <button className="btn-ghost kx-small" onClick={() => { setAsOf(''); loadEntity(entityId, '') }}>Clear date</button>}
-        <label htmlFor="kx-reviewer">Your name</label>
-        <input id="kx-reviewer" className="approve-name" placeholder="for Verify / Reject"
-          value={reviewer} onChange={(e) => setReviewer(e.target.value)} />
+        <span className="kx-meta">Reviews are recorded under your signed-in name.</span>
       </div>
 
       {dupes.length > 0 && (

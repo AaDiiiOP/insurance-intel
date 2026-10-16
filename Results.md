@@ -1222,3 +1222,9 @@ Knowledge Core silent-wrong fixed (earlier-period value after renewal), found by
 Real Qwen (2026-10-10 04:56 UTC, result-20261010T045655, AUR-SYN-001–004): Phase 1A recall 100%, false 2.6% (2 flagged), silent wrong 0, evidence/page 100%; Phase 1B 35 correct / 5 abstained / 0 wrong, probes 28/28; Phase 1C 28/28, probes 24/24; Phase 1D 53/53, probes 24/24; Phase 1E 33 correct / 3 abstained (AUR-SYN-004 sum-insured conflict) / 0 wrong, probes 51/51, evidence and page 100%. Phase 1E: DEVELOPMENT COMPLETE — READY FOR ACCEPTANCE (4-company; 20-company not claimed).
 Acceptance (2026-10-10, lead review): Phase 1E ACCEPTED using 4-company validation — FROZEN. Status-only update, no code change.
 
+## v0.14.0 (2026-10-11) — Phase 2A Broker Workspace
+Baseline 199/199 (0 failed, 0 skipped). After: 222/222 (23 new: authentication, sessions, CSRF, rate limit, roles, invitations, resets, every route requires sign-in, every route refuses another organization's data and writes, clients, documents, downloads, audit).
+Intelligence gates unchanged on the same data (dry run, model off): 1B 0 wrong + 28/28, 1C 28/28 + 24/24, 1D 53/53 + 24/24, 1E 36/36 + 51/51; Phase 1D audit 198/198 (now signs in).
+Browser run: sign-in, client, upload, download, invitation → Reviewer sign-in, 390 px layout. No real-Qwen run needed (no model behaviour changed).
+Phase 2A development gate: PASS (sandbox); not production-ready; no RLS.
+

@@ -1,6 +1,6 @@
 # Aurevia BrokerOS
 
-**Version: 0.13.0** (see `frontend/package.json` — the one version number
+**Version: 0.14.0** (see `frontend/package.json` — the one version number
 for the whole project; bump it there on every release)
 
 **Status (stated precisely, 2026-10-02):**
@@ -28,6 +28,7 @@ for the whole project; bump it there on every release)
 | v0.11.0 — Phase 1C Policy Intelligence | Policy number, insurer, conditions, definitions, sub-limits, per-coverage limits, endorsement ids/dates and document roles read deterministically from labelled lines; policy view / history / conflicts / typed comparison with both-side evidence (`/policies/*`); new policy questions; Policy panel in the explorer. 166/166 tests, 13/13 comparison, structure reader 20/20 companies, Real Qwen AUR-SYN-001–004 (2026-10-08): silent wrong 0, recall 100%, query 0 wrong + 28/28 probes, **policy check 28/28 correct + 24/24 probes**. **Phase 1C: READY FOR ACCEPTANCE (4-company development benchmark; 20-company deferred).** See `PHASE_1C_STATUS.md`. |
 | v0.12.0 — Phase 1D Business Risk Intelligence | Business risk graph in the existing Knowledge Core (no graph database): locations, operations, assets, controls, losses, risk factors, risks, exposures, workforce, surveyor rating — read deterministically from labelled lines, each with document + page, dated by the document's own date. Time-aware profile (`?as_of=`), change intelligence (added / changed / unchanged / conflicting; never "removed" from absence), business conflicts, graph view (`/businesses/*`), business questions, Business panel in the explorer. 177/177 tests; dry run (model off) AUR-SYN-001–004: Phase 1B 28/28 probes, Phase 1C 28/28 + 24/24, **Phase 1D 53/53 + 24/24**. Real Qwen AUR-SYN-001–004 (2026-10-08): silent wrong 0, query 0 wrong + 28/28 probes, policy 28/28 + 24/24, **business check 53/53 correct + 24/24 probes**. **Phase 1D: ACCEPTANCE PASSED, FROZEN (4-company validation, 2026-10-09: audit 198/198, evidence 100%, page 100%; 20-company deferred).** See `PHASE_1D_STATUS.md`. |
 | v0.13.0 — Phase 1E Risk → Coverage Intelligence | Documented exposures/risks mapped to the coverages of the policy in force on a date (mapping type + status), exposure vs limit (WITHIN / EXCEEDS / unknown / needs review — never "underinsured"), exclusion / condition / sublimit / deductible reviews, coverage conflicts, coverage changes over time and policy-change → exposure impact, broker review of findings, coverage graph, Coverage audit panel. Advice questions ("adequately insured?") are declined. Fixed a Knowledge Core silent-wrong case (earlier-period value read after a renewal). 199/199 tests; dry run AUR-SYN-001–004: coverage check 36/36 + 51/51 probes, earlier gates unchanged. Real Qwen AUR-SYN-001–004 (2026-10-10): silent wrong 0, all gates 0 wrong, **coverage check 33 correct + 3 correct abstentions, 51/51 probes, evidence/page 100%**. **Phase 1E: ACCEPTED (4-company), FROZEN — 2026-10-10; 20-company not claimed.** See `PHASE_1E_STATUS.md`. |
+| v0.14.0 — Phase 2A Broker Workspace | Sign-in (argon2id, HttpOnly session cookie, CSRF token, rate limiting, expiry, revocation), roles OWNER/ADMIN/BROKER/REVIEWER with server-side permissions on every route, organization taken only from the signed-in membership (header can no longer choose it), invitations and admin-issued reset codes (no e-mail), client search/filters/pagination/archive/assignment, client ↔ business link, document library with stored originals and authorized download, append-only audit history, Team & security page, small-screen layout. 222/222 tests; intelligence gates unchanged. **Not production-ready; no PostgreSQL RLS.** See `PHASE_2A_STATUS.md`. |
 
 Tenant isolation is application-level (not PostgreSQL RLS); revisit before production.
 See `Results.md` for run-by-run detail.
@@ -1188,4 +1189,22 @@ Phase 1E validated on the 4-company development benchmark (real Qwen,
 2026-10-10: 0 silent wrong, 0 wrong answers in all five gates, coverage check
 33 correct + 3 correct abstentions on AUR-SYN-004's sum-insured conflict).
 **Accepted using 4-company validation and frozen (2026-10-10).** 20-company validation not claimed.
+
+## v0.14.0 — Phase 2A Broker Workspace (2026-10-11)
+
+**Sign-in is now required for everything.** Create the first Owner once:
+
+    docker-compose up -d --build backend
+    docker-compose exec backend python3 manage_users.py create-owner --email you@firm.in --name "Your Name" --org-id 00000000-0000-0000-0000-000000000001
+
+(`--org-id` of the existing default organization keeps every client and
+document you already have; use `--org "New Brokerage"` for a fresh one. The
+password is asked for and never shown). Everyone else joins through
+Team & security → Invite (a one-time code you hand over). Roles:
+Owner / Admin (everything; only an Owner manages Owners), Broker (clients,
+documents, analysis, drafts, export), Reviewer (verify/correct facts, review
+findings, approve drafts, export). The organization comes from the signed-in
+membership; `X-Organization-Id` can no longer choose it. Set
+`AUTH_COOKIE_SECURE=true` when the site is served over HTTPS. Details,
+security findings and limits: **`PHASE_2A_STATUS.md`**.
 

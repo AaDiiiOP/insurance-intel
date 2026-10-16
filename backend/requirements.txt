@@ -3,6 +3,8 @@ uvicorn[standard]==0.30.6
 python-multipart==0.0.9
 psycopg[binary]==3.2.3
 httpx==0.27.2
+# Phase 2A: password hashing (maintained argon2id binding; no home-made crypto).
+argon2-cffi==23.1.0
 pdfplumber==0.11.4
 python-docx==1.1.2
 openpyxl==3.1.5

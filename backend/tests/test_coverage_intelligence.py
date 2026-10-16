@@ -420,11 +420,9 @@ def test_coverage_graph_marks_derived_edges(conn, w):
 
 def test_api_and_tenant_isolation(conn, w):
     conn.commit()
-    app = FastAPI()
-    app.include_router(api_coverage.router)
-    app.include_router(api_businesses.router)
-    app.include_router(api_knowledge.router)
-    c = TestClient(app)
+    from tests.auth_helpers import signed_in
+    routers = [api_coverage.router, api_businesses.router, api_knowledge.router]
+    c = signed_in(routers, conn, w["org"])
     h = {"X-Organization-Id": w["org"]}
     urls = ["coverage-map", "coverage-map?as_of=2026-09-20", "coverage-findings", "unmapped-risks",
             "coverage-conflicts", "coverage-changes", "coverage-changes?from_date=2026-08-01&to_date=2026-09-20",
@@ -438,16 +436,17 @@ def test_api_and_tenant_isolation(conn, w):
     assert "score" not in str(sorted(audit)).lower()
     other = str(db.create_organization(conn, "pytest-cov-b")["id"])
     conn.commit()
-    hb = {"X-Organization-Id": other}
+    cb = signed_in(routers, conn, other)
     for u in urls:
-        r = c.get(f"/businesses/{w['id']}/{u}", headers=hb)
+        r = cb.get(f"/businesses/{w['id']}/{u}")
         assert r.status_code == 404 and "SYN-PROP-0500" not in r.text, u
     fid = audit["findings"][0]["finding_id"]
     body = {"business_id": w["id"], "decision": "REVIEWED", "reviewer": "x"}
-    assert c.post(f"/coverage-findings/{fid}/review", json=body, headers=hb).status_code == 404
+    assert cb.post(f"/coverage-findings/{fid}/review", json=body).status_code == 404
     assert c.post(f"/coverage-findings/{fid}/review", json=dict(body, decision="nope"), headers=h).status_code == 400
     ok = c.post(f"/coverage-findings/{fid}/review", json=body, headers=h)
     assert ok.status_code == 200 and ok.json()["decision"] == "REVIEWED"
+    assert ok.json()["reviewer"].endswith(f"<{c.user['email']}>")     # identity from the session, not "x"
     q = ask(conn, w, "Which findings require broker review?", org=other)
     assert q["answer"] is None and not q["evidence"]
 

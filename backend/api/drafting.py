@@ -17,7 +17,7 @@ import llm
 from llm import LLMError
 from parsers import ParseError, parse_file
 
-from .deps import _resolve_organization, _validate_uuid
+from .deps import _actor, _resolve_organization, _validate_uuid
 from .gaps import _carriers_from_match
 
 logger = logging.getLogger(__name__)
@@ -265,7 +265,7 @@ def edit_draft(draft_id: str, body: DraftEdit,
         if before["status"] == "approved":
             detail = "Edited after approval — the earlier sign-off no longer applies."
         db.log_draft_event(conn, draft_id=draft_id, organization_id=organization_id,
-                           event="edited", detail=detail)
+                           event="edited", actor=_actor()[:120], detail=detail)
 
         # The edit itself is the feedback signal — what was drafted against
         # what a person actually wanted. Stored whole so guidance can be
@@ -304,9 +304,10 @@ def remove_draft(draft_id: str, x_organization_id: str | None = Header(None)):
 
 
 class Approval(BaseModel):
-    """Who is signing this off. Self-declared — there is no user system."""
+    """Phase 2A: the approver is the signed-in user (approved_by is ignored,
+    kept only so older clients do not break)."""
 
-    approved_by: str
+    approved_by: str | None = None
     note: str | None = None
 
 
@@ -361,12 +362,7 @@ def approve_draft(draft_id: str, body: Approval,
     """
     draft_id = _validate_uuid(draft_id, "draft id")
 
-    approver = " ".join((body.approved_by or "").split())
-    if not approver:
-        raise HTTPException(
-            status_code=400,
-            detail="Enter your name to sign this off.",
-        )
+    approver = _actor()
 
     with db.get_connection() as conn:
         organization_id = _resolve_organization(conn, x_organization_id)
@@ -398,6 +394,8 @@ def approve_draft(draft_id: str, body: Approval,
             actor=approver[:120],
             detail=" ".join((body.note or "").split())[:300] or None,
         )
+        import auth
+        auth.audit(conn, auth.current(), "draft.approved", "draft", draft_id)
         updated = db.get_draft(conn, draft_id, organization_id)
         events = db.get_draft_events(conn, draft_id, organization_id)
 
@@ -442,8 +440,11 @@ def revoke_draft(draft_id: str, body: Revocation,
             draft_id=draft_id,
             organization_id=organization_id,
             event="revoked",
+            actor=_actor()[:120],
             detail=" ".join((body.reason or "").split())[:300] or None,
         )
+        import auth
+        auth.audit(conn, auth.current(), "draft.revoked", "draft", draft_id)
         updated = db.get_draft(conn, draft_id, organization_id)
         events = db.get_draft_events(conn, draft_id, organization_id)
 
@@ -514,6 +515,11 @@ def export_draft(draft_id: str, x_organization_id: str | None = Header(None)):
         status=row["status"],
         kind=row["kind"],
     )
+    import auth
+    with db.get_connection() as conn:
+        db.log_draft_event(conn, draft_id=draft_id, organization_id=organization_id, event="exported",
+                           actor=_actor()[:120], detail=f"{row['status']} draft exported as .docx")
+        auth.audit(conn, auth.current(), "draft.exported", "draft", draft_id, {"status": row["status"]})
 
     return Response(
         content=data,

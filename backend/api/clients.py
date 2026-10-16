@@ -16,6 +16,8 @@ import verify
 from llm import LLMError
 from parsers import ParseError, extension_of, parse_file
 
+import auth
+
 from .deps import _resolve_organization, _validate_uuid
 
 logger = logging.getLogger(__name__)
@@ -52,6 +54,13 @@ class ClientIn(BaseModel):
     risk_notes: str | None = None
     documents_held: list[str] = []
     documents_missing: list[str] = []
+    # Phase 2A workspace fields.
+    trading_name: str | None = None
+    notes: str | None = None
+    assigned_user_id: str | None = None
+    # Fields pre-filled from a document (/clients/extract) and NOT yet confirmed
+    # by a person. Everything else is recorded as entered by a person.
+    extracted_fields: list[str] = []
 
 
 # Which intake fields are treated as identifying, and the placeholder kind
@@ -111,8 +120,28 @@ def _build_redacted_profile(body: ClientIn, existing_map: dict) -> tuple[str, di
     return profile, redactor.mapping
 
 
+def _provenance(body: "ClientIn") -> dict:
+    allowed = set(db.CLIENT_FIELDS)
+    return {f: "extracted_unconfirmed" for f in body.extracted_fields if f in allowed}
+
+
+def _check_assignee(conn, organization_id: str, user_id: str | None) -> str | None:
+    if not user_id:
+        return None
+    user_id = _validate_uuid(user_id, "assigned user id")
+    m = db.get_membership(conn, organization_id, user_id)
+    if m is None or m["status"] != "active":
+        raise HTTPException(status_code=400, detail="The assigned user is not an active member.")
+    return user_id
+
+
 def _client_response(row: dict) -> dict:
     out = {
+        "status": row.get("status", "active"),
+        "archived_at": row["archived_at"].isoformat() if row.get("archived_at") else None,
+        "assigned_user_id": str(row["assigned_user_id"]) if row.get("assigned_user_id") else None,
+        "business_entity_id": str(row["business_entity_id"]) if row.get("business_entity_id") else None,
+        "field_provenance": row.get("field_provenance") or {},
         "client_id": str(row["id"]),
         "categories": row.get("categories") or [],
         "documents_held": row.get("documents_held") or [],
@@ -143,6 +172,11 @@ def create_client(body: ClientIn, x_organization_id: str | None = Header(None)):
             organization_id=organization_id,
         )
         db.save_client_tokens(conn, str(row["id"]), organization_id, mapping)
+        row = db.set_client_workspace(conn, str(row["id"]), organization_id,
+                                      assigned_user_id=_check_assignee(conn, organization_id, body.assigned_user_id),
+                                      field_provenance=_provenance(body))
+        auth.audit(conn, auth.current(), "client.created", "client", str(row["id"]),
+                   {"extracted_unconfirmed": sorted(_provenance(body))})
         if body.documents_held or body.documents_missing:
             db.set_client_documents(
                 conn,
@@ -158,14 +192,32 @@ def create_client(body: ClientIn, x_organization_id: str | None = Header(None)):
 
 
 @router.get("/clients")
-def list_clients(x_organization_id: str | None = Header(None)):
+def list_clients(q: str | None = None, status: str = "active", assigned_to: str | None = None,
+                 page: int = 1, page_size: int = 25, x_organization_id: str | None = Header(None)):
+    """Search / filter / paginate in SQL. status: active (default) / archived / all."""
+    if status not in ("active", "archived", "all"):
+        raise HTTPException(status_code=400, detail="status must be active, archived or all.")
+    page, page_size = max(1, int(page)), max(1, min(int(page_size), 100))
+    q = " ".join((q or "").split())[:100] or None
     with db.get_connection() as conn:
         organization_id = _resolve_organization(conn, x_organization_id)
-        rows = db.list_clients(conn, organization_id)
+        if assigned_to == "me":
+            assigned_to = auth.require_context().user_id
+        elif assigned_to:
+            assigned_to = _validate_uuid(assigned_to, "assigned user id")
+        rows, total = db.search_clients(conn, organization_id, q=q, status=status, assigned_user_id=assigned_to,
+                                        limit=page_size, offset=(page - 1) * page_size)
     return {
+        "total": total, "page": page, "page_size": page_size,
         "clients": [
             {
                 "client_id": str(r["id"]),
+                "trading_name": r["trading_name"],
+                "status": r["status"],
+                "assigned_to": ({"user_id": str(r["assigned_user_id"]), "display_name": r["assigned_name"]}
+                                if r["assigned_user_id"] else None),
+                "business_entity_id": str(r["business_entity_id"]) if r["business_entity_id"] else None,
+                "document_count": r["document_count"],
                 "business_name": r["business_name"],
                 "industry": r["industry"],
                 "city": r["city"],
@@ -228,6 +280,11 @@ def update_client(client_id: str, body: ClientIn,
         if not row:
             raise HTTPException(status_code=404, detail="Client not found.")
         db.save_client_tokens(conn, client_id, organization_id, mapping)
+        row = db.set_client_workspace(conn, client_id, organization_id,
+                                      assigned_user_id=_check_assignee(conn, organization_id, body.assigned_user_id),
+                                      field_provenance=_provenance(body))
+        auth.audit(conn, auth.current(), "client.updated", "client", client_id,
+                   {"extracted_unconfirmed": sorted(_provenance(body))})
         db.set_client_documents(
             conn,
             client_id,
@@ -255,6 +312,7 @@ def delete_client(client_id: str, x_organization_id: str | None = Header(None)):
         organization_id = _resolve_organization(conn, x_organization_id)
         if not db.delete_client(conn, client_id, organization_id):
             raise HTTPException(status_code=404, detail="Client not found.")
+        auth.audit(conn, auth.current(), "client.deleted", "client", client_id)
     return {"deleted": client_id}
 
 
@@ -387,6 +445,14 @@ async def upload_client_document(
             "score_parts": {},
         }
 
+    import hashlib
+    from .workspace import content_type_for
+    digest = hashlib.sha256(data).hexdigest()
+    with db.get_connection() as conn:
+        dup = db.find_duplicate_file(conn, organization_id, client_id, digest)
+        if dup:
+            raise HTTPException(status_code=409, detail=f"This file was already uploaded for this client "
+                                                        f"as '{dup['filename']}'.")
     with db.get_connection() as conn:
         row = db.save_client_document(
             conn,
@@ -400,6 +466,11 @@ async def upload_client_document(
             extracted_text=parsed.text,
             verification=result,
         )
+        ctx = auth.current()
+        db.save_stored_file(conn, organization_id, filename, content_type_for(filename), digest, data,
+                            ctx.user_id if ctx else None, client_document_id=str(row["id"]), client_id=client_id)
+        auth.audit(conn, ctx, "document.uploaded", "client_document", str(row["id"]),
+                   {"client_id": client_id, "filename": filename, "requirement": requirement, "size": len(data)})
 
     return _client_document_response(row)
 
@@ -441,10 +512,15 @@ def list_documents(client_id: str, x_organization_id: str | None = Header(None))
 @router.delete("/clients/{client_id}/documents/{document_id}")
 def remove_client_document(client_id: str, document_id: str,
                            x_organization_id: str | None = Header(None)):
-    _validate_uuid(client_id, "client id")
+    client_id = _validate_uuid(client_id, "client id")
     document_id = _validate_uuid(document_id, "document id")
     with db.get_connection() as conn:
         organization_id = _resolve_organization(conn, x_organization_id)
+        if not any(str(d["id"]) == document_id
+                   for d in db.list_client_documents(conn, client_id, organization_id)):
+            raise HTTPException(status_code=404, detail="Document not found.")
         if not db.delete_client_document(conn, document_id, organization_id):
             raise HTTPException(status_code=404, detail="Document not found.")
+        auth.audit(conn, auth.current(), "document.deleted", "client_document", document_id,
+                   {"client_id": client_id})
     return {"deleted": document_id}
