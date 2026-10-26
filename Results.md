@@ -1228,3 +1228,10 @@ Intelligence gates unchanged on the same data (dry run, model off): 1B 0 wrong +
 Browser run: sign-in, client, upload, download, invitation → Reviewer sign-in, 390 px layout. No real-Qwen run needed (no model behaviour changed).
 Phase 2A development gate: PASS (sandbox); not production-ready; no RLS.
 
+## v0.14.1 (2026-10-21) — Phase 2A Docker check fix
+Developer's Docker check on v0.14.0: 22 checks passed, then paperwork upload returned 500 — `column "score" of relation "client_documents" does not exist` (existing database older than these columns; no ALTER had ever been written). Pre-existing schema drift, not caused by Phase 2A.
+Fix: startup migrations add all 14 later `client_documents` columns (nothing dropped); read-only `check_schema.py`; `phase2a_live_check.py` in the repo; 3 regression tests; one test-only flake fixed (duplicate-upload test built the .docx twice).
+Sandbox: old-database reproduction → v0.14.1 repairs it, live check 41/41 PASS over HTTP. Tests 225/225 (3 runs). Dry run AUR-SYN-001–004 unchanged: 1B 0 wrong + 28/28, 1C 28/28 + 24/24, 1D 53/53 + 24/24, 1E 36/36 + 51/51.
+Phase 1D acceptance audit on the sandbox dry data: 198/198.
+Developer's Docker on v0.14.1 (2026-10-26, existing database): `check_schema.py` PASS; `phase2a_live_check.py` 41/41 PASS (run with Ollama stopped — the check script's 60 s timeout is shorter than the local model's upload verification); pytest 225 passed, 0 failed, 0 skipped; frontend through Docker (:5183) worked.
+**Phase 2A: FROZEN — DEVELOPMENT GATE PASSED (2026-10-26).** Not production-ready; no RLS. Status-only update, no code change. Phase 2B not started.

@@ -1,6 +1,9 @@
-# Phase 2A — Broker Workspace: status (v0.14.0, 2026-10-11)
+# Phase 2A — Broker Workspace: status (v0.14.1, 2026-10-26)
 
-Status: **PHASE 2A DEVELOPMENT GATE PASSED (sandbox) — awaiting the developer's Docker check.**
+Status: **FROZEN — DEVELOPMENT GATE PASSED (2026-10-26).** The developer's
+Docker check on v0.14.1 passed every gate item (see "Docker verification"
+below). The first Docker check (v0.14.0) had found one blocker — paperwork
+upload failed on his existing database — fixed in v0.14.1.
 Not production-ready: see Security findings and Known limitations.
 Phases 2B, 2C and 2D are not started.
 
@@ -152,6 +155,151 @@ Deleted: `backend/api/organizations.py`.
   button), mobile 390 px with no horizontal scrolling on every page.
 - AI: Phase 2A adds no model behaviour; no real-Qwen run needed for this gate.
 
+## Docker verification (freeze gate)
+
+### Run 1 — v0.14.0, developer's machine (Docker Compose, existing database)
+Commands:
+```
+docker-compose up -d --build
+docker-compose exec backend python3 phase2a_live_check.py http://localhost:8000
+docker-compose logs --tail 80 backend
+```
+Result: **FAIL.** 22 checks passed (sign-in, cookies, CSRF, organization
+switch and header refusal, roles, client search / pagination / assignment /
+archive / restore), then `POST /clients/{id}/documents/upload` returned 500,
+so the duplicate check failed and the run stopped. Log:
+`psycopg.errors.UndefinedColumn: column "score" of relation "client_documents" does not exist`.
+
+Root cause: the developer's database created `client_documents` before the
+columns `score`, `score_parts`, `improvements` (and others) were added to
+SCHEMA. `CREATE TABLE IF NOT EXISTS` skips an existing table and no `ALTER`
+was ever written for these columns. **Pre-existing schema drift, not
+introduced by Phase 2A**; the sandbox missed it because every sandbox
+database was created fresh. Every past release (v0.4.0–v0.13.0) already had
+these columns in SCHEMA, so the developer's table is older than v0.4.0.
+
+### Fix — v0.14.1 (smallest safe fix, nothing dropped)
+- `repositories/connection.py` MIGRATIONS: `ALTER TABLE client_documents ADD
+  COLUMN IF NOT EXISTS ...` for all 14 non-key columns, same types and
+  defaults as SCHEMA. Runs on every startup; a no-op once applied; existing
+  rows keep their data and get the column default.
+- `find_schema_drift()` + `backend/check_schema.py`: **read-only** check that
+  builds the expected tables in a scratch schema inside a rolled-back
+  transaction and lists any missing table or column in the live database.
+- `backend/phase2a_live_check.py` added to the repo (41 checks; new check 0:
+  "database has every table and column the code expects").
+- Regression tests `tests/test_schema_upgrade.py` (3): a client_documents
+  table made old (14 columns dropped, one existing row) is repaired by
+  MIGRATIONS, the row survives with defaults, the failing insert now works,
+  migrations are idempotent, the drift check leaves nothing behind.
+- Test flake fixed (test only): the duplicate-upload test built the same
+  .docx twice; a .docx stores a timestamp, so builds ~2 s apart differ and
+  the 409 was occasionally not triggered (1 failure in 3 full runs). The
+  product's duplicate check was correct; the test now builds the file once.
+
+### Sandbox verification of v0.14.1 (2026-10-21; Docker Hub is blocked here)
+- Old-database reproduction: database built with v0.14.0 code, then
+  `score, score_parts, improvements` dropped. `check_schema.py` → FAIL (3
+  missing columns); v0.14.0 startup migrations → still FAIL; v0.14.1 backend
+  started on it → `check_schema.py` PASS; `phase2a_live_check.py` over HTTP
+  → **41/41 PASS** (upload, duplicate 409, download, intelligence upload,
+  cross-tenant, rate limit, expiry, audit, no secrets).
+- Backend tests: **225 passed, 0 failed, 0 skipped** (222 + 3), run 3 times.
+- Dry run (model off) AUR-SYN-001–004: Phase 1B 0 wrong + 28/28 probes; 1C
+  28/28 + 24/24; 1D 53/53 + 24/24; 1E 36/36 + 51/51 — unchanged.
+- Phase 1D acceptance audit (sandbox dry data): 198/198, evidence 100%, page 100%.
+
+### Run 2 — v0.14.1, developer's machine (2026-10-21 and 2026-10-26): **PASS**
+Docker Compose, Windows, the developer's existing (older) database;
+services backend :8100, frontend :5183, postgres :5442, chromadb :8101.
+Synthetic data only; each live check creates its own throwaway organization.
+
+2026-10-21 (Ollama running):
+```
+docker-compose up -d --build backend
+docker-compose exec backend python3 check_schema.py
+docker-compose exec backend python3 phase2a_live_check.py http://localhost:8000
+docker-compose exec backend python3 -m pytest -q
+docker-compose exec backend python3 check_schema.py
+```
+- First `check_schema.py`: FAIL, 3 missing columns (`score`, `score_parts`,
+  `improvements`) — run before the backend had finished starting up. The
+  live check a moment later and the re-run both: **PASS** (0 missing tables,
+  0 missing columns, 0 type differences) — the v0.14.1 migration repaired
+  the developer's table.
+- Live check: 23 checks PASS, then the paperwork upload exceeded the
+  script's 60-second client timeout while the local Qwen model verified the
+  file (a limit of the check script, not an app error; no 500 this time).
+- pytest: **225 passed, 0 failed, 0 skipped** (1 library DeprecationWarning
+  from starlette/anyio), 104.9 s.
+
+2026-10-26 (final gate run; Ollama stopped so uploads skip the model's
+document verification and finish quickly):
+```
+cd C:\Project\Perosnal_Projects\insurance-intel
+docker-compose up -d --build
+docker-compose exec backend python3 check_schema.py
+docker-compose logs --tail 200 backend | Select-String "documents/upload|Error|Traceback"
+docker-compose exec backend python3 phase2a_live_check.py http://localhost:8000
+docker-compose exec backend python3 -m pytest -q
+docker-compose ps
+```
+- `check_schema.py`: **PASS** (0 missing tables, 0 missing columns, 0 type
+  differences).
+- Log search: no errors (the rebuild had cleared the earlier log).
+- `phase2a_live_check.py`: **41 checks, 41 passed, 0 failed → PASS** —
+  schema; unauthenticated 401s; identical 401 for wrong password / unknown
+  e-mail; sign-in; HttpOnly + SameSite=Lax cookie; organization create /
+  switch / non-member refused; header naming another organization 403; CSRF
+  403; ADMIN cannot grant OWNER; REVIEWER cannot create clients; BROKER
+  creates but cannot delete clients, cannot read audit or manage members;
+  REVIEWER can view; search; pagination; assign; archive; restore; client
+  document upload; duplicate 409; authorized download returns the original;
+  intelligence document upload; bad file type 400; workspace lists both;
+  intelligence endpoints work when signed in; another organization's user
+  gets 404 on every probe and A's client is unchanged; 5 failed sign-ins →
+  429; logout; signed-out session not reusable; expired and idle sessions
+  refused; audit events recorded; no password or token in the audit API; no
+  password, session token or invitation code in clear in the database;
+  passwords are argon2id.
+- pytest: **225 passed, 0 failed, 0 skipped** (same 1 library warning),
+  172.4 s.
+- `docker-compose ps`: backend, frontend, postgres, chromadb all Up.
+- Frontend through Docker (http://localhost:5183), checked by hand: sign
+  in as Owner, client list, client → "Documents & intelligence", "Team &
+  security", sign out — all worked, no errors.
+
+### Freeze gate
+| # | Criterion | Result |
+|---|---|---|
+| 1 | Docker startup and migrations | PASS — schema check 0 missing |
+| 2 | Authentication and role checks | PASS — live check + pytest |
+| 3 | Cross-tenant access denied | PASS — every live probe 404, pytest over every route |
+| 4 | Client and document workflows | PASS |
+| 5 | Intelligence regression | PASS — endpoints work signed in (Docker); dry run 1B–1E unchanged and Phase 1D audit 198/198 (sandbox) |
+| 6 | Frontend builds and works through Docker | PASS |
+| 7 | Complete test suite | PASS — 225/225, 0 skipped, no suppressed failures |
+| 8 | Limitations documented | Done — below |
+
+Not verified on Docker: an upload with the real Qwen model running to the
+end (it takes longer than the check script's 60 s on the developer's
+laptop); the upload itself is covered by the run without the model and by
+pytest. `/docs` returning 404 in production mode was verified in the
+sandbox only (the developer ran the development compose file).
+
+## Security review — classification
+| Finding | Class | Note |
+|---|---|---|
+| `client_documents` columns missing on older databases (upload 500) | **Blocker — fixed in v0.14.1** | verified on the developer's Docker database 2026-10-26 |
+| Live check gives up after 60 s while the local model verifies an upload | Future task (test tooling) | not an app defect; raise the script's timeout for model steps when needed |
+| No PostgreSQL row-level security | Accepted limitation | application-level isolation, tested over every route; RLS is production-hardening work |
+| Cookie `Secure` off by default; no HTTPS in this repo | Accepted for local use; **blocker for any real deployment** | set `AUTH_COOKIE_SECURE=true` behind HTTPS |
+| Per-IP sign-in limit counts the direct address | Accepted for single-developer use; **must fix before multi-user use** | behind a proxy / Docker port mapping everyone shares one address, so 30 failures in 15 min block all sign-ins. Seen in the sandbox: three test runs left 36 failures from the shared test address and the Phase 1D audit's sign-in was refused (429) until the window passed. Fix proposed, not applied (needs approval). |
+| No multi-factor authentication | Future task | |
+| `/docs`, `/openapi.json` public outside production | Accepted | 404 when `AUREVIA_ENV=production` (verified in the sandbox) |
+| Records before v0.14.0 carry self-declared names | Accepted limitation | |
+| No e-mail delivery of invitation / reset codes | Accepted (by design) | codes handed over by an Owner/Admin |
+
 ## Security findings (honest list)
 - **No PostgreSQL row-level security.** Isolation is enforced in the
   application (one place resolves the organization; every query filters on
@@ -183,5 +331,9 @@ Phase 2A development gate (sandbox): authentication, membership,
 server-side authorization, cross-tenant tests, client management, document
 workspace, frontend/backend integration, intelligence features preserved,
 regression passing, security findings documented — **PASS**.
-Freeze after the developer's Docker check. **Next: Phase 2B (client
-intelligence workspace) — not started.**
+v0.14.0 Docker check: FAIL (upload on an older database) → fixed in v0.14.1.
+v0.14.1 Docker check (2026-10-26): schema PASS, live check 41/41, pytest
+225/225, frontend works through Docker.
+**Phase 2A: FROZEN — DEVELOPMENT GATE PASSED (2026-10-26).** Not
+production-ready; no compliance claim; no PostgreSQL RLS.
+Phases 2B (client intelligence workspace), 2C and 2D — not started.

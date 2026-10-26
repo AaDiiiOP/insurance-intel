@@ -735,6 +735,28 @@ ALTER TABLE clients
 ALTER TABLE summaries
     ADD COLUMN IF NOT EXISTS exclusions JSONB NOT NULL DEFAULT '[]'::jsonb;
 
+-- v0.14.1: client_documents gained columns (verification score, score
+-- breakdown, improvements, identifiers, notes, key facts, ...) after some
+-- databases had already created the table, and no ALTER was ever added, so
+-- an older database failed every paperwork upload with
+-- 'column "score" does not exist'. Every non-key column is listed here with
+-- the same type and default as in SCHEMA. Nothing is dropped or rewritten;
+-- existing rows get the column default (NULL where SCHEMA has none).
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS file_type TEXT;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS size_bytes BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS chars INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS extracted_text TEXT;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS verdict TEXT NOT NULL DEFAULT 'unchecked';
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS doc_type TEXT;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS score INTEGER;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS score_parts JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS improvements JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS identifiers JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS notes JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS key_facts JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
 -- 'exported' was added to the allowed events after draft_events shipped, so
 -- the original CHECK has to be replaced rather than extended in place.
 -- Dropped by name first, which makes this safe to run on every startup.
@@ -1067,3 +1089,61 @@ def init_schema() -> None:
         with conn.cursor() as cur:
             cur.execute(SCHEMA)
             cur.execute(MIGRATIONS)
+
+
+_EXPECTED_SCHEMA = "aurevia_schema_expected"
+
+
+def find_schema_drift(conn=None) -> dict:
+    """
+    Compare the live tables (schema `public`) with what SCHEMA + MIGRATIONS
+    build on an empty database. Read-only: the expected tables are built in a
+    scratch schema inside a transaction that is always rolled back, so
+    nothing is created, changed or deleted.
+
+    Returns {"missing_tables": [...], "missing_columns": ["table.column", ...],
+    "type_differences": ["table.column: live X, expected Y", ...]}.
+    Extra live tables / columns (left over from older versions) are ignored.
+    """
+    def run(c):
+        rows = {}
+        # A savepoint when the caller already has a transaction open, a
+        # transaction otherwise; Rollback undoes it either way.
+        with c.transaction() as tx, c.cursor() as cur:
+            cur.execute(f"CREATE SCHEMA {_EXPECTED_SCHEMA}")
+            cur.execute(f"SET LOCAL search_path TO {_EXPECTED_SCHEMA}, public")
+            cur.execute(SCHEMA)
+            cur.execute(MIGRATIONS)
+            cur.execute(
+                """
+                SELECT table_schema, table_name, column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema IN (%s, 'public')
+                """,
+                (_EXPECTED_SCHEMA,),
+            )
+            for r in cur.fetchall():
+                r = r if isinstance(r, dict) else dict(
+                    zip(("table_schema", "table_name", "column_name", "data_type"), r))
+                rows.setdefault(r["table_schema"], {}).setdefault(
+                    r["table_name"], {})[r["column_name"]] = r["data_type"]
+            raise psycopg.Rollback(tx)
+        expected = rows.get(_EXPECTED_SCHEMA, {})
+        live = rows.get("public", {})
+        out = {"missing_tables": [], "missing_columns": [], "type_differences": []}
+        for table in sorted(expected):
+            if table not in live:
+                out["missing_tables"].append(table)
+                continue
+            for col, typ in sorted(expected[table].items()):
+                if col not in live[table]:
+                    out["missing_columns"].append(f"{table}.{col}")
+                elif live[table][col] != typ:
+                    out["type_differences"].append(
+                        f"{table}.{col}: live {live[table][col]}, expected {typ}")
+        return out
+
+    if conn is not None:
+        return run(conn)
+    with get_connection() as c:
+        return run(c)

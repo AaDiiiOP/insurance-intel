@@ -23,6 +23,9 @@ deliberately shows an older version.
 | result-20261010T045655 * | v0.13.0 | development, real Qwen, Phase 1A–1E gates | 4 | 100% | 0; query 0 wrong, probes 28/28; policy 28/28 + 24/24; business 53/53 + 24/24; coverage 33 + 3 abstained, 0 wrong, 51/51 | **current — Phase 1E ACCEPTED (4-company), frozen** |
 | (phase end) full 20-company run | end of Phase 1B | acceptance, real Qwen | 20 | | | **pending — not run yet** |
 
+
+v0.14.0 / v0.14.1 (Phase 2A): no model behaviour changed, so no new evaluation run; the sandbox dry run (model off) gave the same Phase 1B–1E results as v0.13.0.
+
 \* produced on the developer's machine; commit them from `backend/evaluations/phase1a/`.
 
 Categories:

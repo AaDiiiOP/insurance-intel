@@ -1,6 +1,7 @@
 """Phase 2A (v0.14.0) — authentication, sessions, CSRF, rate limiting, roles,
 memberships, invitations, password resets, tenant isolation over EVERY route
 of the real app, client management, document workspace, downloads, audit."""
+import functools
 import io
 import re
 import uuid
@@ -17,7 +18,11 @@ import main
 from tests.auth_helpers import PASSWORD, make_user, signed_in
 
 
+@functools.lru_cache(maxsize=None)
 def _docx(text: str) -> bytes:
+    # Cached: a .docx stores a timestamp, so building the same text twice a
+    # couple of seconds apart gives different bytes. The duplicate-file test
+    # needs the exact same bytes (v0.14.1: this made it fail now and then).
     d = Document()
     for line in text.splitlines():
         d.add_paragraph(line)
