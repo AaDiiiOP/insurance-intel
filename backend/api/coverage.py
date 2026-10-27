@@ -9,8 +9,10 @@ catch-all /businesses/{id}/{section}.
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
+import auth
 import coverage_intelligence as ci
 import db
+import review_workflow
 from api.businesses import _date
 from api.deps import _actor, _resolve_organization, _validate_uuid
 from api.knowledge import _json_safe
@@ -77,11 +79,17 @@ def _review(subject_type, subject_id, body: ReviewBody, x_organization_id):
     business_id = _validate_uuid(body.business_id, "business id")
     with db.get_connection() as conn:
         org = _resolve_organization(conn, x_organization_id)
+        comment = " ".join((body.comment or "").split())[:1000] or None
+        if body.decision == "REJECTED" and not comment:
+            raise HTTPException(status_code=400, detail="A reason is required to reject (dismiss) a finding.")
         try:
             out = ci.review(conn, org, business_id, subject_type, subject_id, body.decision, _actor(),
-                            body.comment)
+                            comment)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
+        if out is not None:
+            review_workflow.audit_coverage(conn, auth.current(), subject_type, subject_id, business_id,
+                                           body.decision, comment)
     if out is None:
         raise HTTPException(status_code=404, detail=f"No current {subject_type} with that id for this business.")
     return _json_safe(out)

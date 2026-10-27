@@ -228,6 +228,10 @@ def test_api_endpoints_round_trip(conn, test_org, policy):
     bad = client.post(f"/knowledge/facts/{f['id']}/review",
                       json={"action": "verify", "reviewed_by": "Asha"}, headers=h)
     assert bad.status_code == 400                     # no evidence -> cannot verify
+    no_reason = client.post(f"/knowledge/facts/{f['id']}/review",
+                            json={"action": "reject", "reviewed_by": "Asha"}, headers=h)
+    assert no_reason.status_code == 400                # v0.16.0: a rejection needs a reason
     ok = client.post(f"/knowledge/facts/{f['id']}/review",
-                     json={"action": "reject", "reviewed_by": "Asha"}, headers=h)
+                     json={"action": "reject", "reviewed_by": "Asha",
+                           "reason": "Synthetic test: value not in the document."}, headers=h)
     assert ok.status_code == 200 and ok.json()["status"] == "superseded"

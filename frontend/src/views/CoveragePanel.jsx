@@ -50,6 +50,7 @@ export default function CoveragePanel({ businessId, asOf, canReview = true }) {
   const [a, setA] = useState(null)
   const [err, setErr] = useState(null)
   const [reviewer, setReviewer] = useState('')
+  const [comments, setComments] = useState({})
   const [busy, setBusy] = useState(null)
 
   function load() {
@@ -63,9 +64,14 @@ export default function CoveragePanel({ businessId, asOf, canReview = true }) {
   }, [businessId, asOf])
 
   async function decide(f, decision) {
+    const comment = (comments[f.finding_id] || '').trim()
+    if (decision === 'REJECTED' && !comment) {
+      setErr('Give a reason before rejecting (dismissing) a finding.')
+      return
+    }
     setBusy(f.finding_id)
     try {
-      await reviewCoverageFinding(f.finding_id, businessId, decision, reviewer.trim())
+      await reviewCoverageFinding(f.finding_id, businessId, decision, reviewer.trim(), comment)
       load()
     } catch (e) {
       setErr(e.message)
@@ -183,6 +189,9 @@ export default function CoveragePanel({ businessId, asOf, canReview = true }) {
                   {f.review_stale && <div className="kx-meta">An earlier review applied to different evidence.</div>}
                   <Ev items={f.evidence} />
                   {canReview && <div className="kx-actions">
+                    <input className="approve-note" style={{ maxWidth: 240 }} placeholder="Reason (required to reject)"
+                      aria-label="Reason for the decision" value={comments[f.finding_id] || ''}
+                      onChange={(e) => setComments({ ...comments, [f.finding_id]: e.target.value })} />
                     {DECISIONS.map((d) => (
                       <button key={d} className="btn-ghost kx-small" disabled={busy === f.finding_id} onClick={() => decide(f, d)}>
                         {d.replace(/_/g, ' ').toLowerCase()}

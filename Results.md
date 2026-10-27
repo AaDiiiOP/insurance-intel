@@ -1243,3 +1243,10 @@ Dry run (model off) AUR-SYN-001–004 on the final code: 1B 0 wrong + 28/28, 1C 
 Real Qwen not re-run.
 Developer's Docker (2026-10-27): check_schema PASS; pytest 244 passed, 0 failed, 0 skipped; live check 43/43 (Ollama stopped); browser click-through of every tab, evidence page, as-of view and a new unlinked client — all fine.
 **Phase 2B: COMPLETE — DEVELOPMENT GATE PASSED (2026-10-27).** Status-only update after the Docker check. 2C/2D not started.
+
+## v0.16.0 (2026-10-27) — Phase 2C Human Review & Audit Workflows
+Baseline 244/244 (sandbox). After: 265/265, 0 failed, 0 skipped (21 new: queue contents, transitions, assignment and roles, Knowledge Core verify / correct / reject through the queue, conflicts settled only by a person's choice with originals kept, missing evidence, verified fact reopened by a later conflict, coverage reasons and stale reopen, audit completeness, append-only history, direct endpoints need reasons, sign-in, cross-tenant, filters). Two existing tests updated for required reasons (expected results unchanged; the tenant test is now stricter).
+Dry run (model off) AUR-SYN-001–004: 1B 0 wrong + 28/28, 1C 28/28 + 24/24, 1D 53/53 + 24/24, 1E 36/36 + 51/51 — unchanged. Phase 1D audit 198/198. Live check (sandbox HTTP) 44/44. Frontend build OK; browser check incl. 390 px.
+Real Qwen not re-run (no model behaviour changed).
+Developer's Docker (2026-10-27): check_schema PASS; pytest 265 passed, 0 failed, 0 skipped; live check 44/44 (Ollama stopped); browser: review queue, start → reject with reason → history, link to the client's Coverage tab, Knowledge Core reject without a reason refused — all fine.
+**Phase 2C: COMPLETE — DEVELOPMENT GATE PASSED (2026-10-27).** Status-only update after the Docker check. 2D not started.

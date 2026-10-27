@@ -46,6 +46,7 @@ function FactRow({ fact, onError, onCorrected }) {
   const [correcting, setCorrecting] = useState(false)
   const [value, setValue] = useState(fact.value)
   const [reviewer, setReviewer] = useState('')
+  const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const statusCopy = STATUS_COPY[fact.status] || STATUS_COPY.needs_review
 
@@ -54,9 +55,13 @@ function FactRow({ fact, onError, onCorrected }) {
       onError('Enter the corrected value.')
       return
     }
+    if (!reason.trim()) {
+      onError('Give a reason for the correction.')
+      return
+    }
     setSaving(true)
     try {
-      const updated = await correctKnowledgeFact(fact.fact_id, value.trim(), reviewer.trim())
+      const updated = await correctKnowledgeFact(fact.fact_id, value.trim(), reviewer.trim(), null, reason.trim())
       onCorrected(updated)
       setCorrecting(false)
     } catch (e) {
@@ -121,6 +126,13 @@ function FactRow({ fact, onError, onCorrected }) {
               placeholder="Corrected value"
               value={value}
               onChange={(e) => setValue(e.target.value)}
+            />
+            <input
+              className="approve-note"
+              placeholder="Reason (required)"
+              aria-label="Reason for the correction"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
             />
             <button className="btn-ghost" onClick={() => setCorrecting(false)} disabled={saving}>
               Cancel

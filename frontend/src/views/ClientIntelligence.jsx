@@ -309,9 +309,9 @@ function Documents({ d }) {
   )
 }
 
-export default function ClientIntelligence({ me, clientId, refreshKey }) {
+export default function ClientIntelligence({ me, clientId, refreshKey, initialTab }) {
   const can = (p) => me?.permissions?.includes(p)
-  const [tab, setTab] = useState('overview')
+  const [tab, setTab] = useState(initialTab || 'overview')
   const [asOf, setAsOf] = useState('')
   const [d, setD] = useState(null)
   const [err, setErr] = useState(null)

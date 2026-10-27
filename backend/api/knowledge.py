@@ -17,7 +17,9 @@ import property_policy_intelligence
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
+import auth
 import db
+import review_workflow
 
 from .deps import _actor, _resolve_organization, _validate_uuid
 
@@ -36,6 +38,7 @@ class UpdateFactBody(BaseModel):
     new_value: str
     normalized_value: float | None = None
     reviewed_by: str | None = None   # ignored: the signed-in user is the reviewer
+    reason: str | None = None        # v0.16.0: required — why the value is being corrected
 
 
 def _entity_response(row: dict) -> dict:
@@ -191,6 +194,7 @@ def get_entity_relationships(entity_id: str, x_organization_id: str | None = Hea
 class ReviewFactBody(BaseModel):
     action: str
     reviewed_by: str | None = None   # ignored: the signed-in user is the reviewer
+    reason: str | None = None        # v0.16.0: required for 'reject'
 
 
 @router.post("/knowledge/facts/{fact_id}/review")
@@ -199,6 +203,9 @@ def review_fact(fact_id: str, body: ReviewFactBody, x_organization_id: str | Non
     'reject' (kept for audit as superseded). Conflicts are settled by the
     correction endpoint, not here."""
     fact_id = _validate_uuid(fact_id, "fact id")
+    reason = " ".join((body.reason or "").split())[:1000] or None
+    if body.action == "reject" and not reason:
+        raise HTTPException(status_code=400, detail="A reason is required to reject a fact.")
     with db.get_connection() as conn:
         organization_id = _resolve_organization(conn, x_organization_id)
         try:
@@ -207,6 +214,9 @@ def review_fact(fact_id: str, body: ReviewFactBody, x_organization_id: str | Non
         except ValueError as exc:
             status = 404 if "not found" in str(exc).lower() else 400
             raise HTTPException(status_code=status, detail=str(exc))
+        review_workflow.audit_fact(conn, auth.current(),
+                                   "fact.verified" if body.action == "verify" else "fact.rejected",
+                                   fact_id, reason)
         evidence = kc.get_evidence_for_fact(conn, fact_id, organization_id)
     return _fact_response(row, evidence=evidence)
 
@@ -303,6 +313,9 @@ def correct_fact(fact_id: str, body: UpdateFactBody, x_organization_id: str | No
     new_value = (body.new_value or "").strip()
     if not new_value:
         raise HTTPException(status_code=400, detail="Provide the corrected value.")
+    reason = " ".join((body.reason or "").split())[:1000]
+    if not reason:
+        raise HTTPException(status_code=400, detail="A reason is required for a correction.")
 
     with db.get_connection() as conn:
         organization_id = _resolve_organization(conn, x_organization_id)
@@ -333,6 +346,8 @@ def correct_fact(fact_id: str, body: UpdateFactBody, x_organization_id: str | No
             after = db.get_conflict(conn, str(conflict_before["id"]), organization_id)
             if after and after["status"] == "resolved":
                 resolved_conflict_id = str(after["id"])
+        review_workflow.audit_fact(conn, auth.current(), "fact.corrected", fact_id, reason,
+                                   new_fact_id=str(new_fact["id"]), resolved_conflict_id=resolved_conflict_id)
 
     payload = _fact_response(new_fact, evidence=evidence)
     payload["superseded_fact_id"] = fact_id

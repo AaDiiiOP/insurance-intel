@@ -96,8 +96,8 @@ def test_writes_on_another_tenants_data_are_refused(conn, world, client):
     fact = str(world["facts"]["ded26"]["id"])
 
     r = client.put(f"/knowledge/facts/{fact}", headers=h,
-                   json={"new_value": "1", "reviewed_by": "intruder"})
-    assert r.status_code in (400, 404)
+                   json={"new_value": "1", "reviewed_by": "intruder", "reason": "synthetic cross-tenant probe"})
+    assert r.status_code == 404           # v0.16.0: reason given, so only the tenant check can refuse it
     r = client.post(f"/knowledge/facts/{fact}/review", headers=h,
                     json={"action": "verify", "reviewed_by": "intruder"})
     assert r.status_code in (400, 404)

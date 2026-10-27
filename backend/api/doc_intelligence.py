@@ -14,6 +14,7 @@ import doc_intelligence
 from fastapi import APIRouter, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel
 
+import auth
 import db
 import llm
 from llm import LLMError
@@ -351,6 +352,8 @@ def review_fact(
             raise HTTPException(
                 status_code=400, detail="Provide the corrected value."
             )
+        if not " ".join((body.reason or "").split()):
+            raise HTTPException(status_code=400, detail="A reason is required for a correction.")
 
     with db.get_connection() as conn:
         organization_id = _resolve_organization(conn, x_organization_id)
@@ -365,6 +368,8 @@ def review_fact(
         )
         if not row:
             raise HTTPException(status_code=404, detail="Fact not found.")
+        auth.audit(conn, auth.current(), f"doc_fact.{action}", "extracted_fact", fact_id,
+                   {"reason": " ".join((body.reason or "").split())[:300] or None})
         events = db.get_extraction_events(conn, fact_id)
 
     payload = _fact_response(row)

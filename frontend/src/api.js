@@ -565,7 +565,7 @@ export function getKnowledgeFactHistory(factId) {
   return request(`/knowledge/facts/${factId}/history`)
 }
 
-export function correctKnowledgeFact(factId, newValue, reviewedBy, normalizedValue) {
+export function correctKnowledgeFact(factId, newValue, reviewedBy, normalizedValue, reason) {
   return request(`/knowledge/facts/${factId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -573,6 +573,7 @@ export function correctKnowledgeFact(factId, newValue, reviewedBy, normalizedVal
       new_value: newValue,
       normalized_value: normalizedValue ?? null,
       reviewed_by: reviewedBy,
+      reason: reason || null,
     }),
   })
 }
@@ -600,11 +601,11 @@ export function getEntityKnowledge(entityId, asOf) {
   return request(`/knowledge/entities/${entityId}/knowledge${q}`)
 }
 
-export function reviewKnowledgeFact(factId, action, reviewedBy) {
+export function reviewKnowledgeFact(factId, action, reviewedBy, reason) {
   return request(`/knowledge/facts/${factId}/review`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, reviewed_by: reviewedBy }),
+    body: JSON.stringify({ action, reviewed_by: reviewedBy, reason: reason || null }),
   })
 }
 
@@ -671,4 +672,22 @@ export function reviewCoverageFinding(findingId, businessId, decision, reviewer,
 export function getClientIntelligence(clientId, asOf) {
   const q = asOf ? `?as_of=${encodeURIComponent(asOf)}` : ''
   return request(`/clients/${clientId}/intelligence${q}`)
+}
+
+// Phase 2C (v0.16.0): review queue and review workflow.
+export function getReviewQueue(params = {}) {
+  const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString()
+  return request(`/review-queue${q ? `?${q}` : ''}`)
+}
+
+export function getReviewItem(itemId) {
+  return request(`/review-items/${itemId}`)
+}
+
+export function reviewAction(itemId, action, body = {}) {
+  return request(`/review-items/${itemId}/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 }

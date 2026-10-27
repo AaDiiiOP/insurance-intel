@@ -74,13 +74,16 @@ PERMISSIONS = {
     "users.manage": "Invite users, change roles, issue password resets",
     "org.manage": "Manage organization settings",
     "audit.view": "See the audit history",
+    "reviews.work": "Work on review queue items (each kind also needs its own permission)",
+    "reviews.assign": "Assign and reassign review items",
 }
 ROLE_PERMISSIONS = {
     "OWNER": set(PERMISSIONS),
     "ADMIN": set(PERMISSIONS),
     "BROKER": {"view", "evidence.view", "clients.edit", "documents.upload", "documents.delete",
-               "analysis.run", "carriers.edit", "drafts.create", "export"},
-    "REVIEWER": {"view", "evidence.view", "facts.correct", "findings.review", "drafts.approve", "export"},
+               "analysis.run", "carriers.edit", "drafts.create", "export", "reviews.work"},
+    "REVIEWER": {"view", "evidence.view", "facts.correct", "findings.review", "drafts.approve", "export",
+                 "reviews.work"},
 }
 
 # Routes that need no session.
@@ -120,6 +123,13 @@ ROUTE_PERMISSIONS = {
     ("PUT", "/clients/{client_id}/documents"): "clients.edit",
     ("GET", "/clients/{client_id}/documents/{document_id}/download"): "evidence.view",
     ("GET", "/clients/{client_id}/intelligence"): "view",
+    ("GET", "/review-queue"): "view",
+    ("GET", "/review-items/{item_id}"): "evidence.view",
+    ("POST", "/review-items/{item_id}/assign"): "reviews.assign",
+    ("POST", "/review-items/{item_id}/start"): "reviews.work",
+    ("POST", "/review-items/{item_id}/needs-info"): "reviews.work",
+    ("POST", "/review-items/{item_id}/decide"): "reviews.work",
+    ("POST", "/review-items/{item_id}/reopen"): "reviews.work",
     ("GET", "/doc-intelligence/documents/{document_id}/download"): "evidence.view",
     ("POST", "/clients/{client_id}/match"): "analysis.run",
     ("POST", "/clients/{client_id}/gaps"): "analysis.run",

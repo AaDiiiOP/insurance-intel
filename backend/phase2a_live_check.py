@@ -227,6 +227,17 @@ def main():
     check("another organization's user gets 404 on every probe",
           all(v == 404 for v in probes.values()) and all(c["client_id"] != cid for c in listed["clients"]),
           str(probes))
+    # Phase 2C (v0.16.0): review queue — loads for A, shows none of A's items to B, refuses B on A's ids.
+    qa = reviewer.get("/review-queue?state=")
+    qb = intruder.get("/review-queue?state=")
+    a_ids = [i["item_id"] for i in (qa.json().get("items", []) if qa.status_code == 200 else [])]
+    b_ids = {i["item_id"] for i in (qb.json().get("items", []) if qb.status_code == 200 else [])}
+    probe_id = a_ids[0] if a_ids else str(uuid.uuid4())
+    check("review queue loads and stays inside the organization (Phase 2C)",
+          qa.status_code == 200 and qb.status_code == 200 and not (set(a_ids) & b_ids)
+          and intruder.get(f"/review-items/{probe_id}").status_code == 404
+          and intruder.post(f"/review-items/{probe_id}/start").status_code == 404,
+          f"A {qa.status_code} ({len(a_ids)} items), B {qb.status_code}")
     check("A's client unchanged", reviewer.get(f"/clients/{cid}").json()["business_name"] == "Check Textiles Pvt Ltd")
 
     # --- 10. rate limiting ------------------------------------------------------------------
@@ -288,7 +299,7 @@ def main():
 
 def finish():
     failed = [n for n, ok, _ in results if not ok]
-    print(f"\nPhase 2A/2B live check: {len(results)} checks, {len(results) - len(failed)} passed, {len(failed)} failed"
+    print(f"\nPhase 2A–2C live check: {len(results)} checks, {len(results) - len(failed)} passed, {len(failed)} failed"
           + (" -> PASS" if not failed else " -> FAIL"))
     sys.exit(1 if failed else 0)
 

@@ -75,7 +75,7 @@ function sourceLine(source) {
   return parts.filter(Boolean).join(' · ')
 }
 
-export default function ClientDetail({ me, clientId, onBack, onDeleted }) {
+export default function ClientDetail({ me, clientId, initialTab, onBack, onDeleted }) {
   const [client, setClient] = useState(null)
   const [intelKey, setIntelKey] = useState(0)
   const [match, setMatch] = useState(null)
@@ -421,7 +421,7 @@ export default function ClientDetail({ me, clientId, onBack, onDeleted }) {
         </div>
       </header>
 
-      <ClientIntelligence me={me} clientId={clientId} refreshKey={intelKey} />
+      <ClientIntelligence me={me} clientId={clientId} refreshKey={intelKey} initialTab={initialTab} />
 
       <ClientWorkspacePanel me={me} clientId={clientId} onChanged={() => setIntelKey((k) => k + 1)} />
 

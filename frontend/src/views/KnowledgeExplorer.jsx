@@ -110,12 +110,18 @@ export function EvidenceRow({ ev, onError }) {
 function FactCard({ fact, historical, reviewer, onReviewed, onError }) {
   const label = factLabel(fact, historical)
   const [busy, setBusy] = useState(false)
+  const [rejecting, setRejecting] = useState(false)
+  const [reason, setReason] = useState('')
   const canReview = !historical && fact.status === 'needs_review'
 
   async function review(action) {
+    if (action === 'reject' && !reason.trim()) {
+      onError('Give a reason for rejecting this fact.')
+      return
+    }
     setBusy(true)
     try {
-      await reviewKnowledgeFact(fact.id, action, reviewer.trim())
+      await reviewKnowledgeFact(fact.id, action, reviewer.trim(), action === 'reject' ? reason.trim() : null)
       onReviewed()
     } catch (e) {
       onError(e.message)
@@ -144,9 +150,18 @@ function FactCard({ fact, historical, reviewer, onReviewed, onError }) {
           <button className="btn-ghost kx-small" disabled={busy} onClick={() => review('verify')}>
             ✓ Verify
           </button>
-          <button className="btn-ghost kx-small" disabled={busy} onClick={() => review('reject')}>
-            ✕ Reject
-          </button>
+          {!rejecting ? (
+            <button className="btn-ghost kx-small" disabled={busy} onClick={() => setRejecting(true)}>
+              ✕ Reject
+            </button>
+          ) : (
+            <>
+              <input className="approve-note" style={{ maxWidth: 260 }} placeholder="Reason (required)"
+                aria-label="Reason for rejecting" value={reason} onChange={(e) => setReason(e.target.value)} />
+              <button className="btn-ghost kx-small" disabled={busy} onClick={() => review('reject')}>Confirm reject</button>
+              <button className="btn-ghost kx-small" onClick={() => setRejecting(false)}>Cancel</button>
+            </>
+          )}
         </div>
       )}
       {fact.status === 'contradiction_flagged' && (

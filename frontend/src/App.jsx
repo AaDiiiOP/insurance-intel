@@ -13,6 +13,7 @@ import Login from './views/Login'
 import Team from './views/Team'
 import Home from './views/Home'
 import Review from './views/Review'
+import ReviewQueue from './views/ReviewQueue'
 import Upload from './views/Upload'
 
 // Only screens that exist. Dead links for unbuilt phases would be worse than
@@ -21,6 +22,7 @@ const NAV = [
   { id: 'home', label: 'Home' },
   { id: 'carriers', label: 'Carriers' },
   { id: 'clients', label: 'Clients' },
+  { id: 'review-queue', label: 'Review queue' },
   { id: 'ask', label: 'Ask' },
   { id: 'review', label: 'Review' },
   { id: 'doc-intel', label: 'Doc Intelligence' },
@@ -50,6 +52,7 @@ function Workspace({ me, setMe }) {
   const [refreshKey, setRefreshKey] = useState(0)
   const [openCarrierId, setOpenCarrierId] = useState(null)
   const [openClientId, setOpenClientId] = useState(null)
+  const [openClientTab, setOpenClientTab] = useState(null)
   const [health, setHealth] = useState(null)
 
   // A quiet status light in the sidebar, so a dead backend or a missing
@@ -92,8 +95,9 @@ function Workspace({ me, setMe }) {
     setView('briefing')
   }
 
-  function openClient(clientId) {
+  function openClient(clientId, tab = null) {
     setOpenClientId(clientId)
+    setOpenClientTab(tab)
     setView('client')
   }
 
@@ -209,6 +213,7 @@ function Workspace({ me, setMe }) {
           <ClientDetail
             me={me}
             clientId={openClientId}
+            initialTab={openClientTab}
             onBack={() => setView('clients')}
             onDeleted={() => {
               setRefreshKey((k) => k + 1)
@@ -217,6 +222,7 @@ function Workspace({ me, setMe }) {
             }}
           />
         )}
+        {view === 'review-queue' && <ReviewQueue me={me} onOpenClient={openClient} />}
         {view === 'ask' && <Ask />}
         {view === 'review' && <Review />}
         {view === 'doc-intel' && <DocIntelligence />}

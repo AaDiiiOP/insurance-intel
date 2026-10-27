@@ -1075,6 +1075,61 @@ CREATE TABLE IF NOT EXISTS stored_files (
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS stored_files_org_sha_idx ON stored_files (organization_id, client_id, sha256);
+
+-- Phase 2C (v0.16.0): human review workflow. A WORKFLOW layer only: one row per
+-- actionable item the engines already report (conflict, unverified fact, fact
+-- without evidence, coverage finding, failed document). It stores no facts;
+-- decisions are carried out by the existing Knowledge Core / coverage services.
+CREATE TABLE IF NOT EXISTS review_items (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    kind                 TEXT NOT NULL CHECK (kind IN ('fact_conflict', 'unverified_fact', 'missing_evidence',
+                                                       'coverage_finding', 'failed_document')),
+    subject_id           TEXT NOT NULL,
+    business_id          UUID REFERENCES kc_entities(id) ON DELETE SET NULL,
+    client_id            UUID REFERENCES clients(id) ON DELETE SET NULL,
+    title                TEXT NOT NULL,
+    summary              JSONB NOT NULL DEFAULT '{}'::jsonb,
+    engine_status        TEXT,
+    fingerprint          TEXT,
+    decided_fingerprint  TEXT,
+    state                TEXT NOT NULL DEFAULT 'OPEN' CHECK (state IN ('OPEN', 'ASSIGNED', 'IN_REVIEW', 'NEEDS_INFO',
+                                                                       'RESOLVED', 'DISMISSED', 'REOPENED')),
+    assignee_user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (organization_id, kind, subject_id)
+);
+CREATE INDEX IF NOT EXISTS review_items_org_state_idx ON review_items (organization_id, state, kind);
+CREATE TABLE IF NOT EXISTS review_events (
+    id                BIGSERIAL PRIMARY KEY,
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    item_id           UUID NOT NULL REFERENCES review_items(id) ON DELETE CASCADE,
+    at                TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actor_user_id     UUID,          -- no FK: removing a user must not rewrite history
+    actor             TEXT NOT NULL,
+    by_system         BOOLEAN NOT NULL DEFAULT false,
+    action            TEXT NOT NULL,
+    from_state        TEXT,
+    to_state          TEXT NOT NULL,
+    decision          TEXT,
+    reason            TEXT,
+    evidence          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    metadata          JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+CREATE INDEX IF NOT EXISTS review_events_item_idx ON review_events (item_id, id);
+CREATE OR REPLACE FUNCTION review_events_append_only() RETURNS trigger AS $$
+BEGIN
+    -- Deleting an organization (cascade) may remove its rows; nothing else may change them.
+    IF TG_OP = 'DELETE' AND NOT EXISTS (SELECT 1 FROM organizations WHERE id = OLD.organization_id) THEN
+        RETURN OLD;
+    END IF;
+    RAISE EXCEPTION 'review_events is append-only';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS review_events_no_change ON review_events;
+CREATE TRIGGER review_events_no_change BEFORE UPDATE OR DELETE ON review_events
+    FOR EACH ROW EXECUTE FUNCTION review_events_append_only();
 """
 
 

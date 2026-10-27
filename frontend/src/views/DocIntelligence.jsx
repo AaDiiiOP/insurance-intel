@@ -81,6 +81,10 @@ function FactCard({ fact, filename, onUpdated, onError }) {
       onError('Enter the corrected value.')
       return
     }
+    if (action === 'corrected' && !reason.trim()) {
+      onError('Give a reason for the correction.')
+      return
+    }
 
     setActing(true)
     try {
@@ -197,7 +201,7 @@ function FactCard({ fact, filename, onUpdated, onError }) {
             />
             <input
               className="approve-note"
-              placeholder="Reason (optional)"
+              placeholder="Reason (required)"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
