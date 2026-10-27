@@ -5,6 +5,7 @@ import BusinessPanel from './BusinessPanel'
 import CoveragePanel from './CoveragePanel'
 import { EvidenceRow } from './KnowledgeExplorer'
 import PolicyPanel from './PolicyPanel'
+import RenewalPanel from './RenewalPanel'
 
 /**
  * Phase 2B (v0.15.0) — unified client intelligence on the client page.
@@ -24,6 +25,7 @@ const TABS = [
   ['coverage', 'Coverage findings'],
   ['conflicts', 'Conflicts & changes'],
   ['documents', 'Documents'],
+  ['renewal', 'Renewal & submission'],
 ]
 
 const STATE = {
@@ -365,6 +367,7 @@ export default function ClientIntelligence({ me, clientId, refreshKey, initialTa
               : <SectionStatus s={d.sections.coverage} />)}
             {tab === 'conflicts' && <ConflictsChanges d={d} onError={setEvErr} />}
             {tab === 'documents' && <Documents d={d} />}
+            {tab === 'renewal' && <RenewalPanel me={me} clientId={clientId} />}
           </div>
         </>
       )}

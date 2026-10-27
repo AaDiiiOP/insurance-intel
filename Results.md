@@ -1250,3 +1250,6 @@ Dry run (model off) AUR-SYN-001–004: 1B 0 wrong + 28/28, 1C 28/28 + 24/24, 1D 
 Real Qwen not re-run (no model behaviour changed).
 Developer's Docker (2026-10-27): check_schema PASS; pytest 265 passed, 0 failed, 0 skipped; live check 44/44 (Ollama stopped); browser: review queue, start → reject with reason → history, link to the client's Coverage tab, Knowledge Core reject without a reason refused — all fine.
 **Phase 2C: COMPLETE — DEVELOPMENT GATE PASSED (2026-10-27).** Status-only update after the Docker check. 2D not started.
+
+## v0.17.0 (2026-10-27) — Phase 2D Renewal & Submission
+Baseline 265/265. After: 273/273, 0 failed, 0 skipped (8 new). Dry run (model off) AUR-SYN-001–004 unchanged: 1C 28/28 + 24/24, 1D 53/53 + 24/24, 1E 36/36 + 51/51, probes 28/28. Live check 44/44 (sandbox). Frontend build OK; browser smoke test OK. Phase 1D audit and real Qwen not re-run (no engine changed). Developer's Docker check (2026-10-27): reported by the developer as all passing and as expected (schema check, pytest, live check, browser flow incl. DOCX export); the console output was not pasted, so exact Docker counts are not recorded here. **Phase 2D: COMPLETE — DEVELOPMENT GATE PASSED (2026-10-27).**

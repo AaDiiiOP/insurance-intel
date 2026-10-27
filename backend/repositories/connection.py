@@ -1130,6 +1130,41 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS review_events_no_change ON review_events;
 CREATE TRIGGER review_events_no_change BEFORE UPDATE OR DELETE ON review_events
     FOR EACH ROW EXECUTE FUNCTION review_events_append_only();
+
+-- Phase 2D (v0.17.0): submission packages built from existing intelligence.
+CREATE TABLE IF NOT EXISTS submission_packages (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id       UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    client_id             UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    state                 TEXT NOT NULL DEFAULT 'DRAFT' CHECK (state IN ('DRAFT', 'NEEDS_INFORMATION',
+                              'READY_FOR_REVIEW', 'APPROVED', 'EXPORTED')),
+    content               JSONB NOT NULL,
+    fingerprint           TEXT NOT NULL,
+    exceptions            JSONB NOT NULL DEFAULT '[]'::jsonb,
+    approved_by           TEXT,
+    approved_user_id      UUID,
+    approved_at           TIMESTAMPTZ,
+    approved_fingerprint  TEXT,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS submission_package_events (
+    id               BIGSERIAL PRIMARY KEY,
+    organization_id  UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    package_id       UUID NOT NULL REFERENCES submission_packages(id) ON DELETE CASCADE,
+    at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actor_user_id    UUID,
+    actor            TEXT NOT NULL,
+    action           TEXT NOT NULL,
+    from_state       TEXT,
+    to_state         TEXT NOT NULL,
+    reason           TEXT,
+    fingerprint      TEXT,
+    metadata         JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+DROP TRIGGER IF EXISTS submission_package_events_no_change ON submission_package_events;
+CREATE TRIGGER submission_package_events_no_change BEFORE UPDATE OR DELETE ON submission_package_events
+    FOR EACH ROW EXECUTE FUNCTION review_events_append_only();
 """
 
 

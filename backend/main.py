@@ -44,6 +44,7 @@ from api import (
     coverage,
     workspace,
     reviews,
+    renewals,
 )
 from api import auth as auth_api
 
@@ -118,3 +119,4 @@ app.include_router(policies.router)
 app.include_router(coverage.router)      # before businesses: it has a catch-all /{section}
 app.include_router(businesses.router)
 app.include_router(reviews.router)
+app.include_router(renewals.router)

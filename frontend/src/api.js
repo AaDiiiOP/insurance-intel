@@ -691,3 +691,14 @@ export function reviewAction(itemId, action, body = {}) {
     body: JSON.stringify(body),
   })
 }
+
+// Phase 2D (v0.17.0): renewal view and submission packages.
+export function getRenewal(clientId) { return request(`/clients/${clientId}/renewal`) }
+export function listPackages(clientId) { return request(`/clients/${clientId}/submission-packages`) }
+export function createPackage(clientId) { return request(`/clients/${clientId}/submission-packages`, { method: 'POST' }) }
+export function getPackage(id) { return request(`/submission-packages/${id}`) }
+export function packageAction(id, action, body = {}) {
+  return request(`/submission-packages/${id}/${action}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
+}
