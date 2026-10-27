@@ -306,7 +306,15 @@ def reconcile_fact(conn, *, organization_id: str, entity_id: str, fact_type: str
             )
             now = _facts._now()
             if effective_from >= current["effective_from"]:
-                db.close_fact_validity(conn, str(current["id"]), organization_id, now)
+                # Close the WHOLE earlier period, not just one row of it: if that
+                # period holds conflicting values (two documents disagree), closing
+                # only `current` left the other one open, so the earlier period
+                # then showed a single value and the conflict lost a side.
+                for f in db.list_facts_for_entity(conn, entity_id, organization_id, fact_type, False):
+                    if (f.get("valid_to") is None and f["status"] != "superseded"
+                            and f.get("effective_from") == current.get("effective_from")
+                            and f.get("effective_to") == current.get("effective_to")):
+                        db.close_fact_validity(conn, str(f["id"]), organization_id, now)
             else:
                 fact = db.close_fact_validity(conn, str(fact["id"]), organization_id, now)
         else:

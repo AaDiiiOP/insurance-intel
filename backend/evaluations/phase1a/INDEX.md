@@ -26,6 +26,8 @@ deliberately shows an older version.
 
 v0.14.0 / v0.14.1 (Phase 2A): no model behaviour changed, so no new evaluation run; the sandbox dry run (model off) gave the same Phase 1B–1E results as v0.13.0.
 
+v0.15.0 (Phase 2B): a small Knowledge Core fix (conflicts in an earlier period kept when a later period arrives); model-off dry run unchanged (1B–1E) and Phase 1D audit 198/198 in the sandbox; no new real-Qwen run.
+
 \* produced on the developer's machine; commit them from `backend/evaluations/phase1a/`.
 
 Categories:

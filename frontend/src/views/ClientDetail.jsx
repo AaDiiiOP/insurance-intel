@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import ClientIntelligence from './ClientIntelligence'
 import ClientWorkspacePanel from './ClientWorkspacePanel'
 
 import {
@@ -76,6 +77,7 @@ function sourceLine(source) {
 
 export default function ClientDetail({ me, clientId, onBack, onDeleted }) {
   const [client, setClient] = useState(null)
+  const [intelKey, setIntelKey] = useState(0)
   const [match, setMatch] = useState(null)
   const [profile, setProfile] = useState(null)
   const [showProfile, setShowProfile] = useState(false)
@@ -419,7 +421,9 @@ export default function ClientDetail({ me, clientId, onBack, onDeleted }) {
         </div>
       </header>
 
-      <ClientWorkspacePanel me={me} clientId={clientId} />
+      <ClientIntelligence me={me} clientId={clientId} refreshKey={intelKey} />
+
+      <ClientWorkspacePanel me={me} clientId={clientId} onChanged={() => setIntelKey((k) => k + 1)} />
 
       {error && <div className="banner bad">{error}</div>}
 

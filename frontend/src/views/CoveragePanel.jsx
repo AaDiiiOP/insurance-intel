@@ -46,7 +46,7 @@ function Row({ label, children }) {
   )
 }
 
-export default function CoveragePanel({ businessId, asOf }) {
+export default function CoveragePanel({ businessId, asOf, canReview = true }) {
   const [a, setA] = useState(null)
   const [err, setErr] = useState(null)
   const [reviewer, setReviewer] = useState('')
@@ -151,7 +151,9 @@ export default function CoveragePanel({ businessId, asOf }) {
       </Row>
 
       <Row label="Findings for review">
-        <div className="kx-meta" style={{ marginBottom: 6 }}>Decisions are recorded under your signed-in name.</div>
+        <div className="kx-meta" style={{ marginBottom: 6 }}>
+          {canReview ? 'Decisions are recorded under your signed-in name.' : 'Your role can read findings but not record review decisions.'}
+        </div>
         {findings.length === 0 && <span className="kx-meta">No finding on this date.</span>}
         {[
           ['Limit comparisons', ['EXPOSURE_EXCEEDS_LIMIT', 'LIMIT_EXCEEDS_EXPOSURE']],
@@ -180,13 +182,13 @@ export default function CoveragePanel({ businessId, asOf }) {
                   )}
                   {f.review_stale && <div className="kx-meta">An earlier review applied to different evidence.</div>}
                   <Ev items={f.evidence} />
-                  <div className="kx-actions">
+                  {canReview && <div className="kx-actions">
                     {DECISIONS.map((d) => (
                       <button key={d} className="btn-ghost kx-small" disabled={busy === f.finding_id} onClick={() => decide(f, d)}>
                         {d.replace(/_/g, ' ').toLowerCase()}
                       </button>
                     ))}
-                  </div>
+                  </div>}
                 </div>
               ))}
             </div>

@@ -70,7 +70,7 @@ function Highlighted({ text, quote }) {
   )
 }
 
-function EvidenceRow({ ev, onError }) {
+export function EvidenceRow({ ev, onError }) {
   const [page, setPage] = useState(null)
   const [loading, setLoading] = useState(false)
 

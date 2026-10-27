@@ -666,3 +666,9 @@ export function reviewCoverageFinding(findingId, businessId, decision, reviewer,
     body: JSON.stringify({ business_id: businessId, decision, reviewer, comment: comment || null }),
   })
 }
+
+// Phase 2B (v0.15.0): one summary of the client's existing intelligence.
+export function getClientIntelligence(clientId, asOf) {
+  const q = asOf ? `?as_of=${encodeURIComponent(asOf)}` : ''
+  return request(`/clients/${clientId}/intelligence${q}`)
+}

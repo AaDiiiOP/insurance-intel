@@ -10,15 +10,18 @@ check, Knowledge Core analysis) is reused unchanged.
 """
 import hashlib
 import re
+from datetime import date
 
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 
 import auth
+import client_intelligence
 import db
 from parsers import ParseError, extension_of, parse_file_with_quality
 
 from .deps import _resolve_organization, _validate_uuid
+from .knowledge import _json_safe
 
 router = APIRouter()
 
@@ -223,6 +226,26 @@ def client_workspace(client_id: str):
             "business": business, "suggested_business": suggested,
             "submissions": [{"submission_id": str(s["id"]), "label": s["label"]} for s in subs],
             "documents": docs}
+
+
+@router.get("/clients/{client_id}/intelligence")
+def client_intelligence_summary(client_id: str, as_of: str | None = None):
+    """Phase 2B: one summary of the client's existing intelligence (business
+    profile, policies, coverage findings, conflicts, changes, document
+    processing), built only from the existing engines for the business linked
+    to THIS client in the signed-in organization. Read-only."""
+    client_id = _validate_uuid(client_id, "client id")
+    day = None
+    if as_of:
+        try:
+            day = date.fromisoformat(as_of)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="as_of must be YYYY-MM-DD.")
+    with db.get_connection() as conn:
+        org = _resolve_organization(conn)
+        client = _client_or_404(conn, client_id, org)
+        out = client_intelligence.get_client_intelligence(conn, org, client, as_of=day)
+    return _json_safe(out)
 
 
 @router.get("/clients/{client_id}/documents/{document_id}/download")

@@ -20,7 +20,7 @@ const STATUS_LABEL = {
  * the original file (downloadable by authorized users); analysis is a
  * separate, explicit step that runs the existing Knowledge Core pipeline.
  */
-export default function ClientWorkspacePanel({ me, clientId }) {
+export default function ClientWorkspacePanel({ me, clientId, onChanged }) {
   const can = (p) => me?.permissions?.includes(p)
   const [ws, setWs] = useState(null)
   const [error, setError] = useState(null)
@@ -40,6 +40,7 @@ export default function ClientWorkspacePanel({ me, clientId }) {
     try {
       await fn()
       load()
+      if (onChanged) onChanged()
     } catch (e) {
       setError(e.message)
     } finally {
@@ -49,7 +50,7 @@ export default function ClientWorkspacePanel({ me, clientId }) {
 
   if (!ws && !error) return <p className="loading">Loading documents…</p>
   return (
-    <div className="section">
+    <div className="section" id="client-documents">
       <div className="section-head"><h2>Documents &amp; intelligence</h2></div>
       {error && <div className="banner bad">{error}</div>}
       {ws && (

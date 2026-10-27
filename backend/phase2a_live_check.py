@@ -196,6 +196,16 @@ def main():
                                                         "/doc-intelligence/submissions", "/carriers"))
     q = owner.post("/knowledge/query", json={"question": "What is the coverage limit?", "use_llm": False})
     check("intelligence endpoints work when signed in", ok and q.status_code == 200)
+    # Phase 2B (v0.15.0): the unified client intelligence summary.
+    ci = owner.get(f"/clients/{cid}/intelligence")
+    cij = ci.json() if ci.status_code == 200 else {}
+    secs = cij.get("sections") or {}
+    check("client intelligence summary loads (Phase 2B)",
+          ci.status_code == 200 and {"profile", "policies", "coverage", "conflicts", "changes", "documents"} <= set(secs)
+          and all(v.get("status") in ("available", "not_linked", "not_analyzed", "none_found", "insufficient")
+                  for v in secs.values()), str({k: v.get("status") for k, v in secs.items()}))
+    check("client intelligence as-of date is checked (400 on a bad date)",
+          owner.get(f"/clients/{cid}/intelligence?as_of=not-a-date").status_code == 400)
 
     # --- 9. cross-tenant ---------------------------------------------------------------
     created_b = owner.post("/organizations", json={"name": f"Phase 2A check B {uuid.uuid4().hex[:6]}"})
@@ -206,6 +216,7 @@ def main():
     probes = {
         "client": intruder.get(f"/clients/{cid}").status_code,
         "workspace": intruder.get(f"/clients/{cid}/workspace").status_code,
+        "intelligence": intruder.get(f"/clients/{cid}/intelligence").status_code,
         "download": intruder.get(f"/clients/{cid}/documents/{did}/download").status_code,
         "intel download": intruder.get(f"/doc-intelligence/documents/{intel.json().get('document_id')}/download").status_code,
         "edit": intruder.put(f"/clients/{cid}", json={"business_name": "pwned"}).status_code,
@@ -277,7 +288,7 @@ def main():
 
 def finish():
     failed = [n for n, ok, _ in results if not ok]
-    print(f"\nPhase 2A live check: {len(results)} checks, {len(results) - len(failed)} passed, {len(failed)} failed"
+    print(f"\nPhase 2A/2B live check: {len(results)} checks, {len(results) - len(failed)} passed, {len(failed)} failed"
           + (" -> PASS" if not failed else " -> FAIL"))
     sys.exit(1 if failed else 0)
 

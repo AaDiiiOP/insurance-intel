@@ -119,6 +119,7 @@ ROUTE_PERMISSIONS = {
     ("DELETE", "/clients/{client_id}/documents/{document_id}"): "documents.delete",
     ("PUT", "/clients/{client_id}/documents"): "clients.edit",
     ("GET", "/clients/{client_id}/documents/{document_id}/download"): "evidence.view",
+    ("GET", "/clients/{client_id}/intelligence"): "view",
     ("GET", "/doc-intelligence/documents/{document_id}/download"): "evidence.view",
     ("POST", "/clients/{client_id}/match"): "analysis.run",
     ("POST", "/clients/{client_id}/gaps"): "analysis.run",

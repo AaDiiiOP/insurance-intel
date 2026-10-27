@@ -130,7 +130,7 @@ Modified: `backend/main.py` (global guard, CORS with credentials, routers),
 second signed-in user), `frontend/src/api.js`, `App.jsx`, `Clients.jsx`,
 `ClientDetail.jsx`, `DocIntelligence.jsx`, `Knowledge.jsx`,
 `KnowledgeExplorer.jsx`, `CoveragePanel.jsx`, `index.css`, `package.json`.
-Deleted: `backend/api/organizations.py`.
+Deleted: `backend/api/organizations.py` (correction, v0.15.0: the file stayed in the repository because extracting a zip does not delete files; it was never registered or reachable, and was removed in v0.15.0).
 
 ## Tests
 - Before: 199 passed. **After: 222 passed, 0 failed, 0 skipped** (23 new).

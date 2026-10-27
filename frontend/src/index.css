@@ -1729,3 +1729,30 @@ button.suggestion:hover { border-color: var(--accent-line); color: var(--accent-
   .main pre, .main code { white-space: pre-wrap; word-break: break-word; }
 }
 @media (max-width: 760px) { .sidebar { height: auto; min-height: 0; position: static; } }
+
+/* Phase 2B — client intelligence ------------------------------------------ */
+.ci-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ci-asof { font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
+.ci-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 6px 0 14px; overflow-x: auto; }
+.ci-tab {
+  background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; font: inherit;
+  font-size: 13.5px; color: var(--ink-soft); cursor: pointer; white-space: nowrap;
+}
+.ci-tab.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.ci-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ci-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ci-card { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; background: var(--surface); margin-bottom: 12px; min-width: 0; }
+.ci-card h3 { margin: 0 0 8px; font-size: 15px; }
+.ci-row { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px; padding: 4px 0; font-size: 13.5px; }
+.ci-label { color: var(--ink-soft); }
+.ci-value { min-width: 0; overflow-wrap: anywhere; }
+.ci-count { display: inline-block; margin-right: 12px; font-size: 13px; }
+.ci-attn { margin: 0; padding-left: 0; list-style: none; }
+.ci-attn li { padding: 4px 0; font-size: 13.5px; }
+.ci-policy { padding: 6px 0; border-top: 1px solid var(--line); }
+.ci-policy:first-of-type { border-top: 0; }
+.ci-evlink { margin-left: 8px; font-size: 12.5px; }
+@media (max-width: 760px) {
+  .ci-grid { grid-template-columns: minmax(0, 1fr); }
+  .ci-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

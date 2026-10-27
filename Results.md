@@ -1235,3 +1235,11 @@ Sandbox: old-database reproduction → v0.14.1 repairs it, live check 41/41 PASS
 Phase 1D acceptance audit on the sandbox dry data: 198/198.
 Developer's Docker on v0.14.1 (2026-10-26, existing database): `check_schema.py` PASS; `phase2a_live_check.py` 41/41 PASS (run with Ollama stopped — the check script's 60 s timeout is shorter than the local model's upload verification); pytest 225 passed, 0 failed, 0 skipped; frontend through Docker (:5183) worked.
 **Phase 2A: FROZEN — DEVELOPMENT GATE PASSED (2026-10-26).** Not production-ready; no RLS. Status-only update, no code change. Phase 2B not started.
+
+## v0.15.0 (2026-10-27) — Phase 2B Client Intelligence Workspace
+Baseline 225/225 (sandbox). After: 244/244, 0 failed, 0 skipped (19 new: aggregation equals the engines, evidence, missing values, conflicts, history, no advice wording, empty / partly processed clients, engine failure isolation, bad input, sign-in, all roles, cross-tenant, tampered link, Knowledge Core fix).
+Knowledge Core fix found by the new tests: a later period closed only one of two conflicting facts of the earlier period, so that period showed one value; now both stay. Approved by the developer before applying.
+Dry run (model off) AUR-SYN-001–004 on the final code: 1B 0 wrong + 28/28, 1C 28/28 + 24/24, 1D 53/53 + 24/24, 1E 36/36 + 51/51 — unchanged. Phase 1D audit 198/198. Live check (sandbox HTTP) 43/43. Frontend build OK; browser check incl. 390 px.
+Real Qwen not re-run.
+Developer's Docker (2026-10-27): check_schema PASS; pytest 244 passed, 0 failed, 0 skipped; live check 43/43 (Ollama stopped); browser click-through of every tab, evidence page, as-of view and a new unlinked client — all fine.
+**Phase 2B: COMPLETE — DEVELOPMENT GATE PASSED (2026-10-27).** Status-only update after the Docker check. 2C/2D not started.
